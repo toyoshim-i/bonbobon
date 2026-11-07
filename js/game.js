@@ -494,7 +494,7 @@ function triggerStageClear() {
     const modal = document.getElementById("clearModal");
     if (modal) {
       document.getElementById("clearFinalScore").textContent = state.score.toLocaleString();
-      document.getElementById("clearRemainingBalls").textContent = `${state.ballsRemaining} BALLS`;
+      document.getElementById("clearRemainingBalls").textContent = "●".repeat(state.ballsRemaining) + ` (${state.ballsRemaining})`;
       modal.classList.remove("hidden");
       modal.classList.add("flex");
     }

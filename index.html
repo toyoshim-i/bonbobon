@@ -204,65 +204,88 @@
     </div>
   </div>
 
-  <!-- STAGE CLEAR / VICTORY REWARD MODAL (大破CG＆鹵獲レリック選択) -->
-  <div id="clearModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
-    <div class="relative bg-[#11052c] retro-border rounded-xl max-w-lg w-full p-4 flex flex-col items-center text-center shadow-2xl">
-      <div class="text-[#ff1493] text-xs font-bold tracking-widest uppercase mb-1">STAGE CLEAR - TARGET ELIMINATED</div>
-      <h2 class="text-xl font-extrabold text-[#e6ff00] mb-2 flex items-center gap-2">
-        <span>🎉</span> 桃色重装ぼんぼぼん STAGE 1 CLEAR! <span>🎉</span>
-      </h2>
+  <!-- STAGE CLEAR / VICTORY REWARD MODAL (FULL-SIZE REWARD CG OVERLAY) -->
+  <div id="clearModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden items-center justify-center p-0 sm:p-2">
+    <div class="relative w-full max-w-[430px] h-full max-h-[100dvh] bg-[#09031c] retro-border rounded-none sm:rounded-xl overflow-hidden flex flex-col justify-between shadow-2xl">
+      
+      <!-- FULL-SIZE DEFEAT CG BACKGROUND (MAINTAINS EXACT IN-GAME SCALE) -->
+      <div class="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-[#070214]">
+        <img id="defeatCgImg" src="./assets/stage1/defeat_cg.jpg" alt="大破イラスト" class="w-full h-full object-contain pixel-canvas pointer-events-none select-none" onerror="this.src='./assets/stage1/centerpiece.jpg'">
+        <div class="scanlines pointer-events-none absolute inset-0 opacity-70"></div>
+      </div>
 
-      <!-- DEFEAT CG CONTAINER -->
-      <div class="relative w-full max-w-[260px] aspect-[9/16] max-h-[380px] rounded-lg overflow-hidden border-2 border-[#ff1493] shadow-lg mb-2.5 bg-[#0a0218]">
-        <img id="defeatCgImg" src="./assets/stage1/defeat_cg.jpg" alt="大破イラスト" class="w-full h-full object-contain pixel-canvas" onerror="this.src='./assets/stage1/centerpiece.jpg'">
-        <div class="scanlines pointer-events-none absolute inset-0"></div>
-        <div class="absolute bottom-1 left-1.5 right-1.5 bg-black/85 px-2 py-1 rounded text-xs text-[#ff66b2] border border-[#ff1493]/50">
-          「くっ……こんな整備不良の機体じゃなければ……！ 覚えてなさいよっ！」
+      <!-- TOP OVERLAY: STAGE CLEAR BANNER & STATS -->
+      <div class="relative z-10 w-full p-2.5 bg-gradient-to-b from-black/90 via-black/60 to-transparent flex flex-col gap-1.5 shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-[#ff1493] text-white text-[10px] font-black tracking-widest uppercase shadow">
+              STAGE CLEAR
+            </span>
+            <span class="text-xs font-bold text-[#e6ff00]">試作重装甲リリス 大破沈黙</span>
+          </div>
+          <span class="text-[9px] text-[#00f5d4] px-1.5 py-0.5 rounded bg-[#00f5d4]/10 border border-[#00f5d4]/40 font-mono">STAGE 1</span>
+        </div>
+
+        <!-- STATS BAR -->
+        <div class="flex items-center gap-2">
+          <div class="px-2 py-0.5 rounded bg-[#160533]/85 border border-[#00f5d4]/50 flex items-baseline gap-1.5 backdrop-blur-sm">
+            <span class="text-[9px] text-[#00f5d4]/80 font-bold">SCORE:</span>
+            <span id="clearFinalScore" class="text-sm font-black text-[#e6ff00] leading-none">0</span>
+          </div>
+          <div class="px-2 py-0.5 rounded bg-[#160533]/85 border border-[#00f5d4]/50 flex items-baseline gap-1.5 backdrop-blur-sm">
+            <span class="text-[9px] text-[#00f5d4]/80 font-bold">BALLS:</span>
+            <span id="clearRemainingBalls" class="text-xs font-black text-[#00f5d4] leading-none">●●●</span>
+          </div>
         </div>
       </div>
 
-      <!-- CLEAR STATS -->
-      <div class="w-full grid grid-cols-2 gap-2 mb-3 text-xs bg-[#19083d] p-2 rounded border border-[#00f5d4]/40">
-        <div>
-          <span class="text-[#b59ce6]">FINAL SCORE:</span>
-          <div id="clearFinalScore" class="font-extrabold text-[#e6ff00] text-base">0</div>
-        </div>
-        <div>
-          <span class="text-[#b59ce6]">REMAINING BALLS:</span>
-          <div id="clearRemainingBalls" class="font-extrabold text-[#00f5d4] text-base">3</div>
-        </div>
-      </div>
+      <!-- MIDDLE SPACE: EMPTY TO FULLY APPRECIATE THE HIGH-RES DEFEAT CG -->
+      <div class="relative z-10 flex-1 min-h-0 pointer-events-none"></div>
 
-      <!-- RELIC SELECTION (鹵獲パーツ選択) -->
-      <div class="w-full mb-3 text-left">
-        <div class="text-xs font-bold text-[#00f5d4] mb-1.5 flex items-center justify-between">
-          <span>⚙️ 鹵獲パーツを1つ選択 (次ステージ持ち越し):</span>
-          <span class="text-[10px] text-[#e6ff00]">SELECT 1</span>
+      <!-- BOTTOM OVERLAY: ADVENTURE STYLE DIALOGUE, RELIC SELECT & ACTION BUTTONS -->
+      <div class="relative z-10 w-full p-2.5 bg-gradient-to-t from-black/95 via-black/85 to-transparent flex flex-col gap-2 shrink-0">
+        <!-- CHARACTER DIALOGUE BOX (RETRO-16BIT ADV STYLE) -->
+        <div class="bg-[#120429]/95 border-2 border-[#ff1493]/70 rounded-lg p-2 shadow-lg backdrop-blur-sm">
+          <div class="flex items-center justify-between mb-0.5">
+            <span class="text-[10px] font-bold text-[#ff66b2]">リリス (LILITH)</span>
+            <span class="text-[9px] text-gray-400">大破・装甲強制パージ状態</span>
+          </div>
+          <p class="text-xs text-white leading-relaxed font-medium">
+            「くっ……こんな整備不良の機体じゃなければ……！ 覚えてなさいよっ！」
+          </p>
         </div>
-        <div class="grid grid-cols-3 gap-1.5" id="relicOptions">
-          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
-            <div class="font-bold text-xs text-[#e6ff00]">ウサミミ・レーダー</div>
-            <div class="text-[10px] text-[#b59ce6] mt-1">オービット通過スコア2倍＆コア解錠時間短縮</div>
-          </button>
-          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
-            <div class="font-bold text-xs text-[#00f5d4]">電磁スプリング</div>
-            <div class="text-[10px] text-[#b59ce6] mt-1">フリッパー反発力+25%＆弾速UP</div>
-          </button>
-          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
-            <div class="font-bold text-xs text-[#ff66b2]">セーフティ・ドローン</div>
-            <div class="text-[10px] text-[#b59ce6] mt-1">各ボール投入時に股下ストッパー1回自動展開</div>
-          </button>
-        </div>
-      </div>
 
-      <!-- ACTION BUTTONS -->
-      <div class="flex items-center gap-3 w-full">
-        <button id="btnClearReplay" class="flex-1 py-2.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] text-white border border-[#ff1493]/60 font-bold text-xs cursor-pointer transition">
-          もう一度遊ぶ (REPLAY)
-        </button>
-        <button id="btnClearNext" class="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-[#ff1493] to-[#e6ff00] text-black font-extrabold text-xs cursor-pointer transition shadow-lg hover:brightness-110">
-          次のステージへ進む ▶
-        </button>
+        <!-- RELIC SELECTION (LOOT PARTS) -->
+        <div class="bg-[#150734]/95 border border-[#00f5d4]/60 rounded-lg p-2 backdrop-blur-sm">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold text-[#00f5d4]">⚙️ 鹵獲パーツ選択 (次ステージ持越)</span>
+            <span class="text-[9px] text-[#e6ff00] font-mono">SELECT 1</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5" id="relicOptions">
+            <button class="relic-btn p-1.5 rounded bg-[#1e0a4f]/80 hover:bg-[#ff1493]/40 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
+              <div class="font-bold text-[11px] text-[#e6ff00] leading-tight">ウサミミ・レーダー</div>
+              <div class="text-[9px] text-[#b59ce6] leading-tight mt-1">通過スコア2倍＆コア解錠短縮</div>
+            </button>
+            <button class="relic-btn p-1.5 rounded bg-[#1e0a4f]/80 hover:bg-[#ff1493]/40 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
+              <div class="font-bold text-[11px] text-[#00f5d4] leading-tight">電磁スプリング</div>
+              <div class="text-[9px] text-[#b59ce6] leading-tight mt-1">フリッパー反発力+25%＆弾速UP</div>
+            </button>
+            <button class="relic-btn p-1.5 rounded bg-[#1e0a4f]/80 hover:bg-[#ff1493]/40 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
+              <div class="font-bold text-[11px] text-[#ff66b2] leading-tight">セーフティ機</div>
+              <div class="text-[9px] text-[#b59ce6] leading-tight mt-1">投入時ストッパー自動展開</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2">
+          <button id="btnClearReplay" class="flex-1 py-2 rounded-lg bg-[#281058] hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-xs cursor-pointer transition">
+            もう一度遊ぶ
+          </button>
+          <button id="btnClearNext" class="flex-1 py-2 rounded-lg bg-gradient-to-r from-[#ff1493] to-[#e6ff00] active:scale-95 text-black font-extrabold text-xs cursor-pointer transition shadow-lg hover:brightness-110">
+            次のステージへ進む ▶
+          </button>
+        </div>
       </div>
     </div>
   </div>

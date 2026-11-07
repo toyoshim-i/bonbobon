@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>桃色重装ぼんぼぼん // MOMOIRO JUUSOU BON-BO-BON</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="./css/style.css?v=3" />
+</head>
+<body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-2 box-border">
+  
+  <!-- SMARTPHONE VERTICAL PINBALL CABINET (FIXED FULLSCREEN, NO SCROLL) -->
+  <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] retro-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
+    
+    <!-- TOP TITLE & STATUS BAR -->
+    <div class="w-full flex items-center justify-between px-2 py-1 bg-[#160836] border border-[#ff1493]/60 rounded text-[11px] shrink-0">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>
+        <span class="font-extrabold tracking-wider text-[#ff66b2]">桃色重装ぼんぼぼん</span>
+        <span class="text-[#00f5d4]">// ST-01</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btnAudio" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[10px] cursor-pointer transition">
+          FM:ON
+        </button>
+        <button id="btnReset" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[10px] cursor-pointer transition">
+          RESET
+        </button>
+        <button id="btnMenu" class="px-2 py-0.5 rounded bg-[#3d0f5a] hover:bg-[#ff1493] text-[#00f5d4] border border-[#00f5d4]/60 text-[10px] font-bold cursor-pointer transition flex items-center gap-1">
+          <span>⚙️ MENU</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCORE / MULTIPLIER / BALLS HUD (FIXED HEIGHT, NEVER SHIFTS LAYOUT) -->
+    <div class="w-full grid grid-cols-3 gap-1 my-1 text-center shrink-0">
+      <div class="bg-[#140730] border border-[#00f5d4]/50 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border">
+        <div class="text-[9px] text-[#00f5d4]/80 leading-none">SCORE</div>
+        <div id="hudScore" class="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight">0</div>
+        <div id="hudPhaseTarget" class="text-[9px] text-[#e6ff00] truncate leading-none">外装破壊せよ!</div>
+      </div>
+      <div id="hudMultBox" class="bg-[#140730] border border-[#ff1493]/60 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border transition-all">
+        <div class="text-[9px] text-[#ff1493] leading-none">FEVER GAUGE</div>
+        <div class="w-full h-1.5 bg-black/50 rounded overflow-hidden border border-[#ff1493]/50 my-auto">
+          <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
+        </div>
+        <div id="hudBurstTimer" class="text-[9px] text-[#00f5d4] font-bold truncate leading-none">FEVER: 0%</div>
+      </div>
+      <div class="bg-[#140730] border border-[#00f5d4]/50 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border">
+        <div class="text-[9px] text-[#00f5d4]/80 leading-none">BALL / PHASE</div>
+        <div id="hudBalls" class="text-xs sm:text-sm font-bold text-[#00f5d4] leading-tight">●●●</div>
+        <div id="hudPhase" class="text-[9px] text-[#ff1493] font-bold leading-none">PHASE 1</div>
+      </div>
+    </div>
+
+    <!-- CANVAS CONTAINER (AUTO-FIT VERTICAL SPACE, NO SCROLL) -->
+    <div class="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
+      <div class="relative h-full aspect-[420/660] max-w-full rounded-lg overflow-hidden border border-[#ff1493]/70 bg-[#09031c] flex items-center justify-center shadow-inner">
+        <canvas id="pinballCanvas" width="420" height="660" class="w-full h-full block pixel-canvas object-contain"></canvas>
+        <div class="scanlines pointer-events-none absolute inset-0"></div>
+
+        <!-- DIALOGUE / CUT-IN BANNER OVERLAY -->
+        <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center px-2.5 py-1 rounded bg-[#1a0536]/95 border-2 border-[#e6ff00] shadow-lg">
+          <span id="cutinText" class="text-[11px] font-bold text-[#e6ff00] tracking-wide"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCKED BUFF SLOTS & BURST TRIGGER BUTTON -->
+    <div class="w-full mt-1 bg-[#150734] border border-[#ff1493]/60 rounded-lg p-1.5 shrink-0">
+      <div class="flex items-center justify-between mb-0.5">
+        <span class="text-[10px] font-bold text-[#00f5d4]">KEEP BUFFS</span>
+        <span id="hudComboPreview" class="text-[10px] font-bold text-[#e6ff00]">同時発動ボーナス: 待機中</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
+        <button id="btnBurst" class="px-2.5 py-2 rounded-lg font-extrabold text-[11px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border-2 border-[#e6ff00] retro-magenta-glow active:scale-95 transition cursor-pointer shrink-0">
+          BURST解放
+        </button>
+      </div>
+    </div>
+
+    <!-- TOUCH CONTROLS FOR SMARTPHONE (TWO-THUMB DIRECT PLAY) -->
+    <div class="w-full grid grid-cols-4 gap-1 mt-1 shrink-0">
+      <button id="btnLeftFlip" class="py-2.5 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none">
+        ◀ L-FLIP
+      </button>
+      <button id="btnNudge" class="py-2 sm:py-2.5 rounded-lg font-bold text-[11px] bg-[#210b3a] hover:bg-[#34115c] active:bg-[#e6ff00] active:text-black text-[#e6ff00] border border-[#e6ff00]/70 transition cursor-pointer select-none">
+        台揺らし<br>(NUDGE)
+      </button>
+      <button id="btnPlunger" class="py-2 sm:py-2.5 rounded-lg font-bold text-[11px] bg-[#36092f] hover:bg-[#520e47] active:bg-[#ff1493] active:text-white text-[#ff1493] border-2 border-[#ff1493] transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span>引いて発射</span>
+        <span id="plungerBtnHint" class="text-[9px] text-[#e6ff00]">長押し/スワイプ</span>
+      </button>
+      <button id="btnRightFlip" class="py-2.5 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none">
+        R-FLIP ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- POPUP DRAWER MODAL: BUILD STATUS & DEBUG CONTROLS -->
+  <div id="menuDrawer" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-40 hidden flex-col items-center justify-center p-3">
+    <div class="relative bg-[#11052c] retro-border rounded-xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl p-3">
+      <!-- HEADER -->
+      <div class="flex items-center justify-between border-b border-[#00f5d4]/40 pb-2 mb-2">
+        <h2 class="text-sm font-bold text-[#00f5d4] flex items-center gap-1.5">
+          <span>⚙️ システム設定＆ビルド状態</span>
+        </h2>
+        <button id="btnCloseMenu" class="px-2.5 py-1 rounded bg-[#ff1493] text-white font-extrabold text-xs cursor-pointer hover:brightness-110">
+          ✕ 閉じる
+        </button>
+      </div>
+
+      <!-- SCROLLABLE BODY -->
+      <div class="overflow-y-auto space-y-3 pr-1 text-xs">
+        
+        <!-- PERMANENT TABLE UPGRADES -->
+        <div class="bg-[#180838] border border-[#00f5d4]/30 rounded-lg p-2.5">
+          <div class="font-bold text-[#00f5d4] flex justify-between mb-1.5">
+            <span>常設ビルド (即時盤面改造)</span>
+            <span class="text-[10px] text-[#b59ce6]">CYAN CAPSULE</span>
+          </div>
+          <div id="permUpgradesList" class="flex flex-col gap-1"></div>
+        </div>
+
+        <!-- STAGE BOSS GIMMICK MONITOR -->
+        <div class="bg-[#180838] border border-[#ff1493]/40 rounded-lg p-2.5">
+          <div class="font-bold text-[#ff1493] flex justify-between mb-1.5">
+            <span>重装ヒロイン連動ギミック状態</span>
+            <span id="bossFaceStatus" class="text-[10px] px-1.5 py-0.5 rounded bg-[#ff1493]/20 text-[#ff1493]">余裕スマイル</span>
+          </div>
+          <div class="space-y-1.5">
+            <div>
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span>胸部ぷるぷる感度 / EMPカウンター</span>
+                <span id="blushGaugeText" class="font-bold text-[#ff1493]">0%</span>
+              </div>
+              <div class="w-full h-1.5 bg-black/40 rounded overflow-hidden border border-[#ff1493]/40">
+                <div id="blushGaugeBar" class="h-full bg-gradient-to-r from-[#ff66b2] to-[#ff1493] transition-all" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-1 pt-1 text-[11px]">
+              <div class="p-1 rounded bg-black/30 border border-[#00f5d4]/30">
+                <div class="text-[#b59ce6]">外装アーマー (P1)</div>
+                <div id="statusShoulders" class="font-bold text-[#00f5d4]">L:3 / R:3</div>
+              </div>
+              <div class="p-1 rounded bg-black/30 border border-[#00f5d4]/30">
+                <div class="text-[#b59ce6]">胸部装甲 (P2)</div>
+                <div id="statusChestArmor" class="font-bold text-[#ff1493]">HP: 4/4</div>
+              </div>
+              <div class="p-1 rounded bg-black/30 border border-[#00f5d4]/30">
+                <div class="text-[#b59ce6]">ウサミミ軌道ロック</div>
+                <div id="statusEars" class="font-bold text-[#e6ff00]">L:OFF / R:OFF</div>
+              </div>
+              <div class="p-1 rounded bg-black/30 border border-[#00f5d4]/30">
+                <div class="text-[#b59ce6]">胸コア (P3)</div>
+                <div id="statusCore" class="font-bold text-[#ff1493]">SHIELDED</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DEBUG SHORTCUTS -->
+        <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-lg p-2.5">
+          <div class="font-bold text-[#e6ff00] mb-1.5">プロトタイプ検証用ショートカット</div>
+          <div class="grid grid-cols-2 gap-1 text-[11px]">
+            <button id="dbgDropPerm" class="p-1.5 rounded bg-[#00f5d4]/15 hover:bg-[#00f5d4]/30 text-[#00f5d4] border border-[#00f5d4]/50 font-bold cursor-pointer transition">
+              ＋常設カプセル
+            </button>
+            <button id="dbgDropBuff" class="p-1.5 rounded bg-[#ff1493]/15 hover:bg-[#ff1493]/30 text-[#ff1493] border border-[#ff1493]/50 font-bold cursor-pointer transition">
+              ＋バフカプセル
+            </button>
+            <button id="dbgPuruTest" class="p-1.5 rounded bg-[#ff66b2]/15 hover:bg-[#ff66b2]/30 text-[#ff66b2] border border-[#ff66b2]/50 font-bold cursor-pointer transition">
+              ♥ 胸部ぷるぷる
+            </button>
+            <button id="dbgMultiball" class="p-1.5 rounded bg-[#e6ff00]/15 hover:bg-[#e6ff00]/30 text-[#e6ff00] border border-[#e6ff00]/50 font-bold cursor-pointer transition">
+              ★ FEVER突入
+            </button>
+            <button id="dbgFaceAnim" class="col-span-2 p-1.5 rounded bg-[#b84dff]/20 hover:bg-[#b84dff]/35 text-[#e6ff00] border border-[#b84dff]/60 font-bold cursor-pointer transition">
+              👁 表情切替テスト
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE CLEAR / VICTORY REWARD MODAL (大破CG＆鹵獲レリック選択) -->
+  <div id="clearModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
+    <div class="relative bg-[#11052c] retro-border rounded-xl max-w-lg w-full p-4 flex flex-col items-center text-center shadow-2xl">
+      <div class="text-[#ff1493] text-xs font-bold tracking-widest uppercase mb-1">MISSION COMPLETE // KO!</div>
+      <h2 class="text-xl font-extrabold text-[#e6ff00] mb-2 flex items-center gap-2">
+        <span>🎉</span> 桃色重装ぼんぼぼん STAGE 1 CLEAR! <span>🎉</span>
+      </h2>
+
+      <!-- DEFEAT CG CONTAINER -->
+      <div class="relative w-full max-w-[260px] aspect-[9/16] max-h-[380px] rounded-lg overflow-hidden border-2 border-[#ff1493] shadow-lg mb-2.5 bg-[#0a0218]">
+        <img id="defeatCgImg" src="./assets/stage1/defeat_cg.jpg" alt="大破イラスト" class="w-full h-full object-contain pixel-canvas" onerror="this.src='./assets/stage1/centerpiece.jpg'">
+        <div class="scanlines pointer-events-none absolute inset-0"></div>
+        <div class="absolute bottom-1 left-1.5 right-1.5 bg-black/85 px-2 py-1 rounded text-xs text-[#ff66b2] border border-[#ff1493]/50">
+          「くっ……こんな整備不良の機体じゃなければ……！ 覚えてなさいよっ！」
+        </div>
+      </div>
+
+      <!-- CLEAR STATS -->
+      <div class="w-full grid grid-cols-2 gap-2 mb-3 text-xs bg-[#19083d] p-2 rounded border border-[#00f5d4]/40">
+        <div>
+          <span class="text-[#b59ce6]">FINAL SCORE:</span>
+          <div id="clearFinalScore" class="font-extrabold text-[#e6ff00] text-base">0</div>
+        </div>
+        <div>
+          <span class="text-[#b59ce6]">REMAINING BALLS:</span>
+          <div id="clearRemainingBalls" class="font-extrabold text-[#00f5d4] text-base">3</div>
+        </div>
+      </div>
+
+      <!-- RELIC SELECTION (鹵獲パーツ選択) -->
+      <div class="w-full mb-3 text-left">
+        <div class="text-xs font-bold text-[#00f5d4] mb-1.5 flex items-center justify-between">
+          <span>⚙️ 鹵獲パーツを1つ選択 (次ステージ持ち越し):</span>
+          <span class="text-[10px] text-[#e6ff00]">SELECT 1</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5" id="relicOptions">
+          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
+            <div class="font-bold text-xs text-[#e6ff00]">ウサミミ・レーダー</div>
+            <div class="text-[10px] text-[#b59ce6] mt-1">オービット通過スコア2倍＆コア解錠時間短縮</div>
+          </button>
+          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
+            <div class="font-bold text-xs text-[#00f5d4]">電磁スプリング</div>
+            <div class="text-[10px] text-[#b59ce6] mt-1">フリッパー反発力+25%＆弾速UP</div>
+          </button>
+          <button class="relic-btn p-2 rounded bg-[#1e0a4f] hover:bg-[#ff1493]/30 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
+            <div class="font-bold text-xs text-[#ff66b2]">セーフティ・ドローン</div>
+            <div class="text-[10px] text-[#b59ce6] mt-1">各ボール投入時に股下ストッパー1回自動展開</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="flex items-center gap-3 w-full">
+        <button id="btnClearReplay" class="flex-1 py-2.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] text-white border border-[#ff1493]/60 font-bold text-xs cursor-pointer transition">
+          もう一度遊ぶ (REPLAY)
+        </button>
+        <button id="btnClearNext" class="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-[#ff1493] to-[#e6ff00] text-black font-extrabold text-xs cursor-pointer transition shadow-lg hover:brightness-110">
+          次のステージへ進む ▶
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/stage1_assets.js"></script>
+  <script src="./js/audio.js?v=2"></script>
+  <script src="./js/game.js?v=3"></script>
+</body>
+</html>

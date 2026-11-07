@@ -1,0 +1,53 @@
+* {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#cabinetRoot, canvas, button, #btnLeftFlip, #btnRightFlip, #btnPlunger {
+  touch-action: none;
+}
+
+.pinball-stage-container {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.pixel-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.retro-border {
+  border: 2px solid #00f5d4;
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.28), inset 0 0 10px rgba(255, 20, 147, 0.22);
+}
+
+.retro-magenta-glow {
+  box-shadow: 0 0 14px rgba(255, 20, 147, 0.55);
+}
+
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(10, 4, 28, 0.28) 50%,
+    rgba(10, 4, 28, 0.28)
+  );
+  background-size: 100% 4px;
+}

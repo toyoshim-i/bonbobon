@@ -1755,17 +1755,52 @@ function setRightFlip(down) {
   state.rightFlipperDown = down;
 }
 
-function triggerNudge() {
-  sfx.flip();
-  state.nudgeOffset.x = (Math.random() - 0.5) * 10;
-  state.nudgeOffset.y = -5;
-  state.balls.forEach(b => {
-    b.vy -= 2.4;
-    b.vx += (Math.random() - 0.5) * 3.8;
-  });
-  if (state.boss.chestArmorBroken) {
-    impulseBust("L", 2.5, -3.5);
+function triggerDirectionalNudge(dirX = 0, dirY = -1, intensity = 1.0) {
+  // Clamp intensity
+  intensity = Math.min(1.6, Math.max(0.7, intensity));
+  
+  // Normalize direction vector
+  const len = Math.hypot(dirX, dirY);
+  let nx = 0, ny = -1;
+  if (len > 0.001) {
+    nx = dirX / len;
+    ny = dirY / len;
   }
+
+  sfx.flip();
+
+  // Visual screen shake offset
+  state.nudgeOffset.x = nx * 14 * intensity;
+  state.nudgeOffset.y = ny * 14 * intensity;
+
+  // Physical impulse on all active balls
+  state.balls.forEach(b => {
+    b.vx += nx * 4.6 * intensity;
+    b.vy += ny * 4.6 * intensity;
+  });
+
+  // Inertial reaction on Lilith's bust springs
+  if (state.boss.chestArmorBroken) {
+    impulseBust("L", nx * 5.5 * intensity, ny * 5.5 * intensity);
+    impulseBust("R", nx * 5.5 * intensity, ny * 5.5 * intensity);
+  }
+
+  // Direction label for visual feedback popup
+  let dirLabel = "UP";
+  if (Math.abs(nx) > Math.abs(ny) * 1.25) {
+    dirLabel = nx < 0 ? "◀ LEFT" : "▶ RIGHT";
+  } else if (ny > 0.4) {
+    dirLabel = "▼ DOWN";
+  } else {
+    dirLabel = nx < -0.3 ? "◤ UP-LEFT" : (nx > 0.3 ? "◥ UP-RIGHT" : "▲ UP");
+  }
+
+  addPopup(W / 2, 530, `${dirLabel} NUDGE!`, "#e6ff00", 1.15);
+  addParticles(W / 2, 530, "#e6ff00", 14, 4.2);
+}
+
+function triggerNudge() {
+  triggerDirectionalNudge(0, -1, 1.0);
 }
 
 // ----------------------------------------------------
@@ -1808,7 +1843,13 @@ window.addEventListener("keydown", e => {
     triggerBurstBuffs();
   } else if (["ArrowUp", "KeyW"].includes(e.code)) {
     e.preventDefault();
-    triggerNudge();
+    triggerDirectionalNudge(0, -1, 1.0);
+  } else if (e.code === "KeyQ") {
+    e.preventDefault();
+    triggerDirectionalNudge(-1, -0.5, 1.1);
+  } else if (e.code === "KeyE") {
+    e.preventDefault();
+    triggerDirectionalNudge(1, -0.5, 1.1);
   }
 });
 
@@ -1882,21 +1923,38 @@ canvas.addEventListener("pointerdown", e => {
     }
   }
 
-  // Normal Gameplay Multi-Touch
+  // Normal Gameplay Multi-Touch with Swipe-to-Nudge Support
   const side = x < W / 2 ? "L" : "R";
-  activeTouches.set(e.pointerId, { type: side });
+  activeTouches.set(e.pointerId, {
+    type: side,
+    startX: x,
+    startY: y,
+    clientStartX: e.clientX,
+    clientStartY: e.clientY,
+    hasNudged: false
+  });
   if (side === "L") setLeftFlip(true);
   else setRightFlip(true);
 });
 
 canvas.addEventListener("pointermove", e => {
   const t = activeTouches.get(e.pointerId);
-  if (t && t.type === "plunger") {
+  if (!t) return;
+  if (t.type === "plunger") {
     const rect = canvas.getBoundingClientRect();
     const y = (e.clientY - rect.top) * (H / rect.height);
     const dragDist = Math.max(0, y - t.startY);
     state.plunger.power = Math.min(100, (dragDist / 60) * 100);
     t.lastY = y;
+  } else if (!t.hasNudged) {
+    // Quick flick/swipe on canvas triggers directional nudge
+    const dx = e.clientX - t.clientStartX;
+    const dy = e.clientY - t.clientStartY;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 35) {
+      t.hasNudged = true;
+      triggerDirectionalNudge(dx, dy, Math.min(1.5, dist / 45));
+    }
   }
 });
 
@@ -1920,7 +1978,42 @@ const handlePointerEnd = e => {
 canvas.addEventListener("pointerup", handlePointerEnd);
 canvas.addEventListener("pointercancel", handlePointerEnd);
 
-document.getElementById("btnNudge").addEventListener("click", triggerNudge);
+// Direct Swipe-to-Nudge Button Handler
+const nudgeBtn = document.getElementById("btnNudge");
+if (nudgeBtn) {
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isTouchingNudge = false;
+
+  nudgeBtn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { nudgeBtn.setPointerCapture(e.pointerId); } catch (_) {}
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
+    isTouchingNudge = true;
+  });
+
+  const finishNudgeTouch = e => {
+    if (!isTouchingNudge) return;
+    isTouchingNudge = false;
+    const dx = e.clientX - touchStartX;
+    const dy = e.clientY - touchStartY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 14) {
+      // Swiped in a distinct direction!
+      const intensity = Math.min(1.5, Math.max(0.8, dist / 35));
+      triggerDirectionalNudge(dx, dy, intensity);
+    } else {
+      // Simple tap -> upward nudge
+      triggerDirectionalNudge(0, -1, 1.0);
+    }
+  };
+
+  nudgeBtn.addEventListener("pointerup", finishNudgeTouch);
+  nudgeBtn.addEventListener("pointercancel", () => { isTouchingNudge = false; });
+}
+
 document.getElementById("btnBurst").addEventListener("click", triggerBurstBuffs);
 document.getElementById("btnAudio").addEventListener("click", e => {
   sfx.enabled = !sfx.enabled;

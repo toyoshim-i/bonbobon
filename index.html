@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>桃色重装ぼんぼぼん // MOMOIRO JUUSOU BON-BO-BON</title>
+  <title>桃色重装ぼんぼぼん - MOMOIRO JUUSOU BON-BO-BON</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <link rel="stylesheet" href="./css/style.css?v=3" />
 </head>
@@ -13,43 +13,58 @@
   <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] retro-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
     
     <!-- TOP TITLE & STATUS BAR -->
-    <div class="w-full flex items-center justify-between px-2 py-1 bg-[#160836] border border-[#ff1493]/60 rounded text-[11px] shrink-0">
-      <div class="flex items-center gap-1.5">
+    <div class="w-full flex items-center justify-between px-2.5 py-1 bg-[#160836] border border-[#ff1493]/60 rounded text-[11px] shrink-0">
+      <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>
         <span class="font-extrabold tracking-wider text-[#ff66b2]">桃色重装ぼんぼぼん</span>
-        <span class="text-[#00f5d4]">// ST-01</span>
+        <span class="text-[#00f5d4] px-1.5 py-0.5 rounded bg-[#00f5d4]/10 border border-[#00f5d4]/40 font-mono text-[9px] font-bold">STAGE 1</span>
       </div>
       <div class="flex items-center gap-1.5">
-        <button id="btnAudio" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[10px] cursor-pointer transition">
+        <button id="btnAudio" class="px-2 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[10px] cursor-pointer transition">
           FM:ON
         </button>
-        <button id="btnReset" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[10px] cursor-pointer transition">
+        <button id="btnReset" class="px-2 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[10px] cursor-pointer transition">
           RESET
         </button>
-        <button id="btnMenu" class="px-2 py-0.5 rounded bg-[#3d0f5a] hover:bg-[#ff1493] text-[#00f5d4] border border-[#00f5d4]/60 text-[10px] font-bold cursor-pointer transition flex items-center gap-1">
+        <button id="btnMenu" class="px-2.5 py-0.5 rounded bg-[#3d0f5a] hover:bg-[#ff1493] text-[#00f5d4] border border-[#00f5d4]/60 text-[10px] font-bold cursor-pointer transition flex items-center gap-1">
           <span>⚙️ MENU</span>
         </button>
       </div>
     </div>
 
-    <!-- SCORE / MULTIPLIER / BALLS HUD (FIXED HEIGHT, NEVER SHIFTS LAYOUT) -->
-    <div class="w-full grid grid-cols-3 gap-1 my-1 text-center shrink-0">
-      <div class="bg-[#140730] border border-[#00f5d4]/50 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border">
-        <div class="text-[9px] text-[#00f5d4]/80 leading-none">SCORE</div>
-        <div id="hudScore" class="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight">0</div>
-        <div id="hudPhaseTarget" class="text-[9px] text-[#e6ff00] truncate leading-none">外装破壊せよ!</div>
-      </div>
-      <div id="hudMultBox" class="bg-[#140730] border border-[#ff1493]/60 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border transition-all">
-        <div class="text-[9px] text-[#ff1493] leading-none">FEVER GAUGE</div>
-        <div class="w-full h-1.5 bg-black/50 rounded overflow-hidden border border-[#ff1493]/50 my-auto">
-          <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
+    <!-- HUD: 2-ROW BALANCED STATUS & OBJECTIVE BAR (NO TRUNCATION, NO SHIFT) -->
+    <div class="w-full bg-[#140730] border border-[#00f5d4]/50 rounded-lg px-2.5 py-1.5 flex flex-col gap-1 my-1 shrink-0 shadow-md">
+      <!-- ROW 1: SCORE & BALLS / PHASE -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-baseline gap-2">
+          <span class="text-[9px] font-bold text-[#00f5d4]/80 tracking-wider">SCORE</span>
+          <span id="hudScore" class="text-sm sm:text-base font-black text-white tracking-wide">0</span>
         </div>
-        <div id="hudBurstTimer" class="text-[9px] text-[#00f5d4] font-bold truncate leading-none">FEVER: 0%</div>
+        <div class="flex items-center gap-2.5">
+          <div class="flex items-center gap-1">
+            <span class="text-[9px] text-[#00f5d4]/80 font-bold">BALL</span>
+            <span id="hudBalls" class="text-xs sm:text-sm font-black text-[#00f5d4] tracking-wider">●●●</span>
+          </div>
+          <span id="hudPhase" class="px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]">PHASE 1</span>
+        </div>
       </div>
-      <div class="bg-[#140730] border border-[#00f5d4]/50 rounded px-1.5 py-1 h-[48px] flex flex-col justify-between overflow-hidden box-border">
-        <div class="text-[9px] text-[#00f5d4]/80 leading-none">BALL / PHASE</div>
-        <div id="hudBalls" class="text-xs sm:text-sm font-bold text-[#00f5d4] leading-tight">●●●</div>
-        <div id="hudPhase" class="text-[9px] text-[#ff1493] font-bold leading-none">PHASE 1</div>
+
+      <!-- ROW 2: FEVER GAUGE & TARGET OBJECTIVE -->
+      <div class="flex items-center gap-2 pt-1 border-t border-[#00f5d4]/20">
+        <!-- FEVER -->
+        <div class="flex items-center gap-1.5 shrink-0 w-[120px]">
+          <span class="text-[9px] font-bold text-[#ff1493]">FEVER</span>
+          <div class="flex-1 h-2 bg-black/60 rounded overflow-hidden border border-[#ff1493]/50">
+            <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
+          </div>
+          <span id="hudBurstTimer" class="text-[9px] font-bold text-[#00f5d4] w-7 text-right shrink-0">0%</span>
+        </div>
+
+        <!-- TARGET OBJECTIVE -->
+        <div class="flex-1 min-w-0 flex items-center justify-end gap-1 text-right">
+          <span class="text-[9px] font-bold text-[#e6ff00]/70 shrink-0">目標:</span>
+          <span id="hudPhaseTarget" class="text-[10px] font-bold text-[#e6ff00] truncate">ドローン＆両肩アーマー破壊</span>
+        </div>
       </div>
     </div>
 
@@ -60,15 +75,15 @@
         <div class="scanlines pointer-events-none absolute inset-0"></div>
 
         <!-- DIALOGUE / CUT-IN BANNER OVERLAY -->
-        <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center px-2.5 py-1 rounded bg-[#1a0536]/95 border-2 border-[#e6ff00] shadow-lg">
-          <span id="cutinText" class="text-[11px] font-bold text-[#e6ff00] tracking-wide"></span>
+        <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center justify-center px-3 py-1.5 rounded-lg bg-[#1a0536]/95 border-2 border-[#e6ff00] shadow-xl text-center">
+          <span id="cutinText" class="text-[11px] sm:text-xs font-bold text-[#e6ff00] tracking-wide leading-tight"></span>
         </div>
       </div>
     </div>
 
     <!-- STOCKED BUFF SLOTS & BURST TRIGGER BUTTON -->
     <div class="w-full mt-1 bg-[#150734] border border-[#ff1493]/60 rounded-lg p-1.5 shrink-0">
-      <div class="flex items-center justify-between mb-0.5">
+      <div class="flex items-center justify-between mb-1 px-0.5">
         <span class="text-[10px] font-bold text-[#00f5d4]">KEEP BUFFS</span>
         <span id="hudComboPreview" class="text-[10px] font-bold text-[#e6ff00]">同時発動ボーナス: 待機中</span>
       </div>
@@ -80,20 +95,23 @@
       </div>
     </div>
 
-    <!-- TOUCH CONTROLS FOR SMARTPHONE (TWO-THUMB DIRECT PLAY) -->
+    <!-- TOUCH CONTROLS FOR SMARTPHONE (BALANCED 2-ROW BUTTONS, NO WEIRD WRAPPING) -->
     <div class="w-full grid grid-cols-4 gap-1 mt-1 shrink-0">
-      <button id="btnLeftFlip" class="py-2.5 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none">
-        ◀ L-FLIP
+      <button id="btnLeftFlip" class="h-12 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span class="text-xs font-bold leading-tight">◀ 左パドル</span>
+        <span class="text-[9px] text-[#00f5d4]/70 leading-none mt-0.5">L-FLIP</span>
       </button>
-      <button id="btnNudge" class="py-2 sm:py-2.5 rounded-lg font-bold text-[11px] bg-[#210b3a] hover:bg-[#34115c] active:bg-[#e6ff00] active:text-black text-[#e6ff00] border border-[#e6ff00]/70 transition cursor-pointer select-none">
-        台揺らし<br>(NUDGE)
+      <button id="btnNudge" class="h-12 rounded-lg bg-[#210b3a] hover:bg-[#34115c] active:bg-[#e6ff00] active:text-black text-[#e6ff00] border border-[#e6ff00]/70 transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span class="text-xs font-bold leading-tight">台揺らし</span>
+        <span class="text-[9px] text-[#e6ff00]/70 leading-none mt-0.5">NUDGE</span>
       </button>
-      <button id="btnPlunger" class="py-2 sm:py-2.5 rounded-lg font-bold text-[11px] bg-[#36092f] hover:bg-[#520e47] active:bg-[#ff1493] active:text-white text-[#ff1493] border-2 border-[#ff1493] transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span>引いて発射</span>
-        <span id="plungerBtnHint" class="text-[9px] text-[#e6ff00]">長押し/スワイプ</span>
+      <button id="btnPlunger" class="h-12 rounded-lg bg-[#36092f] hover:bg-[#520e47] active:bg-[#ff1493] active:text-white text-[#ff1493] border-2 border-[#ff1493] transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span class="text-xs font-bold leading-tight">発射</span>
+        <span id="plungerBtnHint" class="text-[9px] text-[#e6ff00] leading-none mt-0.5">引いて離す</span>
       </button>
-      <button id="btnRightFlip" class="py-2.5 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none">
-        R-FLIP ▶
+      <button id="btnRightFlip" class="h-12 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span class="text-xs font-bold leading-tight">右パドル ▶</span>
+        <span class="text-[9px] text-[#00f5d4]/70 leading-none mt-0.5">R-FLIP</span>
       </button>
     </div>
   </div>
@@ -189,7 +207,7 @@
   <!-- STAGE CLEAR / VICTORY REWARD MODAL (大破CG＆鹵獲レリック選択) -->
   <div id="clearModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
     <div class="relative bg-[#11052c] retro-border rounded-xl max-w-lg w-full p-4 flex flex-col items-center text-center shadow-2xl">
-      <div class="text-[#ff1493] text-xs font-bold tracking-widest uppercase mb-1">MISSION COMPLETE // KO!</div>
+      <div class="text-[#ff1493] text-xs font-bold tracking-widest uppercase mb-1">STAGE CLEAR - TARGET ELIMINATED</div>
       <h2 class="text-xl font-extrabold text-[#e6ff00] mb-2 flex items-center gap-2">
         <span>🎉</span> 桃色重装ぼんぼぼん STAGE 1 CLEAR! <span>🎉</span>
       </h2>

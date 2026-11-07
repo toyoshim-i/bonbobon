@@ -39,19 +39,19 @@ const IMG_BOX = { x: 16, y: 16, w: 364, h: 644 };
 const PERM_DEFS = {
   centerPost: {
     id: "centerPost",
-    name: "股下ストッパー (CENTER POST)",
+    name: "股下ストッパー",
     desc: "フリッパー間の死に穴に電磁ピン(耐久3回)を展開",
     maxLv: 3
   },
   kickbackL: {
     id: "kickbackL",
-    name: "左アウトレーン防衛 (L-KICKBACK)",
+    name: "左レーザーガード",
     desc: "左端落下時にレーザーで自動撃ち返し(1回)",
     maxLv: 2
   },
   kickbackR: {
     id: "kickbackR",
-    name: "右アウトレーン防衛 (R-KICKBACK)",
+    name: "右レーザーガード",
     desc: "右端落下時にレーザーで自動撃ち返し(1回)",
     maxLv: 2
   },
@@ -71,9 +71,9 @@ const PERM_DEFS = {
 
 // Stockable Buff Definitions (Keep & Trigger for Multiplier)
 const BUFF_DEFS = {
-  mult2x:   { id: "mult2x",   label: "SCORE ×2", color: "#ff1493", mult: 2.0, desc: "スコア倍率×2.0" },
-  overdrive:{ id: "overdrive",label: "PIERCE弾", color: "#e6ff00", mult: 1.8, desc: "貫通電撃ボール＆倍率×1.8" },
-  magnet:   { id: "magnet",   label: "MAGNET",   color: "#00f5d4", mult: 1.5, desc: "フリッパー磁力吸着＆×1.5" },
+  mult2x:   { id: "mult2x",   label: "スコア×2", color: "#ff1493", mult: 2.0, desc: "スコア倍率×2.0" },
+  overdrive:{ id: "overdrive",label: "電撃貫通", color: "#e6ff00", mult: 1.8, desc: "貫通電撃ボール＆倍率×1.8" },
+  magnet:   { id: "magnet",   label: "磁力吸着", color: "#00f5d4", mult: 1.5, desc: "フリッパー磁力吸着＆×1.5" },
   fever:    { id: "fever",    label: "FEVER+玉", color: "#b84dff", mult: 2.2, desc: "即時フィーバーゲージ+50%" }
 };
 
@@ -202,7 +202,7 @@ function prepareBallForLaunch() {
   state.plunger.power = 0;
   state.plunger.pulling = false;
   state.skillShotEligible = true;
-  showCutin("READY... 画面右下を下に引いて離すか、発射ボタンを押してスタート！", 120);
+  showCutin("【ゲーム開始】<br>発射ボタン長押し または 右下スワイプで発射！", 140);
 }
 
 function spawnBall(x = 198, y = 260, vx = 0, vy = -7.5) {
@@ -225,7 +225,7 @@ function showCutin(text, durationFrames = 130) {
   const banner = document.getElementById("cutinBanner");
   const label = document.getElementById("cutinText");
   if (!banner || !label) return;
-  label.textContent = text;
+  label.innerHTML = text;
   banner.classList.remove("hidden");
   banner.classList.add("flex");
   clearTimeout(showCutin._timer);
@@ -285,7 +285,7 @@ function startFeverMode() {
   spawnFloatingCapsule(null, "buff");
   spawnFloatingCapsule(null, "perm");
 
-  showCutin("🔥 BOMB-O-FEVER突入!! MULTIBALL ＆ メガぷるぷる開放!! スコア×5.0!!", 200);
+  showCutin("🔥【BOMB-O-FEVER 突入】🔥<br>マルチボール発動＆スコア倍率×5.0！", 200);
   addParticles(198, 350, "#e6ff00", 35, 6.0);
   updateHUD();
 }
@@ -296,7 +296,7 @@ function endFeverMode() {
   state.fever.mult = 1.0;
   state.boss.bustL.r = 24;
   state.boss.bustR.r = 24;
-  showCutin("フィーバー終了！ 通常モードへ戻ります", 90);
+  showCutin("【FEVER 終了】<br>通常モードへ復帰します", 100);
   updateHUD();
 }
 
@@ -380,27 +380,27 @@ function collectCapsule(cap) {
       if (key === "centerPost") state.perm.centerPostHP = 3;
       if (key === "kickbackL") state.perm.kickbackL_charges = 1;
       if (key === "kickbackR") state.perm.kickbackR_charges = 1;
-      addPopup(cap.x, cap.y - 12, `常設設置! ${def.name} Lv.${state.perm[key]}`, "#00f5d4", 1.15);
-      showCutin(`🛠 パーツ強奪＆即時設置: ${def.name} Lv.${state.perm[key]}!`);
+      addPopup(cap.x, cap.y - 12, `🛠 ${def.name} Lv.${state.perm[key]}`, "#00f5d4", 1.15);
+      showCutin(`🛠【パーツ鹵獲設置】<br>${def.name} Lv.${state.perm[key]} を展開！`, 160);
     } else {
       if (key === "centerPost") state.perm.centerPostHP = 3;
       if (key === "kickbackL") state.perm.kickbackL_charges = 1;
       if (key === "kickbackR") state.perm.kickbackR_charges = 1;
-      addScore(3500, cap.x, cap.y, "MAX REPAIR BONUS");
+      addScore(3500, cap.x, cap.y, "MAX REPAIR");
     }
   } else {
     const key = cap.subId;
     const def = BUFF_DEFS[key];
     if (key === "fever") {
       addFever(50);
-      addPopup(cap.x, cap.y - 12, "FEVER GAUGE +50%!", "#b84dff", 1.2);
+      addPopup(cap.x, cap.y - 12, "FEVER +50%!", "#b84dff", 1.2);
     } else {
       const existingIdx = state.keptBuffs.findIndex(b => b && b.id === key && b.tier < 3);
       if (existingIdx !== -1) {
         state.keptBuffs[existingIdx].tier++;
         const newTier = state.keptBuffs[existingIdx].tier;
-        addPopup(cap.x, cap.y - 12, `バフ合成! ${def.label} ★Lv.${newTier}`, "#e6ff00", 1.2);
-        showCutin(`⚡ バフ合成ランクアップ: ${def.label} が Lv.${newTier} に強化！`);
+        addPopup(cap.x, cap.y - 12, `合成 ★Lv.${newTier}`, "#e6ff00", 1.2);
+        showCutin(`⚡【バフ合成強化】<br>${def.label} が ★Lv.${newTier} にランクアップ！`, 160);
       } else {
         const emptyIdx = state.keptBuffs.findIndex(b => b === null);
         if (emptyIdx !== -1) {
@@ -408,7 +408,7 @@ function collectCapsule(cap) {
           addPopup(cap.x, cap.y - 12, `KEEP! ${def.label}`, def.color, 1.1);
         } else {
           state.keptBuffs[0].tier = Math.min(3, state.keptBuffs[0].tier + 1);
-          addPopup(cap.x, cap.y - 12, `FULL合成! SLOT1 ★Lv.${state.keptBuffs[0].tier}`, "#e6ff00", 1.1);
+          addPopup(cap.x, cap.y - 12, `FULL合成 ★Lv.${state.keptBuffs[0].tier}`, "#e6ff00", 1.1);
         }
       }
     }
@@ -419,7 +419,7 @@ function collectCapsule(cap) {
 function triggerBurstBuffs() {
   const activeList = state.keptBuffs.filter(Boolean);
   if (activeList.length === 0) {
-    addPopup(W / 2, 520, "NO KEPT BUFFS!", "#ff1493", 1.0);
+    addPopup(W / 2, 520, "NO BUFFS!", "#ff1493", 1.0);
     return;
   }
   sfx.burstTrigger();
@@ -450,7 +450,7 @@ function triggerBurstBuffs() {
   state.boss.expression = "shock";
   state.boss.expressionTimer = 55;
   addParticles(210, 340, "#e6ff00", 28, 5.5);
-  showCutin(`🔥 BURST解放!! スコア倍率 ×${state.burstMultiplier.toFixed(1)} (10秒間)!!`, 180);
+  showCutin(`🔥【BURST解放】🔥<br>スコア倍率 ×${state.burstMultiplier.toFixed(1)} (10秒間発動)！`, 180);
   updateHUD();
 }
 
@@ -474,7 +474,7 @@ function addScore(basePts, x, y, label = "") {
       state.ballsRemaining = Math.min(5, state.ballsRemaining + 1);
       sfx.burstTrigger();
       addParticles(198, 550, "#e6ff00", 30, 6.0);
-      showCutin(`⭐ スコア達成ボーナス!! ★EXTRA BALL (+1球獲得)!! 残り${state.ballsRemaining}球！`, 210);
+      showCutin(`⭐【EXTRA BALL 獲得】⭐<br>スコアボーナス！ ボール＋1球 (残り${state.ballsRemaining}球)`, 210);
     }
   }
 
@@ -486,7 +486,7 @@ function triggerStageClear() {
   if (state.stageCleared) return;
   state.stageCleared = true;
   sfx.burstTrigger();
-  showCutin("🏆 STAGE 1 CLEAR!! 桃色重装ラビ・メック完全沈黙!!", 240);
+  showCutin("🏆【STAGE 1 CLEAR】🏆<br>桃色重装ラビ・メック 完全撃破！", 240);
   addParticles(198, 300, "#e6ff00", 60, 8.0);
   addParticles(198, 300, "#ff1493", 60, 8.0);
 
@@ -532,7 +532,7 @@ function impulseBust(which, vxImpact, vyImpact) {
     state.boss.expression = "angry_emp";
     state.boss.expressionTimer = 60;
     sfx.armorBreak();
-    showCutin("⚡ 「ちょ、どこ触ってんのよ！！///」 カウンターEMP発動＆浮遊カプセル放出！", 180);
+    showCutin("⚡「ちょ、どこ触ってんのよっ！！」<br>カウンターEMP発動＆カプセル放出！", 180);
     addParticles(210, 390, "#ff1493", 32, 6.5);
     spawnFloatingCapsule(5, "buff");
     state.balls.forEach(ball => {
@@ -853,14 +853,14 @@ function stepPhysics() {
               if (state.boss.chestArmorHP === 5) {
                 sfx.armorBreak();
                 addScore(4000, armorX, armorY, "💥ARMOR CRACK!!");
-                showCutin("⚠️ 胸部第1装甲が破壊され亀裂発生！ あと5回で完全装甲パージ！", 180);
+                showCutin("⚠️【胸部装甲に亀裂発生】<br>第1装甲破壊！ あと5回直撃で完全パージ！", 180);
               } else if (state.boss.chestArmorHP === 0) {
                 state.boss.chestArmorBroken = true;
                 state.phase = 3;
                 sfx.armorBreak();
                 state.boss.expression = "blush";
                 state.boss.expressionTimer = 85;
-                showCutin("💥 CHEST ARMOR FULL PURGE!! バスト露出＆クライマックスPHASE 3突入！", 240);
+                showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 最終PHASE 3突入！", 240);
                 addScore(12000, armorX, armorY, "FULL PURGE!!");
                 spawnFloatingCapsule(2, "buff");
                 spawnFloatingCapsule(5, "buff");
@@ -952,7 +952,7 @@ function stepPhysics() {
               if (state.boss[hpKey] === 0) {
                 sfx.armorBreak();
                 addScore(3000, d.x, d.y - 15, `💥${tag} DOWN!!`);
-                showCutin(`💥 ${tag} 撃破！ 肩アーマーの電磁シールド解除！`);
+                showCutin(`💥【${tag} 撃破】<br>肩アーマーの電磁シールドが解除！`, 160);
                 spawnFloatingCapsule(slot, "buff");
               } else {
                 addScore(1000, d.x, d.y - 15, `${tag} HP:${state.boss[hpKey]}`);
@@ -974,14 +974,14 @@ function stepPhysics() {
           if (state.skillShotEligible) {
             state.skillShotEligible = false;
             addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
-            showCutin("🎯 ★SKILL SHOT 炸裂!! +25,000pts ＆ レアカプセル出現！", 180);
+            showCutin("🎯【SKILL SHOT 炸裂】<br>+25,000pts ＆ レアカプセル出現！", 180);
             spawnFloatingCapsule(2, "buff");
           } else {
             addScore(1200, ear.x, ear.y, "L-EAR SENSOR!");
           }
           if (state.boss.leftEarLit && state.boss.rightEarLit && !state.boss.coreUnlocked) {
             state.boss.coreUnlocked = true;
-            showCutin("🔓 両耳センサー達成！ 胸元の黄色いコアのロック解除！");
+            showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
             spawnFloatingCapsule(5, "buff");
           }
           updateHUD();
@@ -994,14 +994,14 @@ function stepPhysics() {
           if (state.skillShotEligible) {
             state.skillShotEligible = false;
             addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
-            showCutin("🎯 ★SKILL SHOT 炸裂!! +25,000pts ＆ レアカプセル出現！", 180);
+            showCutin("🎯【SKILL SHOT 炸裂】<br>+25,000pts ＆ レアカプセル出現！", 180);
             spawnFloatingCapsule(2, "buff");
           } else {
             addScore(1200, ear.x, ear.y, "R-EAR SENSOR!");
           }
           if (state.boss.leftEarLit && state.boss.rightEarLit && !state.boss.coreUnlocked) {
             state.boss.coreUnlocked = true;
-            showCutin("🔓 両耳センサー達成！ 胸元の黄色いコアのロック解除！");
+            showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
             spawnFloatingCapsule(5, "buff");
           }
           updateHUD();
@@ -1024,7 +1024,7 @@ function stepPhysics() {
                 state.boss.expression = "shock";
                 state.boss.expressionTimer = 65;
                 addScore(5000, pod.x, pod.y, "💥L-ARMOR BREAK!!");
-                showCutin("💥 左肩アーマー破壊！ 常設強化カプセル放出！");
+                showCutin("💥【左肩アーマー破壊】<br>防衛ユニット大破！ 強化カプセル放出！", 180);
                 spawnFloatingCapsule(3, "perm");
                 checkPhase1Clear();
               } else {
@@ -1054,7 +1054,7 @@ function stepPhysics() {
                 state.boss.expression = "shock";
                 state.boss.expressionTimer = 65;
                 addScore(5000, pod.x, pod.y, "💥R-ARMOR BREAK!!");
-                showCutin("💥 右肩アーマー破壊！ 常設強化カプセル放出！");
+                showCutin("💥【右肩アーマー破壊】<br>防衛ユニット大破！ 強化カプセル放出！", 180);
                 spawnFloatingCapsule(4, "perm");
                 checkPhase1Clear();
               } else {
@@ -1073,7 +1073,7 @@ function stepPhysics() {
             sfx.burstTrigger();
             state.boss.expression = "shock";
             state.boss.expressionTimer = 90;
-            showCutin("🎉 PHASE 1 突破!! 外装防衛網壊滅！ PHASE 2: 胸部複合装甲(HP 10)を撃ち抜け！", 240);
+            showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>PHASE 2: 胸部複合装甲 (HP 10) を破壊せよ！", 240);
             spawnFloatingCapsule(2, "buff");
           }
         }
@@ -1194,7 +1194,7 @@ function stepPhysics() {
         } else {
           // Reset balls for seamless play
           state.ballsRemaining = 3;
-          showCutin("🔄 3球終了！ コンティニュー補充しました");
+          showCutin("🔄【コンティニュー】<br>ボールを3球補充しました！", 150);
           prepareBallForLaunch();
         }
         updateHUD();
@@ -1650,12 +1650,19 @@ function renderTable() {
 function updateHUD() {
   document.getElementById("hudScore").textContent = state.score.toLocaleString();
 
-  const phaseTargets = {
-    1: "P1: 両肩アーマーを撃破せよ!",
-    2: "P2: 胸部装甲パージを狙え!",
-    3: "P3: 露出コアを叩き込め!!"
-  };
-  document.getElementById("hudPhaseTarget").textContent = phaseTargets[state.phase] || "外装破壊せよ!";
+  let targetDesc = "ドローン＆両肩アーマー破壊";
+  if (state.phase === 1) {
+    if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) {
+      targetDesc = `ドローン撃破 (残 L:${state.boss.droneL_HP} R:${state.boss.droneR_HP})`;
+    } else {
+      targetDesc = `両肩アーマー破壊 (残 L:${state.boss.leftShoulderHP} R:${state.boss.rightShoulderHP})`;
+    }
+  } else if (state.phase === 2) {
+    targetDesc = `胸部装甲パージ (残HP: ${state.boss.chestArmorHP})`;
+  } else if (state.phase === 3) {
+    targetDesc = `露出コア直撃KO (残HP: ${state.boss.coreHP})`;
+  }
+  document.getElementById("hudPhaseTarget").textContent = targetDesc;
   document.getElementById("hudPhase").textContent = `PHASE ${state.phase}`;
 
   // Fever Gauge HUD (Strict single-line text, never expands or breaks layout)
@@ -1665,36 +1672,36 @@ function updateHUD() {
   if (fText) {
     if (state.fever.active) {
       const sec = Math.ceil(state.fever.timer / 60);
-      fText.textContent = `🔥FEVER ×5 (${sec}s)`;
-      fText.className = "text-[9px] text-[#e6ff00] font-extrabold truncate whitespace-nowrap leading-none animate-pulse";
+      fText.textContent = `×5 (${sec}s)`;
+      fText.className = "text-[9px] text-[#e6ff00] font-extrabold w-7 text-right shrink-0 leading-none animate-pulse";
     } else if (state.burstTimer > 0) {
       const sec = Math.ceil(state.burstTimer / 60);
-      fText.textContent = `BURST ×${state.burstMultiplier.toFixed(1)} (${sec}s)`;
-      fText.className = "text-[9px] text-[#ff1493] font-bold truncate whitespace-nowrap leading-none";
+      fText.textContent = `B×${state.burstMultiplier.toFixed(1)}`;
+      fText.className = "text-[9px] text-[#ff1493] font-bold w-7 text-right shrink-0 leading-none";
     } else {
-      fText.textContent = `FEVER: ${Math.floor(state.fever.gauge)}%`;
-      fText.className = "text-[9px] text-[#00f5d4] font-bold truncate whitespace-nowrap leading-none";
+      fText.textContent = `${Math.floor(state.fever.gauge)}%`;
+      fText.className = "text-[9px] text-[#00f5d4] font-bold w-7 text-right shrink-0 leading-none";
     }
   }
 
   document.getElementById("hudBalls").textContent = "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining));
 
-  // Buff Slots
+  // Buff Slots (Balanced spacing, zero truncation)
   const slotsContainer = document.getElementById("buffSlots");
   slotsContainer.innerHTML = "";
   state.keptBuffs.forEach((slot, idx) => {
     const div = document.createElement("div");
     if (slot) {
       const def = BUFF_DEFS[slot.id];
-      div.className = "rounded px-1.5 py-1 border text-center bg-[#230b4f]";
+      div.className = "rounded px-1 py-1 border text-center bg-[#230b4f] flex flex-col justify-center items-center h-10";
       div.style.borderColor = def.color;
       div.innerHTML = `
-        <div class="text-xs font-bold truncate" style="color:${def.color}">${def.label}</div>
-        <div class="text-xs text-[#e6ff00] font-bold">★Lv.${slot.tier}</div>
+        <div class="text-[10px] font-bold leading-tight truncate w-full" style="color:${def.color}">${def.label}</div>
+        <div class="text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5">★Lv.${slot.tier}</div>
       `;
     } else {
-      div.className = "rounded px-1.5 py-1 border border-dashed border-[#00f5d4]/30 text-center bg-black/30 flex flex-col justify-center";
-      div.innerHTML = `<div class="text-xs text-[#00f5d4]/40">SLOT ${idx + 1}</div><div class="text-xs text-[#00f5d4]/30">EMPTY</div>`;
+      div.className = "rounded px-1 py-1 border border-dashed border-[#00f5d4]/30 text-center bg-black/30 flex flex-col justify-center items-center h-10";
+      div.innerHTML = `<div class="text-[9px] text-[#00f5d4]/40 font-mono leading-none">SLOT ${idx + 1}</div><div class="text-[9px] text-[#00f5d4]/30 leading-none mt-0.5">EMPTY</div>`;
     }
     slotsContainer.appendChild(div);
   });
@@ -1724,14 +1731,14 @@ function updateHUD() {
   // Boss Status Monitor
   document.getElementById("blushGaugeText").textContent = `${state.boss.blushGauge}%`;
   document.getElementById("blushGaugeBar").style.width = `${state.boss.blushGauge}%`;
-  document.getElementById("statusShoulders").textContent = `L:${state.boss.leftShoulderHP}/3 R:${state.boss.rightShoulderHP}/3`;
-  document.getElementById("statusChestArmor").textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/4`;
+  document.getElementById("statusShoulders").textContent = `L:${state.boss.leftShoulderHP}/5 R:${state.boss.rightShoulderHP}/5`;
+  document.getElementById("statusChestArmor").textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/10`;
   document.getElementById("statusEars").textContent = `L:${state.boss.leftEarLit ? "ON" : "OFF"} / R:${state.boss.rightEarLit ? "ON" : "OFF"}`;
-  document.getElementById("statusCore").textContent = state.phase === 3 ? `HP: ${state.boss.coreHP}/6 [KO可]` : (state.boss.coreUnlocked ? "★UNLOCKED★" : "SHIELDED");
+  document.getElementById("statusCore").textContent = state.phase === 3 ? `HP: ${state.boss.coreHP}/16 [KO可]` : (state.boss.coreUnlocked ? "★UNLOCKED★" : "SHIELDED");
 
   const faceMap = {
     smile: "余裕スマイル",
-    blush: "赤面ぷるぷる///",
+    blush: "赤面ぷるぷる",
     shock: "ダメージ焦り顔!?",
     angry_emp: "EMP逆上カウンター⚡"
   };
@@ -1947,7 +1954,7 @@ document.getElementById("btnReset").addEventListener("click", () => {
   state = createInitialState();
   prepareBallForLaunch();
   updateHUD();
-  showCutin("🔄 テーブル＆ビルドを初期化しました");
+  showCutin("🔄 テーブルとビルドを初期化しました", 100);
 });
 
 // Modal Actions
@@ -1966,14 +1973,14 @@ if (modal) {
     state = createInitialState();
     prepareBallForLaunch();
     updateHUD();
-    showCutin("🚀 STAGE 2 開発中... STAGE 1を強化状態でリプレイ開始！");
+    showCutin("🚀【NEXT STAGE】<br>強化を引き継いで再出撃します！", 180);
   });
   document.querySelectorAll(".relic-btn").forEach(btn => {
     btn.addEventListener("click", e => {
       document.querySelectorAll(".relic-btn").forEach(b => b.classList.remove("border-[#e6ff00]", "bg-[#ff1493]/40"));
       btn.classList.add("border-[#e6ff00]", "bg-[#ff1493]/40");
       const relic = btn.dataset.relic;
-      showCutin(`⚙️ 鹵獲パーツ [${btn.querySelector('.font-bold').textContent}] を装着しました！`);
+      showCutin(`⚙️【パーツ換装】<br>${btn.querySelector('.font-bold').textContent} を装着！`, 160);
     });
   });
 }

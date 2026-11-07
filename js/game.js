@@ -57,8 +57,8 @@ const PERM_DEFS = {
   },
   wideFlipper: {
     id: "wideFlipper",
-    name: "ロング＆レーザーフリッパー",
-    desc: "フリッパー長拡大＋精密エイムガイド表示",
+    name: "ロングフリッパー",
+    desc: "フリッパー長拡大（打撃・防衛範囲UP）",
     maxLv: 2
   },
   subBumpers: {
@@ -1259,19 +1259,13 @@ function renderTable() {
   ctx.fillStyle = "#09031c";
   ctx.fillRect(0, 0, W, H);
 
-  // Perspective grid
-  ctx.strokeStyle = state.fever.active ? "rgba(255, 20, 147, 0.4)" : "rgba(130, 35, 205, 0.25)";
+  // Subtle ambient horizontal floor glow
+  ctx.strokeStyle = state.fever.active ? "rgba(255, 20, 147, 0.25)" : "rgba(130, 35, 205, 0.15)";
   ctx.lineWidth = 1;
-  for (let y = 420; y < H; y += 24) {
+  for (let y = 460; y < H; y += 32) {
     ctx.beginPath();
-    ctx.moveTo(16, y);
-    ctx.lineTo(380, y);
-    ctx.stroke();
-  }
-  for (let x = 30; x < 380; x += 36) {
-    ctx.beginPath();
-    ctx.moveTo(x, 420);
-    ctx.lineTo(x, H);
+    ctx.moveTo(30, y);
+    ctx.lineTo(370, y);
     ctx.stroke();
   }
 
@@ -1513,17 +1507,6 @@ function renderTable() {
     const y2 = f.py + Math.sin(st.angle) * f.len;
 
     ctx.save();
-    if (state.perm.wideFlipper > 0) {
-      ctx.strokeStyle = "rgba(230, 255, 0, 0.35)";
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x2, y2);
-      ctx.lineTo(x2 + Math.cos(st.angle - (f.isLeft ? 1.2 : -1.2)) * 120, y2 - 140);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
     ctx.lineCap = "round";
     ctx.strokeStyle = state.magnetActive ? "#e6ff00" : "#00f5d4";
     ctx.lineWidth = 11;

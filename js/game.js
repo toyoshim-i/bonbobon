@@ -200,8 +200,8 @@ function createInitialState() {
       // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
       hipL:   { x: 134, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
       hipR:   { x: 262, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
-      // Crotch Secret Delta Reactor (Located at actual crotch between thighs, y: 562)
-      crotch: { x: 198, y: 562, r: 13, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
+      // Crotch Secret Gravity Well (Activated when chest armor is shattered; weak gravitational pull!)
+      crotch: { x: 198, y: 556, r: 17, gravRadius: 85, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
       // Core Gem at chest center
       core:   { x: 198, y: 311, r: 16, flash: 0 }
     },
@@ -1327,7 +1327,7 @@ function stepPhysics() {
                 triggerArmorBreakEffect("chest", hit.cx, hit.cy);
                 state.boss.expression = "blush";
                 state.boss.expressionTimer = 85;
-                showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 最終PHASE 3突入！", 240);
+                showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 秘密のグラビティコア起動！", 240);
                 addScore(15000, hit.cx, hit.cy, "FULL PURGE!!");
                 spawnFloatingCapsule(2, "buff");
                 spawnFloatingCapsule(5, "buff");
@@ -1575,63 +1575,76 @@ function stepPhysics() {
           });
         }
 
-        // Crotch Secret Delta Reactor Gimmick! (Deflects ball toward flippers; unlocks in Phase 2 or Fever!)
-        const crotch = state.boss.crotch;
-        const dxCr = ball.x - crotch.x;
-        const dyCr = ball.y - crotch.y;
-        const distCr = Math.hypot(dxCr, dyCr);
-        if (distCr < ball.r + crotch.r && distCr > 0.001) {
-          const nx = dxCr / distCr;
-          const ny = dyCr / distCr;
-          ball.x = crotch.x + nx * (ball.r + crotch.r + 2);
-          ball.y = crotch.y + ny * (ball.r + crotch.r + 2);
+        // Crotch Secret Gravity Well (Active ONLY after Chest Armor is broken; gentle gravitational pull!)
+        if (state.boss.chestArmorBroken) {
+          const crotch = state.boss.crotch;
+          const dxCr = crotch.x - ball.x;
+          const dyCr = crotch.y - ball.y;
+          const distCr = Math.hypot(dxCr, dyCr);
 
-          // Deflect downward/sideways toward flippers rather than launching high into the sky!
-          ball.vx = (nx >= 0 ? 1 : -1) * (4.2 + Math.random() * 2.2);
-          ball.vy = Math.max(3.2, ny * 4.5);
-          crotch.flash = 12;
+          // 1. Weak Gravitational Pull (Curvature deflection, weaker than table gravity 0.22 so ball never sticks)
+          if (distCr < crotch.gravRadius && distCr > 1.5) {
+            const pullFactor = 1 - distCr / crotch.gravRadius;
+            const force = 0.11 * pullFactor; // Weaker than gravity (0.22)
+            ball.vx += (dxCr / distCr) * force;
+            ball.vy += (dyCr / distCr) * force;
 
-          const isUnlocked = state.phase >= 2 || state.fever.active;
-          if (!isUnlocked) {
-            // Shielded in Phase 1
-            sfx.metalBumper();
-            addScore(1000, crotch.x, crotch.y - 16, "DELTA SHIELDED");
-            addPopup(crotch.x, crotch.y - 25, "きゃっ、そこは装甲の外でしょっ！", "#00f5d4", 0.95);
-          } else if (crotch.cooldown && crotch.cooldown > 0) {
-            sfx.metalBumper();
-            addScore(2000, crotch.x, crotch.y - 16, "CORE COOLING...");
-          } else {
-            crotch.charge++;
-            sfx.burstTrigger();
-            state.boss.expression = "blush";
-            state.boss.expressionTimer = 80;
-            state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 20);
-            addParticles(crotch.x, crotch.y, "#e6ff00", 18, 4.5);
-            addParticles(crotch.x, crotch.y, "#ff1493", 12, 3.5);
-
-            if (crotch.charge < crotch.maxCharge) {
-              addScore(3000 * crotch.charge, crotch.x, crotch.y - 16, `⚡DELTA CHARGE ${crotch.charge}/${crotch.maxCharge}`);
-              addPopup(crotch.x, crotch.y - 30, "きゃっ！？ どこ狙ってんのよっ！", "#ff66b2", 1.05);
-            } else {
-              // Gimmick Triggered! DELTA OVERDRIVE & MULTIBALL!
-              crotch.charge = 0;
-              crotch.cooldown = 60 * 15; // 15 seconds cooldown
-              sfx.burstTrigger();
-              sfx.exSpark();
-              addScore(25000, crotch.x, crotch.y - 20, "★DELTA OVERDRIVE!! +25,000");
-              addPopup(crotch.x, crotch.y - 35, "「きゃあっ！？ 出力が暴走しちゃう……っ！！」", "#e6ff00", 1.25);
-              showCutin("⚡【DELTA REACTOR OVERLOAD!!】⚡<br>機体コア暴走！ 秘密のマルチボール＆フィーバー突入！", 200);
-
-              // Spawn extra ball (Capped at 3 total balls on table)
-              if (state.balls.length < 3) {
-                spawnBall(crotch.x + (Math.random() - 0.5) * 16, crotch.y - 16, (Math.random() - 0.5) * 6, -6.5);
-              }
-              startFeverMode();
-              state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
-              state.burstTimer = 360; // 6 seconds of extra multiplier
+            if (Math.random() < 0.25) {
+              addParticles(ball.x, ball.y, "#b84dff", 1, 1.2);
             }
           }
-          updateHUD();
+
+          // 2. Core Penetration Event (Traversing the inner event horizon without solid wall blocking)
+          if (distCr < ball.r + crotch.r) {
+            if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
+              ball.crotchHitTimer = 50; // Debounce per single traversal
+              crotch.flash = 16;
+              sfx.burstTrigger();
+
+              // Gentle dampening so ball curves naturally through the core
+              ball.vx *= 0.88;
+              ball.vy *= 0.88;
+
+              if (crotch.cooldown && crotch.cooldown > 0) {
+                sfx.metalBumper();
+                addScore(1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
+              } else {
+                crotch.charge++;
+                state.boss.expression = "blush";
+                state.boss.expressionTimer = 85;
+                state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
+                addParticles(crotch.x, crotch.y, "#e6ff00", 22, 5.0);
+                addParticles(crotch.x, crotch.y, "#ff1493", 16, 4.0);
+
+                if (crotch.charge < crotch.maxCharge) {
+                  addScore(4000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY CHARGE ${crotch.charge}/${crotch.maxCharge}`);
+                  addPopup(crotch.x, crotch.y - 30, "「きゃあっ……重力炉に触らないでっ！」", "#ff66b2", 1.1);
+                } else {
+                  // GRAVITY OVERLOAD TRIGGERED!
+                  crotch.charge = 0;
+                  crotch.cooldown = 60 * 18; // 18 seconds cooldown
+                  sfx.burstTrigger();
+                  sfx.exSpark();
+                  addScore(30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
+                  addPopup(crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
+                  showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！ 秘密のマルチボール＆全開フィーバー！", 220);
+
+                  // Repulsion shockwave blasts ball outward!
+                  ball.vy = -8.5;
+                  ball.vx = (Math.random() - 0.5) * 6;
+
+                  // Spawn extra ball (Capped at 3 total balls on table)
+                  if (state.balls.length < 3) {
+                    spawnBall(crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
+                  }
+                  startFeverMode();
+                  state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
+                  state.burstTimer = 360;
+                }
+              }
+              updateHUD();
+            }
+          }
         }
 
         function checkPhase1Clear() {
@@ -1754,6 +1767,7 @@ function stepPhysics() {
     const ball = state.balls[bi];
     ball.trail.push({ x: ball.x, y: ball.y });
     if (ball.trail.length > 9) ball.trail.shift();
+    if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
 
     if (ball.y > H + 18) {
       state.balls.splice(bi, 1);
@@ -2131,24 +2145,29 @@ function renderTable() {
       drawCyberTargetGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
     }
 
-    // 4. Crotch Secret Delta Reactor (Hidden Easter-Egg in Phase 1; Unlocks into visible target in Phase 2 or Fever!)
-    const cr = state.boss.crotch;
-    const isUnlocked = state.phase >= 2 || state.fever.active;
-    if (isUnlocked) {
+    // 4. Crotch Secret Gravity Well (Activated ONLY after Chest Armor is purged!)
+    if (state.boss.chestArmorBroken) {
+      const cr = state.boss.crotch;
       const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
       const isCooling = cr.cooldown && cr.cooldown > 0;
       const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
       const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
-      drawCyberTargetGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "DELTA CORE", sub);
-    } else if (cr.flash > 0) {
-      // In Phase 1, strictly NO target mark (no spoilers!) - only a subtle impact spark when hit accidentally
+
+      // Inward Gravitational Pull Waves (Distortion rings converging into the core)
       ctx.save();
-      ctx.strokeStyle = "rgba(255, 102, 178, 0.7)";
-      ctx.lineWidth = 1.5;
+      ctx.translate(cr.x, cr.y);
+      const animTick = (state.boss && state.boss.animTick) || 0;
+      const inwardPhase = (animTick * 0.04) % 1.0;
+      const waveRadius = cr.r + (cr.gravRadius - cr.r) * (1.0 - inwardPhase);
+      ctx.strokeStyle = "rgba(184, 77, 255, " + (0.35 * inwardPhase).toFixed(2) + ")";
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(cr.x, cr.y, cr.r, 0, Math.PI * 2);
+      ctx.arc(0, 0, waveRadius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+
+      drawCyberTargetGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "GRAV CORE", sub);
     }
 
     // 5. Chest Core Gem Flash (Phase 3 Core Gem)

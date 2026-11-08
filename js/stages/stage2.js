@@ -177,18 +177,21 @@ window.Stage2 = {
       get butt() { return this.buttL; },
 
       // 9. カチューシャ猫耳三角バウンス板（左猫耳＆右猫耳）
+      // 原画の猫耳3頂点に1ピクセル単位で正確に一致
+      // 左耳: Tip (299, 92) -> (158, 59), BaseL (276, 149) -> (147, 86), BaseR (350, 144) -> (182, 83)
       catEarL: {
-        v1: { x: 168, y: 70 }, // Tip (320, 115)
-        v2: { x: 153, y: 91 }, // Base Left (288, 160)
-        v3: { x: 183, y: 89 }, // Base Right (352, 155)
-        cx: 168, cy: 83, r: 16,
+        v1: { x: 158, y: 59 }, // Tip
+        v2: { x: 147, y: 86 }, // Base Left
+        v3: { x: 182, y: 83 }, // Base Right
+        cx: 162, cy: 76, r: 18,
         flash: 0
       },
+      // 右耳: Tip (494, 129) -> (250, 76), BaseL (464, 208) -> (236, 113), BaseR (540, 193) -> (272, 106)
       catEarR: {
-        v1: { x: 247, y: 92 },  // Tip (488, 162)
-        v2: { x: 229, y: 112 }, // Base Left (450, 205)
-        v3: { x: 262, y: 112 }, // Base Right (518, 205)
-        cx: 246, cy: 105, r: 16,
+        v1: { x: 250, y: 76 },  // Tip
+        v2: { x: 236, y: 113 }, // Base Left
+        v3: { x: 272, y: 106 }, // Base Right
+        cx: 253, cy: 98, r: 18,
         flash: 0
       },
 
@@ -1323,15 +1326,16 @@ window.Stage2 = {
       drawGuide(hip.x, hip.y, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
     }
 
-    // 7. カチューシャ猫耳三角バウンス板（左猫耳＆右猫耳の鋭角エッジバンパー）
+    // 7. カチューシャ猫耳三角バウンス板（原画の猫耳3点に精密フィットした鋭角エッジバンパー）
     const drawCatEar = (ear, label) => {
       if (!ear) return;
       ctx.save();
       const f = ear.flash || 0;
       ctx.strokeStyle = f > 0 ? "#ffffff" : "#ff007f";
       ctx.lineWidth = f > 0 ? 3.0 : 2.0;
-      ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.45)" : "rgba(255, 0, 127, 0.22)";
+      ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.45)" : "rgba(255, 0, 127, 0.20)";
 
+      // 三角形フレーム
       ctx.beginPath();
       ctx.moveTo(ear.v1.x, ear.v1.y);
       ctx.lineTo(ear.v2.x, ear.v2.y);
@@ -1340,7 +1344,18 @@ window.Stage2 = {
       ctx.fill();
       ctx.stroke();
 
-      // 内側サイバースリット
+      // 3頂点のサイバーノード（コーナー接点）
+      [ear.v1, ear.v2, ear.v3].forEach(v => {
+        ctx.fillStyle = f > 0 ? "#ffffff" : "#00f5d4";
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ff007f";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      });
+
+      // 内側サイバースリット（先端から底辺中点へのリブ）
       ctx.strokeStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -1353,7 +1368,7 @@ window.Stage2 = {
       ctx.font = "bold 8px monospace";
       ctx.fillStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.textAlign = "center";
-      ctx.fillText("BOUNCE", ear.cx, ear.cy - 10);
+      ctx.fillText("BOUNCE", ear.cx, ear.v1.y - 6);
       ctx.restore();
     };
     drawCatEar(state.boss.catEarL, "L-EAR");

@@ -198,10 +198,10 @@ function createInitialState() {
       podL:   { x: 108, y: 290, r: 23, flash: 0, rot: 0 },
       podR:   { x: 288, y: 290, r: 23, flash: 0, rot: 0 },
       // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
-      hipL:   { x: 126, y: 485, r: 14, flash: 0, rot: 0, hp: 4 },
-      hipR:   { x: 270, y: 485, r: 14, flash: 0, rot: 0, hp: 4 },
-      // Crotch Secret Gravity Well (Activated when chest armor is shattered; weak gravitational pull!)
-      crotch: { x: 198, y: 556, r: 17, gravRadius: 85, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
+      hipL:   { x: 126, y: 465, r: 16, flash: 0, rot: 0, hp: 4 },
+      hipR:   { x: 270, y: 465, r: 16, flash: 0, rot: 0, hp: 4 },
+      // Crotch Secret Gravity Well (Activated when chest armor is shattered; powerful gravitational suction!)
+      crotch: { x: 198, y: 556, r: 17, gravRadius: 120, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
       // Core Gem at chest center
       core:   { x: 198, y: 311, r: 16, flash: 0 }
     },
@@ -750,39 +750,61 @@ function updateClearSequence() {
     seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
 
     // Continuous real-time billowing smoke and rising steam from damage zones:
-    // Ensures REAL-TIME smoke animation is constantly billowing behind the translucent dialogue box!
-    // 1. Thigh breach smoke (around x: 285, y: 460)
-    if (seq.frame % 5 === 0) {
-      const thighCloud = spawnSmokeCloud(285 + (Math.random() - 0.5) * 20, 465 + (Math.random() - 0.5) * 15, Math.random() > 0.4 ? "#f0e6ff" : "#ffb6d9");
-      thighCloud.r = 16 + Math.random() * 12;
-      thighCloud.maxR = 48 + Math.random() * 20;
-      thighCloud.vy = -1.2 - Math.random() * 1.5;
+    // Ensures REAL-TIME smoke animation is constantly, actively billowing behind the translucent dialogue box!
+    // 1. Thigh breach active combustion (around x: 295, y: 450) - dense, live billows covering the static art!
+    if (seq.frame % 2 === 0) {
+      const colors = ["#ffffff", "#f0e6ff", "#d8c8ff", "#ffd1e6", "#6c528a"];
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      const thighCloud = spawnSmokeCloud(295 + (Math.random() - 0.5) * 16, 455 + (Math.random() - 0.5) * 12, col);
+      thighCloud.r = 14 + Math.random() * 10;
+      thighCloud.maxR = 44 + Math.random() * 18;
+      thighCloud.vy = -1.5 - Math.random() * 1.8;
+      thighCloud.vx = -0.4 + (Math.random() - 0.5) * 1.2;
+      thighCloud.alpha = 0.25;
+      thighCloud.maxAlpha = 0.65;
       seq.smokeClouds.push(thighCloud);
+
+      // Thigh electrical fire sparks!
+      if (Math.random() < 0.8) {
+        state.particles.push({
+          x: 295 + (Math.random() - 0.5) * 14,
+          y: 455 + (Math.random() - 0.5) * 10,
+          vx: (Math.random() - 0.5) * 3.5,
+          vy: -1.5 - Math.random() * 3.0,
+          color: Math.random() > 0.4 ? "#ffdd00" : "#ff55aa",
+          life: 25 + Math.floor(Math.random() * 20),
+          scale: 1.2
+        });
+      }
     }
-    // 2. Playfield bottom smoke rising up through translucent dialogue box (around y: 580-620)
-    if (seq.frame % 7 === 0) {
-      const botCloud = spawnSmokeCloud(80 + Math.random() * 260, 600, Math.random() > 0.5 ? "#ffffff" : "#c4b5fd");
-      botCloud.r = 24 + Math.random() * 18;
-      botCloud.maxR = 65 + Math.random() * 25;
-      botCloud.vy = -1.4 - Math.random() * 1.6;
+
+    // 2. Playfield bottom smoke continuously drifting upward through translucent dialogue box (y: 580-620)
+    if (seq.frame % 3 === 0) {
+      const botCloud = spawnSmokeCloud(60 + Math.random() * 300, 610, Math.random() > 0.5 ? "#ffffff" : "#c4b5fd");
+      botCloud.r = 22 + Math.random() * 16;
+      botCloud.maxR = 60 + Math.random() * 25;
+      botCloud.vy = -1.6 - Math.random() * 1.8;
+      botCloud.alpha = 0.2;
+      botCloud.maxAlpha = 0.55;
       seq.smokeClouds.push(botCloud);
     }
-    // 3. Chest breach smoke (around x: 215, y: 270)
-    if (seq.frame % 8 === 0) {
+
+    // 3. Chest breach smoke & sparks (around x: 215, y: 270)
+    if (seq.frame % 6 === 0) {
       const chestCloud = spawnSmokeCloud(215 + (Math.random() - 0.5) * 15, 270 + (Math.random() - 0.5) * 15, "#e0d0ff");
-      chestCloud.r = 14 + Math.random() * 10;
-      chestCloud.maxR = 42 + Math.random() * 16;
+      chestCloud.r = 12 + Math.random() * 10;
+      chestCloud.maxR = 38 + Math.random() * 14;
       chestCloud.vy = -1.0 - Math.random() * 1.2;
       seq.smokeClouds.push(chestCloud);
     }
 
     // Ambient floating glowing dust & electrical sparks over defeat CG (Keeps screen alive!)
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.7) {
       state.particles.push({
         x: 60 + Math.random() * 280,
         y: 440 + Math.random() * 180,
-        vx: (Math.random() - 0.5) * 1.4,
-        vy: -0.9 - Math.random() * 1.8,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -1.0 - Math.random() * 2.0,
         color: Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#00f5d4" : "#e6ff00"),
         life: 55 + Math.floor(Math.random() * 40)
       });
@@ -1607,35 +1629,47 @@ function stepPhysics() {
           });
         }
 
-        // Crotch Secret Gravity Well (Active ONLY after Chest Armor is broken; gentle gravitational pull!)
+        // Crotch Secret Gravity Well (Active ONLY after Chest Armor is broken; strong gravitational pull & orbital curve!)
         if (state.boss.chestArmorBroken) {
           const crotch = state.boss.crotch;
           const dxCr = crotch.x - ball.x;
           const dyCr = crotch.y - ball.y;
           const distCr = Math.hypot(dxCr, dyCr);
 
-          // 1. Weak Gravitational Pull (Curvature deflection, weaker than table gravity 0.22 so ball never sticks)
-          if (distCr < crotch.gravRadius && distCr > 1.5) {
-            const pullFactor = 1 - distCr / crotch.gravRadius;
-            const force = 0.11 * pullFactor; // Weaker than gravity (0.22)
+          // 1. Strong Gravitational Pull (Distinct trajectory curvature & suction towards the core!)
+          if (distCr < crotch.gravRadius && distCr > 2.0) {
+            const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.2);
+            // Peak force 0.44 is DOUBLE table gravity (0.22)! Curves paths dramatically!
+            const force = 0.44 * pullFactor;
             ball.vx += (dxCr / distCr) * force;
             ball.vy += (dyCr / distCr) * force;
 
-            if (Math.random() < 0.25) {
-              addParticles(ball.x, ball.y, "#b84dff", 1, 1.2);
+            // Inward particle suction stream toward core
+            if (Math.random() < 0.7) {
+              const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
+              state.particles.push({
+                x: ball.x,
+                y: ball.y,
+                vx: Math.cos(pAngle) * (2.8 + Math.random() * 2.2),
+                vy: Math.sin(pAngle) * (2.8 + Math.random() * 2.2),
+                color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
+                life: 16,
+                scale: 1.1
+              });
             }
           }
 
-          // 2. Core Penetration Event (Traversing the inner event horizon without solid wall blocking)
+          // 2. Core Penetration & Slingshot Dynamics (Traversing the inner event horizon)
           if (distCr < ball.r + crotch.r) {
             if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
-              ball.crotchHitTimer = 50; // Debounce per single traversal
-              crotch.flash = 16;
+              ball.crotchHitTimer = 40; // Debounce per traversal
+              crotch.flash = 18;
               sfx.burstTrigger();
 
-              // Gentle dampening so ball curves naturally through the core
-              ball.vx *= 0.88;
-              ball.vy *= 0.88;
+              // Tangential deflection boost: curves the ball through and ejects toward flippers
+              const spinDir = ball.vx >= 0 ? 1 : -1;
+              ball.vx += spinDir * 2.4;
+              ball.vy = Math.max(ball.vy * 0.8, 1.8); // Always maintain downward flow!
 
               if (crotch.cooldown && crotch.cooldown > 0) {
                 sfx.metalBumper();
@@ -2208,13 +2242,39 @@ function renderTable() {
       const animTick = (state.boss && state.boss.animTick) || 0;
       const inwardPhase = (animTick * 0.04) % 1.0;
       const waveRadius = cr.r + (cr.gravRadius - cr.r) * (1.0 - inwardPhase);
-      ctx.strokeStyle = "rgba(184, 77, 255, " + (0.35 * inwardPhase).toFixed(2) + ")";
-      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = "rgba(184, 77, 255, " + (0.45 * inwardPhase).toFixed(2) + ")";
+      ctx.lineWidth = 1.6;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.arc(0, 0, waveRadius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+
+      // Active Gravitational Tether & Flux Lightning to nearby balls!
+      state.balls.forEach(b => {
+        const d = Math.hypot(cr.x - b.x, cr.y - b.y);
+        if (d < cr.gravRadius) {
+          ctx.save();
+          const beamAlpha = Math.pow(1.0 - d / cr.gravRadius, 1.1) * 0.95;
+          ctx.strokeStyle = `rgba(230, 255, 0, ${beamAlpha.toFixed(2)})`;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.moveTo(cr.x, cr.y);
+          const midX = (cr.x + b.x) / 2 + (Math.random() - 0.5) * 8;
+          const midY = (cr.y + b.y) / 2 + (Math.random() - 0.5) * 8;
+          ctx.lineTo(midX, midY);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+
+          // Glowing aura around affected ball
+          ctx.strokeStyle = `rgba(184, 77, 255, ${beamAlpha.toFixed(2)})`;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
 
       drawCyberTargetGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "GRAV CORE", sub);
     }

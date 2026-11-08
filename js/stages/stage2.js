@@ -92,21 +92,11 @@ window.Stage2 = {
         flash: 0
       },
 
-      // 3. バウンスポイント：肩（左肩＆右肩）
+      // 3. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
       // 左肩: 原画 (340, 573) -> キャンバス (177, 284)
       shoulderL: {
         x: 177,
         y: 284,
-        r: 26,
-        hp: 8,
-        broken: false,
-        flash: 0,
-        rot: 0
-      },
-      // 右肩: 原画 (538, 564) -> キャンバス (271, 280)
-      shoulderR: {
-        x: 271,
-        y: 280,
         r: 26,
         hp: 8,
         broken: false,
@@ -552,7 +542,7 @@ window.Stage2 = {
     }
 
     // Flash decay
-    [state.boss.shoulderL, state.boss.shoulderR, state.boss.elbowL, state.boss.elbowR, state.boss.tipBust, state.boss.hipJointL, state.boss.catEarL, state.boss.catEarR].forEach(t => {
+    [state.boss.shoulderL, state.boss.elbowL, state.boss.elbowR, state.boss.tipBust, state.boss.hipJointL, state.boss.catEarL, state.boss.catEarR].forEach(t => {
       if (t && t.flash > 0) t.flash--;
     });
   },
@@ -597,7 +587,7 @@ window.Stage2 = {
       }
     }
 
-    // 2. バウンスポイント：肩（左肩＆右肩）
+    // 2. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
     const handleShoulderHit = (sh, sideLabel) => {
       checkBumper(sh, 9.5, () => {
         sh.flash = 22;
@@ -630,7 +620,6 @@ window.Stage2 = {
     };
 
     if (state.boss.shoulderL) handleShoulderHit(state.boss.shoulderL, "L");
-    if (state.boss.shoulderR) handleShoulderHit(state.boss.shoulderR, "R");
 
     // 3. バウンスポイント：肘（左肘＆右肘）
     const handleElbowHit = (elb, sideLabel) => {
@@ -1210,14 +1199,10 @@ window.Stage2 = {
       }
     }
 
-    // 3. バウンスポイント：肩（左肩＆右肩）
+    // 3. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
     const shL = state.boss.shoulderL;
     if (shL) {
       drawGuide(shL.x, shL.y, shL.r, shL.broken ? "#00f5d4" : "#e6ff00", shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}`);
-    }
-    const shR = state.boss.shoulderR;
-    if (shR) {
-      drawGuide(shR.x, shR.y, shR.r, shR.broken ? "#00f5d4" : "#e6ff00", shR.flash, -animTick * 0.02, "R-SHOULDER", shR.broken ? "PURGED" : `HP:${shR.hp}`);
     }
 
     // 4. バウンスポイント：肘（左肘＆右肘）
@@ -1362,16 +1347,15 @@ window.Stage2 = {
     if (holo && holo.laserState === "charge") {
       return holo.isLocked ? "⚠️レーザー照準ロックオン！高速移動で緊急回避せよ！" : "⚠️ホログラム砲台がボールを照準中！停止するな！";
     }
-    return "TARGET: 両肩装甲破壊 ＆ 胸・足付け根ヒットでギミック発動！";
+    return "TARGET: 手前の左肩装甲破壊 ＆ 胸・足付け根ヒットでギミック発動！";
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const dtArmR = document.getElementById("dtArmRStatus");
     if (dtArmR) {
-      const shR = state.boss.shoulderR;
-      dtArmR.textContent = shR.broken ? "💥PURGED!" : `R-SHOULDER (${shR.hp}/8)`;
-      dtArmR.className = shR.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      dtArmR.textContent = "奥側 (判定なし)";
+      dtArmR.className = "text-gray-500 font-bold text-[10px]";
     }
     const dtArmL = document.getElementById("dtArmLStatus");
     if (dtArmL) {

@@ -174,8 +174,9 @@ function createInitialState() {
       bustR: { x: 236, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
 
       // Mecha Colliders (Calibrated 1:1 with centerpiece pixel art landmarks)
-      droneL: { x: 68,  y: 178, r: 18, flash: 0 },
-      droneR: { x: 328, y: 178, r: 18, flash: 0 },
+      // Drones (Spherical pods)
+      droneL: { x: 61,  y: 175, r: 16, flash: 0, rot: 0 },
+      droneR: { x: 335, y: 175, r: 16, flash: 0, rot: 0 },
       // Hanging Rabbit Ear Tips (Capsule collider from hinge joint to dangling tip with swing physics)
       earL:   {
         ax: 137, ay: 49,   // Hinge joint pivot
@@ -193,9 +194,14 @@ function createInitialState() {
         dx: 0, dy: 0, vx: 0, vy: 0,
         flash: 0
       },
-      // Shoulder Armor Clusters (Booster + shoulder pad composite)
-      podL:   { x: 104, y: 264, rx: 26, ry: 40, flash: 0 },
-      podR:   { x: 292, y: 264, rx: 26, ry: 40, flash: 0 },
+      // Shoulder Armor Clusters (Spherical collider tracing outer shoulder pad radius R)
+      podL:   { x: 108, y: 290, r: 23, flash: 0, rot: 0 },
+      podR:   { x: 288, y: 290, r: 23, flash: 0, rot: 0 },
+      // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
+      hipL:   { x: 134, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
+      hipR:   { x: 262, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
+      // Crotch Secret Delta Reactor (3 hits trigger Delta Overdrive & Secret Multiball)
+      crotch: { x: 198, y: 477, r: 18, flash: 0, rot: 0, charge: 0, maxCharge: 3 },
       // Core Gem at chest center
       core:   { x: 198, y: 311, r: 16, flash: 0 }
     },
@@ -1491,21 +1497,14 @@ function stepPhysics() {
           }
         });
 
-        // Shoulder Armor Clusters (Contoured to broad shoulder armor shapes)
+        // Shoulder Armor Clusters (Calibrated 1:1 to circular shoulder pad outer radius R)
         [
           { which: "L", pod: state.boss.podL, hpKey: "leftShoulderHP", droneKey: "droneL_HP", tag: "L-ARMOR" },
           { which: "R", pod: state.boss.podR, hpKey: "rightShoulderHP", droneKey: "droneR_HP", tag: "R-ARMOR" }
         ].forEach(({ which, pod, hpKey, droneKey, tag }) => {
           const isDestroyed = state.boss[hpKey] === 0;
-          const hit = checkEllipseHit(pod.x, pod.y, pod.rx, pod.ry);
-          if (hit) {
-            const kickSpd = isDestroyed ? 13.5 : 9.5;
-            ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
-            ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
-            ball.vx = hit.nx * kickSpd;
-            ball.vy = hit.ny * kickSpd;
-            pod.flash = 12;
-
+          const kickSpd = isDestroyed ? 13.5 : 10.5;
+          checkCircleBumper(pod, kickSpd, () => {
             if (state.boss[hpKey] > 0) {
               sfx.metalBumper();
               addFever(8);
@@ -1539,7 +1538,69 @@ function stepPhysics() {
               state.nudgeOffset.y = (Math.random() - 0.5) * 8;
             }
             updateHUD();
+          });
+        });
+
+        // Waist / Hip Cyber Units (Exposed when chest armor is shattered in Phase 2/3)
+        if (state.boss.chestArmorBroken) {
+          [
+            { hip: state.boss.hipL, tag: "L-HIP", side: "L" },
+            { hip: state.boss.hipR, tag: "R-HIP", side: "R" }
+          ].forEach(({ hip, tag, side }) => {
+            checkCircleBumper(hip, 11.5, () => {
+              sfx.metalBumper();
+              addFever(10);
+              addParticles(hip.x, hip.y, "#ff66b2", 14, 4.5);
+              addParticles(hip.x, hip.y, "#00f5d4", 8, 3.5);
+              if (hip.hp > 0) {
+                hip.hp--;
+                addScore(2500, hip.x, hip.y - 12, `${tag} HIT! HP:${hip.hp}`);
+                if (hip.hp === 0) {
+                  sfx.armorBreak();
+                  triggerArmorBreakEffect(side === "L" ? "shoulder_l" : "shoulder_r", hip.x, hip.y);
+                  addScore(8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
+                  showCutin(`💥【${side === "L" ? "左" : "右"}腰ユニット過熱】<br>冷却系ダウン！ スコア倍率UP！`, 160);
+                  state.baseMultiplier += 0.5;
+                  addFever(30);
+                }
+              } else {
+                sfx.exSpark();
+                addScore(3000, hip.x, hip.y - 12, "⚡HIP SPARK!");
+              }
+              updateHUD();
+            });
+          });
+        }
+
+        // Crotch Secret Delta Reactor Gimmick!
+        const crotch = state.boss.crotch;
+        checkCircleBumper(crotch, 12.5, () => {
+          crotch.charge++;
+          sfx.burstTrigger();
+          state.boss.expression = "blush";
+          state.boss.expressionTimer = 80;
+          state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
+          addParticles(crotch.x, crotch.y, "#e6ff00", 20, 5.0);
+          addParticles(crotch.x, crotch.y, "#ff1493", 15, 4.0);
+
+          if (crotch.charge < crotch.maxCharge) {
+            addScore(3000 * crotch.charge, crotch.x, crotch.y - 16, `⚡DELTA CHARGE ${crotch.charge}/${crotch.maxCharge}`);
+            addPopup(crotch.x, crotch.y - 30, "きゃっ！？ どこ狙ってんのよっ！", "#ff66b2", 1.05);
+            sfx.metalBumper();
+          } else {
+            // Gimmick Triggered! DELTA OVERDRIVE & SECRET MULTIBALL!
+            crotch.charge = 0;
+            sfx.burstTrigger();
+            sfx.exSpark();
+            addScore(25000, crotch.x, crotch.y - 20, "★DELTA OVERDRIVE!! +25,000");
+            addPopup(crotch.x, crotch.y - 35, "「きゃあっ！？ 出力が暴走しちゃう……っ！！」", "#e6ff00", 1.25);
+            showCutin("⚡【DELTA REACTOR OVERLOAD!!】⚡<br>機体コア暴走！ 秘密のマルチボール＆フィーバー突入！", 220);
+
+            startFeverMode();
+            state.burstMultiplier = Math.max(state.burstMultiplier, 2.5);
+            state.burstTimer = 480; // 8 seconds of mega multiplier!
           }
+          updateHUD();
         });
 
         function checkPhase1Clear() {
@@ -1723,8 +1784,17 @@ function stepPhysics() {
     state.boss.droneL, state.boss.droneR,
     state.boss.earL, state.boss.earR,
     state.boss.podL, state.boss.podR,
+    state.boss.hipL, state.boss.hipR,
+    state.boss.crotch,
     state.boss.core
-  ].forEach(g => { if (g.flash > 0) g.flash--; });
+  ].forEach(g => {
+    if (!g) return;
+    if (g.flash > 0) g.flash--;
+    if (g.rot !== undefined) {
+      // Normal continuous rotation loop; ultra-fast spin when impacted!
+      g.rot += g.flash > 0 ? (0.28 + (g.flash / 12) * 0.18) : 0.035;
+    }
+  });
 
   updateDebrisAndEffects();
 }
@@ -1893,41 +1963,145 @@ function renderTable() {
     ctx.restore();
   }
 
-  // Dynamic Hit Flashes & Overheat Sparks (Strictly contoured to artwork; zero misaligned artificial circles!)
+  // Cyber Target Guides & Reticles (Pulsing Afterimage Loop + High-Speed Spin Impact Feedback)
   if (!isPostWhiteout) {
-    // 1. Drone Hit Flash (Circular sphere contour)
-    const drawDroneFlash = (d) => {
-      if (d.flash <= 0) return;
+    const drawCyberTargetGuide = (x, y, r, color, flash, rot, label, subInfo) => {
       ctx.save();
-      ctx.strokeStyle = "#00f5d4";
-      ctx.lineWidth = 2.5;
+      ctx.translate(x, y);
+
+      const isHit = flash > 0;
+      const animTick = (state.boss && state.boss.animTick) || 0;
+      const pulseFactor = 0.16; // 1.0 to 1.16 scale oscillation
+      const baseScale = 1.0 + pulseFactor * Math.sin(animTick * 0.08);
+
+      // 1. Afterimage Outer Ring (Trail 2)
+      const scale2 = 1.0 + pulseFactor * 1.35 * Math.sin(animTick * 0.08 - 0.7);
+      const r2 = r * scale2;
+      ctx.save();
+      ctx.rotate((rot || 0) * 0.55);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = isHit ? 0.5 : 0.20;
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.arc(0, 0, r2, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = "rgba(0, 245, 212, 0.25)";
-      ctx.fill();
+      ctx.restore();
+
+      // 2. Afterimage Mid Ring (Trail 1)
+      const scale1 = 1.0 + pulseFactor * 1.15 * Math.sin(animTick * 0.08 - 0.35);
+      const r1 = r * scale1;
+      ctx.save();
+      ctx.rotate((rot || 0) * 0.85);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = isHit ? 0.75 : 0.35;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(0, 0, r1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Main Rotating Cyber Reticle Brackets (Fast spin on hit!)
+      ctx.save();
+      ctx.rotate(rot || 0);
+      const rMain = r * baseScale;
+      ctx.strokeStyle = isHit ? "#ffffff" : color;
+      ctx.lineWidth = isHit ? 3.2 : 2.0;
+      ctx.globalAlpha = isHit ? 1.0 : 0.85;
+
+      // Draw 4 circular corner brackets [ ]
+      const bracketArc = 0.42; // radians per bracket
+      for (let i = 0; i < 4; i++) {
+        const startAngle = i * (Math.PI / 2) - bracketArc / 2;
+        const endAngle = i * (Math.PI / 2) + bracketArc / 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, rMain, startAngle, endAngle);
+        ctx.stroke();
+      }
+
+      // Crosshair ticks
+      ctx.strokeStyle = isHit ? "#e6ff00" : color;
+      ctx.lineWidth = 1.6;
+      for (let i = 0; i < 4; i++) {
+        const a = i * (Math.PI / 2);
+        const cos = Math.cos(a);
+        const sin = Math.sin(a);
+        ctx.beginPath();
+        ctx.moveTo(cos * (rMain - 4), sin * (rMain - 4));
+        ctx.lineTo(cos * (rMain + 4), sin * (rMain + 4));
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 4. Hit Shockwave Ring (When flash > 0)
+      if (isHit) {
+        const waveR = r * (1.0 + (12 - flash) * 0.15);
+        ctx.save();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = flash / 12;
+        ctx.beginPath();
+        ctx.arc(0, 0, waveR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = (flash / 12) * 0.28;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 5. Small Cyber Label & HP/Status HUD
+      if (label && !isHit) {
+        ctx.fillStyle = color;
+        ctx.font = "bold 8px monospace";
+        ctx.textAlign = "center";
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(label, 0, -rMain - 4);
+      }
+      if (subInfo && !isHit) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 7px monospace";
+        ctx.textAlign = "center";
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(subInfo, 0, rMain + 10);
+      }
+
       ctx.restore();
     };
-    drawDroneFlash(state.boss.droneL);
-    drawDroneFlash(state.boss.droneR);
 
-    // 2. Shoulder Armor Hit Flash (Elliptical shoulder pod contour)
-    const drawShoulderFlash = (pod) => {
-      if (pod.flash <= 0) return;
-      ctx.save();
-      ctx.strokeStyle = "#ff1493";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.ellipse(pod.x, pod.y, pod.rx, pod.ry, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(255, 20, 147, 0.25)";
-      ctx.fill();
-      ctx.restore();
-    };
-    drawShoulderFlash(state.boss.podL);
-    drawShoulderFlash(state.boss.podR);
+    // 1. Drones (Spherical pods)
+    const dL = state.boss.droneL;
+    const dR = state.boss.droneR;
+    const dL_HP = state.boss.droneL_HP;
+    const dR_HP = state.boss.droneR_HP;
+    drawCyberTargetGuide(dL.x, dL.y, dL.r, dL_HP > 0 ? "#00f5d4" : "#e6ff00", dL.flash, dL.rot, "L-DRONE", dL_HP > 0 ? `HP:${dL_HP}` : "EX-BUMP");
+    drawCyberTargetGuide(dR.x, dR.y, dR.r, dR_HP > 0 ? "#00f5d4" : "#e6ff00", dR.flash, dR.rot, "R-DRONE", dR_HP > 0 ? `HP:${dR_HP}` : "EX-BUMP");
 
-    // 3. Core Gem Hit Flash (Hexagonal gem contour)
+    // 2. Shoulder Armor Clusters (Spherical pods contoured to outer pad radius R)
+    const pL = state.boss.podL;
+    const pR = state.boss.podR;
+    const shL_HP = state.boss.leftShoulderHP;
+    const shR_HP = state.boss.rightShoulderHP;
+    const pL_shielded = state.phase === 1 && state.boss.droneL_HP > 0;
+    const pR_shielded = state.phase === 1 && state.boss.droneR_HP > 0;
+    const colL = shL_HP === 0 ? "#e6ff00" : (pL_shielded ? "#b59ce6" : "#ff1493");
+    const colR = shR_HP === 0 ? "#e6ff00" : (pR_shielded ? "#b59ce6" : "#ff1493");
+    drawCyberTargetGuide(pL.x, pL.y, pL.r, colL, pL.flash, pL.rot, "L-ARMOR", shL_HP === 0 ? "⚡EX-SPARK" : (pL_shielded ? "🛡️SHIELD" : `HP:${shL_HP}`));
+    drawCyberTargetGuide(pR.x, pR.y, pR.r, colR, pR.flash, pR.rot, "R-ARMOR", shR_HP === 0 ? "⚡EX-SPARK" : (pR_shielded ? "🛡️SHIELD" : `HP:${shR_HP}`));
+
+    // 3. Waist / Hip Mecha Units (Active when chest armor is shattered in Phase 2/3)
+    if (state.boss.chestArmorBroken) {
+      const hL = state.boss.hipL;
+      const hR = state.boss.hipR;
+      drawCyberTargetGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
+      drawCyberTargetGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
+    }
+
+    // 4. Crotch Secret Delta Reactor Gimmick!
+    const cr = state.boss.crotch;
+    const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
+    drawCyberTargetGuide(cr.x, cr.y, cr.r, cr.charge > 0 ? "#e6ff00" : "#ff66b2", cr.flash, cr.rot, "DELTA CORE", `[${crChargeStr}]`);
+
+    // 5. Chest Core Gem Flash (Phase 3 Core Gem)
     if (state.boss.core.flash > 0) {
       ctx.save();
       const core = state.boss.core;

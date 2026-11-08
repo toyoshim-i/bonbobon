@@ -23,7 +23,7 @@
         <div class="text-[10px] text-[#00f5d4] font-bold tracking-widest uppercase">System Console</div>
         <div class="text-sm font-black text-white tracking-wider flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-ping"></span>
-          RETRO-16BIT MODE
+          CYBER ARCADE
         </div>
       </div>
 
@@ -77,20 +77,23 @@
     </aside>
 
     <!-- SMARTPHONE VERTICAL PINBALL CABINET (FIXED FULLSCREEN, NO SCROLL) -->
-    <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] retro-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
+    <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] cyber-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
     
     <!-- TOP TITLE & STATUS BAR -->
     <div class="w-full flex items-center justify-between px-2 py-1 bg-[#160836] border border-[#ff1493]/60 rounded text-[11px] shrink-0">
       <div class="flex items-center gap-1.5 min-w-0">
         <span class="inline-block w-2 h-2 rounded-full bg-[#ff1493] animate-pulse shrink-0"></span>
         <span class="font-extrabold tracking-tight sm:tracking-wider text-[#ff66b2] text-[10px] sm:text-[11px] whitespace-nowrap truncate">桃色装甲ボンぼや〜ジュッ！</span>
-        <span class="text-[#00f5d4] px-1 py-0.5 rounded bg-[#00f5d4]/10 border border-[#00f5d4]/40 font-mono text-[8px] sm:text-[9px] font-bold shrink-0">STAGE 1</span>
+        <button id="btnHeaderStage" class="text-[#00f5d4] hover:text-white px-1.5 py-0.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/40 border border-[#00f5d4]/60 font-mono text-[9px] sm:text-[10px] font-black shrink-0 cursor-pointer transition flex items-center gap-1">
+          <span id="txtHeaderStage">STAGE 1</span>
+          <span class="text-[7px] text-[#e6ff00]">▼</span>
+        </button>
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <button id="btnAudio" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[9px] sm:text-[10px] cursor-pointer transition">
           FM:ON
         </button>
-        <button id="btnReset" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[9px] sm:text-[10px] cursor-pointer transition">
+        <button id="btnReset" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[9px] sm:text-[10px] font-bold cursor-pointer transition">
           RESET
         </button>
         <button id="btnMenu" class="px-2 py-0.5 rounded bg-[#3d0f5a] hover:bg-[#ff1493] text-[#00f5d4] border border-[#00f5d4]/60 text-[9px] sm:text-[10px] font-bold cursor-pointer transition flex items-center gap-0.5">
@@ -151,7 +154,7 @@
 
           <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (PURE TRANSLUCENT ALPHA, NO BACKDROP-FILTER BUG) -->
           <div class="w-full p-2 bg-gradient-to-t from-[#090218]/45 via-[#090218]/20 to-transparent rounded-b-lg flex flex-col gap-1.5 shrink-0 border-t border-[#ff1493]/30">
-            <!-- CHARACTER DIALOGUE BOX (RETRO-16BIT ADV STYLE, PURE TRANSLUCENT OVERLAY) -->
+            <!-- CHARACTER DIALOGUE BOX (CYBER ADV STYLE, PURE TRANSLUCENT OVERLAY) -->
             <div class="bg-[#0b031c]/50 border border-[#ff1493]/70 rounded p-1.5 shadow-lg">
               <div class="flex items-center justify-between mb-0.5">
                 <span class="text-[10px] font-bold text-[#ff66b2] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">リリス (LILITH)</span>
@@ -195,6 +198,58 @@
             </div>
           </div>
         </div>
+
+        <!-- SYSTEM / PAUSE MENU MODAL -->
+        <div id="menuModal" class="absolute inset-0 z-40 hidden items-center justify-center p-3 bg-black/80 backdrop-blur-md pointer-events-auto transition-opacity duration-200 opacity-0">
+          <div class="relative bg-[#11052c] cyber-border rounded-2xl max-w-sm w-full p-4 text-center shadow-2xl flex flex-col gap-3">
+            <!-- MODAL HEADER -->
+            <div class="flex items-center justify-between border-b border-[#00f5d4]/30 pb-2">
+              <div class="text-sm font-black text-white tracking-widest flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#00f5d4] animate-ping"></span>
+                SYSTEM MENU
+              </div>
+              <button id="btnMenuClose" class="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-[#ff1493] text-white font-bold text-xs cursor-pointer transition">
+                ✕
+              </button>
+            </div>
+
+            <!-- STAGE SELECT SECTION -->
+            <div class="text-left space-y-1.5">
+              <div class="text-[10px] font-black text-[#e6ff00] tracking-wider uppercase flex items-center gap-1">
+                <span>🚀 SELECT STAGE (ステージ選択)</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btnSelectStage1" class="p-2.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-1 transition cursor-pointer text-center group">
+                  <span class="text-[11px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
+                  <span class="text-[10px] font-bold text-white">桃色装甲リリス</span>
+                  <span class="text-[8px] text-gray-400">正面装甲・胸部バイブス</span>
+                </button>
+                <button id="btnSelectStage2" class="p-2.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-1 transition cursor-pointer text-center group">
+                  <span class="text-[11px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
+                  <span class="text-[10px] font-bold text-white">疾風紫電セルティ</span>
+                  <span class="text-[8px] text-gray-400">見返り・電撃＆レーザー砲</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- AUDIO & ACTIONS -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="btnMenuToggleAudio" class="p-2 rounded-xl bg-[#1c083e] hover:bg-[#281058] border border-[#00f5d4]/50 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                <span id="txtMenuAudioIcon">🔊</span>
+                <span id="txtMenuAudioStatus">FM: ON</span>
+              </button>
+              <button id="btnMenuReset" class="p-2 rounded-xl bg-[#ff1493]/20 hover:bg-[#ff1493]/40 border border-[#ff1493] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                <span>🔄</span>
+                <span>STAGE RESET</span>
+              </button>
+            </div>
+
+            <!-- RESUME BUTTON -->
+            <button id="btnMenuResume" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00f5d4] via-[#ff66b2] to-[#e6ff00] text-black font-black text-xs tracking-wider shadow-lg active:scale-95 transition cursor-pointer mt-1">
+              RESUME GAME (ゲームに戻る)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -206,7 +261,7 @@
       </div>
       <div class="flex items-center gap-1.5">
         <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
-        <button id="btnBurst" class="px-2.5 py-2 rounded-lg font-extrabold text-[11px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border-2 border-[#e6ff00] retro-magenta-glow active:scale-95 transition cursor-pointer shrink-0">
+        <button id="btnBurst" class="px-2.5 py-2 rounded-lg font-extrabold text-[11px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border-2 border-[#e6ff00] neon-glow active:scale-95 transition cursor-pointer shrink-0">
           BURST解放
         </button>
       </div>
@@ -310,7 +365,7 @@
 
   <!-- POPUP DRAWER MODAL: BUILD STATUS & DEBUG CONTROLS -->
   <div id="menuDrawer" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-40 hidden flex-col items-center justify-center p-3">
-    <div class="relative bg-[#11052c] retro-border rounded-xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl p-3">
+    <div class="relative bg-[#11052c] cyber-border rounded-xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl p-3">
       <!-- HEADER -->
       <div class="flex items-center justify-between border-b border-[#00f5d4]/40 pb-2 mb-2">
         <h2 class="text-sm font-bold text-[#00f5d4] flex items-center gap-1.5">
@@ -399,16 +454,16 @@
     </div>
   </div>
 
-  <script src="./js/stage1_assets.js?v=72"></script>
-  <script src="./js/stage2_assets.js?v=72"></script>
-  <script src="./js/audio.js?v=72"></script>
-  <script src="./js/engine/particles.js?v=72"></script>
-  <script src="./js/engine/physics.js?v=72"></script>
-  <script src="./js/engine/systems.js?v=72"></script>
-  <script src="./js/engine/ui.js?v=72"></script>
-  <script src="./js/stages/stage1.js?v=72"></script>
-  <script src="./js/stages/stage2.js?v=72"></script>
-  <script src="./js/engine/game_engine.js?v=72"></script>
-  <script src="./js/main.js?v=72"></script>
+  <script src="./js/stage1_assets.js?v=75"></script>
+  <script src="./js/stage2_assets.js?v=75"></script>
+  <script src="./js/audio.js?v=75"></script>
+  <script src="./js/engine/particles.js?v=75"></script>
+  <script src="./js/engine/physics.js?v=75"></script>
+  <script src="./js/engine/systems.js?v=75"></script>
+  <script src="./js/engine/ui.js?v=75"></script>
+  <script src="./js/stages/stage1.js?v=75"></script>
+  <script src="./js/stages/stage2.js?v=75"></script>
+  <script src="./js/engine/game_engine.js?v=75"></script>
+  <script src="./js/main.js?v=75"></script>
 </body>
 </html>

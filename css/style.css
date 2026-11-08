@@ -58,13 +58,20 @@ body {
   image-rendering: crisp-edges;
 }
 
-.retro-border {
+.cyber-border {
   border: 2px solid #00f5d4;
   box-shadow: 0 0 12px rgba(0, 245, 212, 0.28), inset 0 0 10px rgba(255, 20, 147, 0.22);
 }
 
-.retro-magenta-glow {
+.neon-glow {
   box-shadow: 0 0 14px rgba(255, 20, 147, 0.55);
+}
+
+.cyber-btn-active {
+  background-color: #ff1493 !important;
+  color: #ffffff !important;
+  border-color: #e6ff00 !important;
+  transform: scale(0.96);
 }
 
 .scanlines {

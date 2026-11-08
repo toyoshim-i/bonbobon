@@ -189,13 +189,13 @@ window.UI = {
     const setLeft = (d) => {
       engine.state.leftFlipperDown = d;
       const btn = document.getElementById("btnLeftFlip");
-      if (btn) btn.classList.toggle("retro-btn-active", d);
+      if (btn) btn.classList.toggle("cyber-btn-active", d);
       if (d && window.sfx) window.sfx.flip();
     };
     const setRight = (d) => {
       engine.state.rightFlipperDown = d;
       const btn = document.getElementById("btnRightFlip");
-      if (btn) btn.classList.toggle("retro-btn-active", d);
+      if (btn) btn.classList.toggle("cyber-btn-active", d);
       if (d && window.sfx) window.sfx.flip();
     };
 
@@ -350,7 +350,7 @@ window.UI = {
     playfieldEl.addEventListener("pointerup", finishPlayfieldTouch);
     playfieldEl.addEventListener("pointercancel", finishPlayfieldTouch);
 
-    // Other Buttons
+    // Action Buttons
     const btnBurst = document.getElementById("btnBurst");
     if (btnBurst) {
       btnBurst.addEventListener("click", () => Systems.triggerBurst(engine.state));
@@ -361,9 +361,112 @@ window.UI = {
       btnNudge.addEventListener("click", () => Physics.triggerNudge(engine.state));
     }
 
-    const btnReset = document.getElementById("btnResetGame");
-    if (btnReset) {
-      btnReset.addEventListener("click", () => engine.resetGame());
+    // Reset Buttons (Header RESET, In-game, and Menu Modal RESET)
+    const bindResetAction = (id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("click", () => {
+          if (window.sfx) window.sfx.flipperClick();
+          engine.resetGame();
+          closeMenu();
+          UI.showCutin("🔄【GAME RESET】<br>盤面を初期化して再出撃！", 140);
+        });
+      }
+    };
+    bindResetAction("btnReset");
+    bindResetAction("btnResetGame");
+    bindResetAction("btnMenuReset");
+
+    // System Menu Modal Open & Close
+    const menuModal = document.getElementById("menuModal");
+    const openMenu = () => {
+      if (!menuModal) return;
+      if (window.sfx) window.sfx.flipperClick();
+      menuModal.classList.remove("hidden");
+      menuModal.classList.add("flex");
+      requestAnimationFrame(() => {
+        menuModal.classList.remove("opacity-0");
+        menuModal.classList.add("opacity-100");
+      });
+    };
+    const closeMenu = () => {
+      if (!menuModal) return;
+      if (window.sfx) window.sfx.flipperClick();
+      menuModal.classList.remove("opacity-100");
+      menuModal.classList.add("opacity-0");
+      setTimeout(() => {
+        menuModal.classList.add("hidden");
+        menuModal.classList.remove("flex");
+      }, 200);
+    };
+
+    const btnMenu = document.getElementById("btnMenu");
+    if (btnMenu) btnMenu.addEventListener("click", openMenu);
+
+    const btnMenuClose = document.getElementById("btnMenuClose");
+    if (btnMenuClose) btnMenuClose.addEventListener("click", closeMenu);
+
+    const btnMenuResume = document.getElementById("btnMenuResume");
+    if (btnMenuResume) btnMenuResume.addEventListener("click", closeMenu);
+
+    // Stage Selection (Header Button, Menu Modal Stage 1 & 2 Cards)
+    const loadStageFromUI = (stage) => {
+      if (!stage) return;
+      if (window.sfx) window.sfx.capsuleCatch();
+      engine.resetGame();
+      engine.loadStage(stage);
+
+      const txtHeader = document.getElementById("txtHeaderStage");
+      if (txtHeader) {
+        txtHeader.textContent = stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
+      }
+      closeMenu();
+      UI.showCutin(`🚀【STAGE SELECT】<br>${stage.name} (${stage.bossName})`, 180);
+    };
+
+    const btnHeaderStage = document.getElementById("btnHeaderStage");
+    if (btnHeaderStage) {
+      btnHeaderStage.addEventListener("click", () => {
+        const curId = engine.currentStage ? engine.currentStage.id : "stage1";
+        const next = curId === "stage1" ? window.Stage2 : window.Stage1;
+        loadStageFromUI(next);
+      });
     }
+
+    const btnSelS1 = document.getElementById("btnSelectStage1");
+    if (btnSelS1) {
+      btnSelS1.addEventListener("click", () => loadStageFromUI(window.Stage1));
+    }
+    const btnSelS2 = document.getElementById("btnSelectStage2");
+    if (btnSelS2) {
+      btnSelS2.addEventListener("click", () => loadStageFromUI(window.Stage2));
+    }
+
+    // Audio Mute / Unmute Toggle
+    const toggleAudio = () => {
+      if (!window.sfx) return;
+      const isEnabled = window.sfx.enabled !== false;
+      const nextState = !isEnabled;
+      window.sfx.enabled = nextState;
+
+      const btnAudio = document.getElementById("btnAudio");
+      if (btnAudio) {
+        btnAudio.textContent = nextState ? "FM:ON" : "FM:MUTE";
+        btnAudio.className = nextState 
+          ? "px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[9px] sm:text-[10px] cursor-pointer transition"
+          : "px-1.5 py-0.5 rounded bg-[#180828] text-gray-400 border border-gray-600 text-[9px] sm:text-[10px] cursor-pointer transition";
+      }
+      const txtMenuStatus = document.getElementById("txtMenuAudioStatus");
+      if (txtMenuStatus) txtMenuStatus.textContent = nextState ? "FM: ON" : "FM: MUTE";
+      const txtMenuIcon = document.getElementById("txtMenuAudioIcon");
+      if (txtMenuIcon) txtMenuIcon.textContent = nextState ? "🔊" : "🔇";
+      if (nextState && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+    };
+
+    const btnAudio = document.getElementById("btnAudio");
+    if (btnAudio) btnAudio.addEventListener("click", toggleAudio);
+
+    const btnMenuAudio = document.getElementById("btnMenuToggleAudio");
+    if (btnMenuAudio) btnMenuAudio.addEventListener("click", toggleAudio);
   }
 };

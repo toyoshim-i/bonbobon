@@ -1,7 +1,7 @@
 // =========================================================================
 // FM SYNTHESIS SOUND ENGINE (Web Audio API)
 // =========================================================================
-class RetroSoundEngine {
+class FMSoundEngine {
   constructor() {
     this.ctx = null;
     this.enabled = true;
@@ -135,7 +135,7 @@ class RetroSoundEngine {
   }
 }
 
-const rawSfx = new RetroSoundEngine();
+const rawSfx = new FMSoundEngine();
 window.sfx = new Proxy(rawSfx, {
   get(target, prop) {
     if (prop in target) {

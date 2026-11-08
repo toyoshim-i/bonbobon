@@ -43,6 +43,8 @@ window.addEventListener("DOMContentLoaded", () => {
         GameEngine.resetGame();
         if (window.Stage2) {
           GameEngine.loadStage(Stage2);
+          const txtHeader = document.getElementById("txtHeaderStage");
+          if (txtHeader) txtHeader.textContent = "STAGE 2";
           UI.showCutin("🚀【STAGE 2 突入】<br>疾風紫電セルティ 迎撃戦開始！", 220);
         } else {
           UI.showCutin("🚀【NEXT STAGE】<br>強化を引き継いで再出撃します！", 180);

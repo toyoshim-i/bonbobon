@@ -44,12 +44,53 @@ window.Stage2 = {
       talkTimer: 0,
       blushGauge: 0,
 
-      // Sensitive Tip Targets (胸の先端 & 髪の先端)
-      tipBust: { x: 132, y: 342, r: 16, flash: 0, rot: 0, hp: 6 },
-      tipTailL: { x: 88, y: 440, r: 18, flash: 0, rot: 0, angle: 0, vAngle: 0 },
-      tipTailR: { x: 308, y: 420, r: 18, flash: 0, rot: 0, angle: 0, vAngle: 0 },
+      // 1. カチューシャ左アンテナ（周期放電トラップ＆オービットゲート）
+      antennaL: {
+        x: 135,
+        y: 104,
+        r: 22,
+        timer: 0,
+        cycle: 190,          // 190 frames total cycle (~3.1 sec)
+        activeDuration: 65,  // 65 frames of active electric barrier
+        warningDuration: 30, // 30 frames of pre-discharge warning
+        flash: 0,
+        sparks: []
+      },
 
-      // Back Jet Thruster (背中ジェット噴射機構)
+      // 2. 左手奥のホログラム（ラスターグリッジ＆間欠レーザー砲台）
+      hologram: {
+        x: 104,
+        y: 196,
+        r: 28,
+        glitchShift: 0,
+        laserState: "idle",  // "idle" | "charge" | "fire"
+        laserTimer: 0,
+        cooldown: 180,       // Time until next charge
+        beamAngle: Math.PI * 0.42, // Aimed diagonally downwards across the table
+        beamLength: 260,
+        flash: 0
+      },
+
+      // 3. バウンスポイント（肩・肘）
+      shoulderR: {
+        x: 232,
+        y: 295,
+        r: 25,
+        hp: 8,
+        broken: false,
+        flash: 0,
+        rot: 0
+      },
+      elbowL: {
+        x: 74,
+        y: 320,
+        r: 18,
+        flash: 0,
+        rot: 0
+      },
+
+      // 4. 背中ジェット＆胸の先端センサー
+      tipBust: { x: 132, y: 342, r: 16, flash: 0, rot: 0, hp: 6 },
       jet: {
         x: 198,
         y: 275,
@@ -59,17 +100,8 @@ window.Stage2 = {
         blastCooldown: 0
       },
 
-      // Asymmetric Posed Collision Bumper Points
-      handShield: { x: 145, y: 215, r: 24, flash: 0, rot: 0, hp: 8, broken: false },
-      elbowL: { x: 68, y: 290, r: 16, flash: 0, rot: 0 },
-      hipR: { x: 275, y: 370, r: 22, flash: 0, rot: 0, hp: 6, broken: false },
-      buttCore: { x: 210, y: 465, r: 30, flash: 0, rot: 0, charge: 0, maxCharge: 3 },
-
       // Stage Progression & Armor States
-      armorHandBroken: false,
-      armorHipBroken: false,
-      armorBustBroken: false,
-      allArmorsPurged: false,
+      armorShoulderBroken: false,
       defeatTriggered: false
     };
   },
@@ -77,14 +109,12 @@ window.Stage2 = {
   update(state, engine) {
     if (!state.boss) return;
 
-    // 1. Natural Blink Cycle
+    // 1. Natural Blink & Expression Timers
     if (state.boss.blinkTimer > 0) {
       state.boss.blinkTimer--;
     } else {
       state.boss.blinkTimer = 140 + Math.floor(Math.random() * 110);
     }
-
-    // 2. Wink & Expression Timers
     if (state.boss.winkTimer > 0) state.boss.winkTimer--;
     if (state.boss.talkTimer > 0) state.boss.talkTimer--;
     if (state.boss.expressionTimer > 0) {
@@ -94,27 +124,143 @@ window.Stage2 = {
       }
     }
 
-    // 3. Twintail Physical Sway Physics
-    const tL = state.boss.tipTailL;
-    if (tL) {
-      tL.vAngle += -0.04 * tL.angle - 0.02 * tL.vAngle;
-      tL.angle += tL.vAngle;
-      tL.rot = tL.angle;
-    }
-    const tR = state.boss.tipTailR;
-    if (tR) {
-      tR.vAngle += -0.04 * tR.angle - 0.02 * tR.vAngle;
-      tR.angle += tR.vAngle;
-      tR.rot = tR.angle;
+    // 2. 左アンテナの周期放電サイクル
+    const ant = state.boss.antennaL;
+    if (ant) {
+      ant.timer = (ant.timer + 1) % ant.cycle;
+      if (ant.flash > 0) ant.flash--;
+
+      const isWarning = ant.timer >= (ant.cycle - ant.activeDuration - ant.warningDuration) &&
+                        ant.timer < (ant.cycle - ant.activeDuration);
+      const isActive = ant.timer >= (ant.cycle - ant.activeDuration);
+
+      ant.isWarning = isWarning;
+      ant.isActive = isActive;
+
+      if (isActive) {
+        // 放電中：電撃スパーク粒子を散らす
+        if (Math.random() < 0.6) {
+          const arcAngle = Math.random() * Math.PI * 2;
+          const arcR = ant.r * (0.8 + Math.random() * 0.7);
+          state.particles.push({
+            x: ant.x + Math.cos(arcAngle) * arcR,
+            y: ant.y + Math.sin(arcAngle) * arcR,
+            vx: (Math.random() - 0.5) * 3.5,
+            vy: (Math.random() - 0.5) * 3.5,
+            color: Math.random() < 0.5 ? "#00f5d4" : "#e6ff00",
+            life: 10,
+            scale: 1.2
+          });
+        }
+      }
     }
 
-    // 4. Back Jet Thruster Propulsion & Repulsion Wind Blast
+    // 3. 左手奥ホログラムのラスターグリッジ＆レーザー砲台制御
+    const holo = state.boss.hologram;
+    if (holo) {
+      if (holo.flash > 0) holo.flash--;
+
+      // ラスターグリッジノイズのランダムジッター
+      holo.glitchShift = (Math.random() < 0.28) ? (Math.random() - 0.5) * 14 : 0;
+
+      // レーザー発射ステートマシン
+      if (holo.laserState === "idle") {
+        if (holo.cooldown > 0) {
+          holo.cooldown--;
+        } else {
+          holo.laserState = "charge";
+          holo.laserTimer = 55; // 55 frames charge warning
+          if (window.sfx && window.sfx.capsuleCatch) {
+            window.sfx.capsuleCatch();
+          }
+        }
+      } else if (holo.laserState === "charge") {
+        holo.laserTimer--;
+        // 照準角度を一番近いボールに向けて微調整
+        if (state.balls.length > 0) {
+          const targetBall = state.balls[0];
+          const aimAngle = Math.atan2(targetBall.y - holo.y, targetBall.x - holo.x);
+          // 画面右下〜下向きの範囲（0.25π〜0.65π）に制限
+          const clampedAngle = Math.max(Math.PI * 0.22, Math.min(Math.PI * 0.62, aimAngle));
+          holo.beamAngle = holo.beamAngle * 0.90 + clampedAngle * 0.10;
+        }
+
+        // チャージスパーク粒子
+        if (Math.random() < 0.55) {
+          const ca = Math.random() * Math.PI * 2;
+          const cr = 24 + Math.random() * 16;
+          state.particles.push({
+            x: holo.x + Math.cos(ca) * cr,
+            y: holo.y + Math.sin(ca) * cr,
+            vx: -Math.cos(ca) * 3.0,
+            vy: -Math.sin(ca) * 3.0,
+            color: "#ff007f",
+            life: 12,
+            scale: 1.0
+          });
+        }
+
+        if (holo.laserTimer <= 0) {
+          holo.laserState = "fire";
+          holo.laserTimer = 35; // 35 frames active laser beam
+          holo.flash = 25;
+          if (window.sfx && window.sfx.metalBumper) {
+            window.sfx.metalBumper();
+          }
+          UI.showCutin("⚡【ホログラムレーザー発砲！】⚡<br>防衛ビームを回避せよ！", 140);
+        }
+      } else if (holo.laserState === "fire") {
+        holo.laserTimer--;
+
+        // レーザービーム線分とのボール衝突判定＆弾き飛ばし
+        const beamStartX = holo.x;
+        const beamStartY = holo.y;
+        const beamEndX = holo.x + Math.cos(holo.beamAngle) * holo.beamLength;
+        const beamEndY = holo.y + Math.sin(holo.beamAngle) * holo.beamLength;
+
+        state.balls.forEach(ball => {
+          const hit = Physics.checkCapsuleHit(ball, beamStartX, beamStartY, beamEndX, beamEndY, 8.0);
+          if (hit) {
+            ball.x = hit.qx + hit.nx * (hit.minDist + 1.5);
+            ball.y = hit.qy + hit.ny * (hit.minDist + 1.5);
+            ball.vx = hit.nx * 15.0;
+            ball.vy = hit.ny * 15.0;
+            if (window.sfx) window.sfx.metalBumper();
+            Particles.add(state, ball.x, ball.y, "#00f5d4", 16, 5.0);
+            Particles.add(state, ball.x, ball.y, "#ffffff", 10, 4.0);
+            Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER DEFLECT!⚡");
+          }
+        });
+
+        // ビーム沿いに激しいレーザー粒子
+        for (let i = 0; i < 2; i++) {
+          const ratio = Math.random();
+          const px = beamStartX + (beamEndX - beamStartX) * ratio;
+          const py = beamStartY + (beamEndY - beamStartY) * ratio;
+          state.particles.push({
+            x: px + (Math.random() - 0.5) * 8,
+            y: py + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            color: Math.random() < 0.6 ? "#00f5d4" : "#ffffff",
+            life: 8,
+            scale: 1.2
+          });
+        }
+
+        if (holo.laserTimer <= 0) {
+          holo.laserState = "idle";
+          holo.cooldown = 220 + Math.floor(Math.random() * 80);
+        }
+      }
+    }
+
+    // 4. 背中ジェット噴射機構
     const jet = state.boss.jet;
     if (jet && jet.timer > 0) {
       jet.timer--;
       jet.active = true;
 
-      // Exhaust flame particles spewing backwards & diagonally
       for (let i = 0; i < 3; i++) {
         const spreadAngle = Math.PI * 0.55 + (Math.random() - 0.5) * 0.75;
         const speed = 4.0 + Math.random() * 5.0;
@@ -129,7 +275,6 @@ window.Stage2 = {
         });
       }
 
-      // Ball Repulsion Wind (Blow away nearby balls!)
       state.balls.forEach(ball => {
         const dx = ball.x - jet.x;
         const dy = ball.y - jet.y;
@@ -141,7 +286,6 @@ window.Stage2 = {
           ball.vx += (dx / dist) * force;
           ball.vy += (dy / dist) * force;
 
-          // Extra speed cap safety
           const spd = Math.hypot(ball.vx, ball.vy);
           if (spd > 22.0) {
             ball.vx = (ball.vx / spd) * 22.0;
@@ -154,8 +298,8 @@ window.Stage2 = {
       if (jet.blastCooldown > 0) jet.blastCooldown--;
     }
 
-    // Flash decay on targets
-    [state.boss.tipBust, state.boss.tipTailL, state.boss.tipTailR, state.boss.handShield, state.boss.elbowL, state.boss.hipR, state.boss.buttCore].forEach(t => {
+    // Flash decay
+    [state.boss.shoulderR, state.boss.elbowL, state.boss.tipBust].forEach(t => {
       if (t && t.flash > 0) t.flash--;
     });
   },
@@ -164,7 +308,73 @@ window.Stage2 = {
     if (s !== 0) return;
     const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, cb);
 
-    // 1. Sensitive Tip (胸の先端): Triggers Back Jet Blast!
+    // 1. カチューシャ左アンテナ（放電時は弾く、停止時は通り抜け可能！）
+    const ant = state.boss.antennaL;
+    if (ant) {
+      const dxA = ball.x - ant.x;
+      const dyA = ball.y - ant.y;
+      const distA = Math.hypot(dxA, dyA);
+
+      if (distA < ball.r + ant.r) {
+        if (ant.isActive) {
+          // 放電中：激しい電撃で弾き返す！
+          checkBumper(ant, 11.0, () => {
+            ant.flash = 24;
+            if (window.sfx) window.sfx.metalBumper();
+            Particles.add(state, ant.x, ant.y, "#00f5d4", 18, 5.0);
+            Particles.add(state, ant.x, ant.y, "#e6ff00", 12, 4.0);
+            Systems.addScore(state, 4000, ant.x, ant.y, "⚡ELECTRIC SHOCK REPEL!⚡");
+          });
+        } else {
+          // 電撃停止中：通り抜け可能！ オービットゲート通過ボーナス
+          if (!ball._passedAntennaGate) {
+            ball._passedAntennaGate = true;
+            Systems.addScore(state, 8000, ant.x, ant.y, "★ORBIT GATE CLEAR!!★");
+            Particles.addPopup(state, ant.x, ant.y - 14, "★GATE PASS +8000★", "#e6ff00", 1.1);
+            if (window.sfx) window.sfx.capsuleCatch();
+          }
+        }
+      } else {
+        ball._passedAntennaGate = false;
+      }
+    }
+
+    // 2. 右肩バウンスポイント（振り向き右肩装甲）
+    const sh = state.boss.shoulderR;
+    if (sh) {
+      checkBumper(sh, 8.8, () => {
+        sh.flash = 20;
+        if (window.sfx) window.sfx.metalBumper();
+        Particles.add(state, sh.x, sh.y, "#00f5d4", 16, 4.5);
+        if (sh.hp > 0) {
+          sh.hp--;
+          Systems.addScore(state, 3000, sh.x, sh.y, `R-SHOULDER! HP:${sh.hp}`);
+          if (sh.hp === 0) {
+            sh.broken = true;
+            state.boss.armorShoulderBroken = true;
+            Particles.triggerArmorBreakEffect(state, "shoulder_r", sh.x, sh.y);
+            UI.showCutin("💥【右肩装甲大破！】💥<br>肩部スラスター装甲剥離！<br>+25,000pts ボーナス！", 200);
+            Systems.addScore(state, 25000, sh.x, sh.y, "★SHOULDER PURGED!★");
+            Systems.spawnFloatingCapsule(state, 2, "buff");
+          }
+        } else {
+          Systems.addScore(state, 3500, sh.x, sh.y, "⚡SHOULDER SPARK!");
+        }
+      });
+    }
+
+    // 3. 左肘バウンスポイント（外側エルボー）
+    const elb = state.boss.elbowL;
+    if (elb) {
+      checkBumper(elb, 9.2, () => {
+        elb.flash = 18;
+        if (window.sfx) window.sfx.metalBumper();
+        Particles.add(state, elb.x, elb.y, "#e6ff00", 14, 4.0);
+        Systems.addScore(state, 3000, elb.x, elb.y, "⚡ELBOW DEFLECT!");
+      });
+    }
+
+    // 4. 胸の先端（背中ジェット暴走トリガー）
     const bust = state.boss.tipBust;
     if (bust) {
       checkBumper(bust, 9.0, () => {
@@ -177,137 +387,23 @@ window.Stage2 = {
         state.boss.expressionTimer = 85;
         state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 30);
 
-        // TRIGGER BACK JET PROPULSION!
-        this.triggerJetBlast(state, "bust");
+        this.triggerJetBlast(state);
         Systems.addScore(state, 12000, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
-      });
-    }
-
-    // 2. Twintail Tips (髪の先端): Physical Sway & Posture Jet Burn
-    const tL = state.boss.tipTailL;
-    if (tL) {
-      checkBumper(tL, 7.5, () => {
-        tL.flash = 18;
-        tL.vAngle += 0.35;
-        if (window.sfx) window.sfx.softPuru();
-        Particles.add(state, tL.x, tL.y, "#00f5d4", 12, 4.0);
-        state.boss.expression = "shock";
-        state.boss.expressionTimer = 60;
-        this.triggerJetBlast(state, "tailL");
-        Systems.addScore(state, 6000, tL.x, tL.y, "⚡TAIL TIP IMPACT!");
-      });
-    }
-
-    const tR = state.boss.tipTailR;
-    if (tR) {
-      checkBumper(tR, 7.5, () => {
-        tR.flash = 18;
-        tR.vAngle -= 0.35;
-        if (window.sfx) window.sfx.softPuru();
-        Particles.add(state, tR.x, tR.y, "#00f5d4", 12, 4.0);
-        state.boss.expression = "shock";
-        state.boss.expressionTimer = 60;
-        this.triggerJetBlast(state, "tailR");
-        Systems.addScore(state, 6000, tR.x, tR.y, "⚡TAIL TIP IMPACT!");
-      });
-    }
-
-    // 3. Hand Hologram Shield (左手・前方スキルターゲット)
-    const hs = state.boss.handShield;
-    if (hs) {
-      checkBumper(hs, 8.5, () => {
-        hs.flash = 20;
-        if (window.sfx) window.sfx.metalBumper();
-        Particles.add(state, hs.x, hs.y, "#00f5d4", 18, 5.0);
-        if (hs.hp > 0) {
-          hs.hp--;
-          Systems.addScore(state, 3000, hs.x, hs.y, `HAND EMITTER! HP:${hs.hp}`);
-          if (hs.hp === 0) {
-            hs.broken = true;
-            state.boss.armorHandBroken = true;
-            Particles.triggerArmorBreakEffect(state, "shoulder_l", hs.x, hs.y);
-            UI.showCutin("💥【左手エミッター大破！】💥<br>シールドフィールド完全消滅！", 180);
-            Systems.addScore(state, 20000, hs.x, hs.y, "★EMITTER DESTROYED!★");
-            Systems.spawnFloatingCapsule(state, 1, "perm");
-          }
-        } else {
-          Systems.addScore(state, 4000, hs.x, hs.y, "⚡EMITTER SPARK!");
-        }
-      });
-    }
-
-    // 4. Left Elbow (左肘アングルバンパー)
-    const elb = state.boss.elbowL;
-    if (elb) {
-      checkBumper(elb, 8.8, () => {
-        elb.flash = 16;
-        if (window.sfx) window.sfx.metalBumper();
-        Particles.add(state, elb.x, elb.y, "#e6ff00", 12, 4.0);
-        Systems.addScore(state, 2500, elb.x, elb.y, "ELBOW DEFLECT!");
-      });
-    }
-
-    // 5. Right Hip / Flank (腰・ヒップ装甲)
-    const hip = state.boss.hipR;
-    if (hip) {
-      checkBumper(hip, 8.0, () => {
-        hip.flash = 18;
-        if (window.sfx) window.sfx.metalBumper();
-        Particles.add(state, hip.x, hip.y, "#ff66b2", 14, 4.5);
-        if (hip.hp > 0) {
-          hip.hp--;
-          Systems.addScore(state, 3000, hip.x, hip.y, `HIP UNIT HP:${hip.hp}`);
-          if (hip.hp === 0) {
-            hip.broken = true;
-            state.boss.armorHipBroken = true;
-            Particles.triggerArmorBreakEffect(state, "shoulder_r", hip.x, hip.y);
-            UI.showCutin("💥【右腰推進ユニット過熱】<br>姿勢制御ダウン！", 180);
-            Systems.addScore(state, 20000, hip.x, hip.y, "★HIP OVERHEAT!★");
-          }
-        }
-      });
-    }
-
-    // 6. Butt / Hip Core (ヒップ・ぷるぷる反発バンパー)
-    const butt = state.boss.buttCore;
-    if (butt) {
-      checkBumper(butt, 9.5, () => {
-        butt.flash = 24;
-        if (window.sfx) window.sfx.softPuru();
-        Particles.add(state, butt.x, butt.y, "#ff1493", 20, 5.0);
-        Particles.spawnHeart(state, butt.x, butt.y, false);
-
-        state.boss.expression = "open_blush";
-        state.boss.expressionTimer = 80;
-        butt.charge++;
-        Systems.addScore(state, 5000 * butt.charge, butt.x, butt.y, `🍑HIP PURU-PURU x${butt.charge}!`);
-
-        if (butt.charge >= butt.maxCharge) {
-          butt.charge = 0;
-          UI.showCutin("🍑【ヒップバースト達成】🍑<br>過剰刺激でフィーバー全開！", 200);
-          Systems.startFeverMode(state);
-        }
       });
     }
   },
 
-  triggerJetBlast(state, originType) {
+  triggerJetBlast(state) {
     const jet = state.boss.jet;
     if (!jet) return;
 
-    jet.timer = 45; // 45 frames of active jet propulsion
+    jet.timer = 45;
     if (window.sfx && window.sfx.feverAlarm) {
       window.sfx.feverAlarm();
     }
 
-    // Dialogue based on what was touched
-    if (originType === "bust") {
-      UI.showCutin("🚀【背中ジェット暴走！！】🚀<br>「ひゃんっ！？ どこ当ててるのバカッ！<br>吹き飛びなさいっっ！！」", 200);
-    } else {
-      UI.showCutin("💨【姿勢制御スラスター点火】💨<br>「くっ……！ 接近させないわよ！」", 160);
-    }
+    UI.showCutin("🚀【背中ジェット暴走！！】🚀<br>「ひゃんっ！？ どこ当ててるのバカッ！<br>吹き飛びなさいっっ！！」", 200);
 
-    // Initial shockwave ring
     state.shockwaves.push({
       x: jet.x,
       y: jet.y,
@@ -330,7 +426,35 @@ window.Stage2 = {
     ctx.save();
     ctx.drawImage(this.assets.bareImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
-    // Overlay Dynamic Face Expression Patch
+    // ラスターグリッジノイズ処理（左手奥のホログラム領域）
+    const holo = state.boss.hologram;
+    if (holo) {
+      const hx = IMG_BOX.x + (150 / 768) * IMG_BOX.w;
+      const hy = IMG_BOX.y + (350 / 1376) * IMG_BOX.h;
+      const hw = (160 / 768) * IMG_BOX.w;
+      const hh = (160 / 1376) * IMG_BOX.h;
+
+      // ラスター走査線スライス変形（ホログラムのちらつき表現）
+      const slices = 8;
+      const sliceH = hh / slices;
+      for (let i = 0; i < slices; i++) {
+        if (Math.random() < 0.45) {
+          const shift = (Math.random() - 0.5) * 8.0 + (holo.glitchShift || 0);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(hx - 10, hy + i * sliceH, hw + 20, sliceH);
+          ctx.clip();
+          ctx.drawImage(this.assets.bareImg, IMG_BOX.x + shift, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+
+          // RGB色ズレ（シアン＆マゼンタゴースト）
+          ctx.fillStyle = Math.random() < 0.5 ? "rgba(0, 245, 212, 0.25)" : "rgba(255, 0, 127, 0.22)";
+          ctx.fillRect(hx - 10, hy + i * sliceH, hw + 20, sliceH);
+          ctx.restore();
+        }
+      }
+    }
+
+    // Dynamic Face Expression Patch
     const isDefeat = state.clearSequence && state.clearSequence.active;
     const activePatchKey = isDefeat ? "open_blush" : (
       state.boss.expression === "open_blush" ? "open_blush" :
@@ -342,7 +466,6 @@ window.Stage2 = {
     );
 
     if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
-      // Relative face box: (270, 310, 190, 170) on 768x1376
       const fx = IMG_BOX.x + (270 / 768) * IMG_BOX.w;
       const fy = IMG_BOX.y + (310 / 1376) * IMG_BOX.h;
       const fw = (190 / 768) * IMG_BOX.w;
@@ -350,7 +473,7 @@ window.Stage2 = {
       ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
     }
 
-    // Render Back Jet Exhaust Flames (when active)
+    // 背中ジェット噴射火炎
     const jet = state.boss.jet;
     if (jet && jet.active) {
       ctx.save();
@@ -368,7 +491,6 @@ window.Stage2 = {
       ctx.arc(0, 0, 45 * pulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Jet Nozzle Ring
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2.5;
       ctx.stroke();
@@ -396,7 +518,6 @@ window.Stage2 = {
       ctx.fill();
       ctx.stroke();
 
-      // Tick notches
       for (let i = 0; i < 4; i++) {
         ctx.rotate(Math.PI / 2);
         ctx.beginPath();
@@ -422,65 +543,108 @@ window.Stage2 = {
       }
     };
 
-    // 1. Sensitive Tip Target (胸の先端 - JET IGNITION)
-    const bTip = state.boss.tipBust;
-    if (bTip) {
-      drawGuide(bTip.x, bTip.y, bTip.r, "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", "⚡JET SENSOR");
-    }
-
-    // 2. Twintail Tips (髪の先端)
-    const tL = state.boss.tipTailL;
-    if (tL) {
-      drawGuide(tL.x, tL.y, tL.r, "#00f5d4", tL.flash, tL.rot, "TAIL-L", "SWAY");
-    }
-    const tR = state.boss.tipTailR;
-    if (tR) {
-      drawGuide(tR.x, tR.y, tR.r, "#00f5d4", tR.flash, tR.rot, "TAIL-R", "SWAY");
-    }
-
-    // 3. Hand Hologram Shield
-    const hs = state.boss.handShield;
-    if (hs) {
-      drawGuide(hs.x, hs.y, hs.r, hs.broken ? "#00f5d4" : "#e6ff00", hs.flash, animTick * 0.02, "SHIELD-PAD", hs.broken ? "BROKEN" : `HP:${hs.hp}`);
-    }
-
-    // 4. Left Elbow
-    const elb = state.boss.elbowL;
-    if (elb) {
-      drawGuide(elb.x, elb.y, elb.r, "#00f5d4", elb.flash, animTick * 0.02, "ELBOW", "DEFLECT");
-    }
-
-    // 5. Right Hip Unit
-    const hip = state.boss.hipR;
-    if (hip) {
-      drawGuide(hip.x, hip.y, hip.r, hip.broken ? "#00f5d4" : "#ff66b2", hip.flash, -animTick * 0.02, "R-HIP", hip.broken ? "BROKEN" : `HP:${hip.hp}`);
-    }
-
-    // 6. Butt / Hip Core
-    const butt = state.boss.buttCore;
-    if (butt) {
-      drawGuide(butt.x, butt.y, butt.r, "#ff1493", butt.flash, animTick * 0.015, "🍑HIP CORE", `[${"◆".repeat(butt.charge)}${"◇".repeat(butt.maxCharge - butt.charge)}]`);
-    }
-
-    // 7. Back Jet Nozzle Status
-    const jet = state.boss.jet;
-    if (jet) {
+    // 1. カチューシャ左アンテナ（周期電撃バリア）
+    const ant = state.boss.antennaL;
+    if (ant) {
       ctx.save();
-      ctx.translate(jet.x, jet.y);
-      ctx.strokeStyle = jet.active ? "#e6ff00" : "rgba(0, 245, 212, 0.4)";
-      ctx.lineWidth = jet.active ? 2.5 : 1.2;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.arc(0, 0, jet.r, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.translate(ant.x, ant.y);
+      if (ant.isActive) {
+        // 電撃放電中：ジグザグの電撃アークリング
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        const steps = 12;
+        for (let i = 0; i <= steps; i++) {
+          const a = (i / steps) * Math.PI * 2;
+          const r = ant.r + ((i % 2 === 0) ? 5 : -4) + Math.random() * 4;
+          const px = Math.cos(a) * r;
+          const py = Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0, 245, 212, 0.3)";
+        ctx.fill();
+      } else if (ant.isWarning) {
+        // 放電予告（黄色点滅）
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 2.0;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(0, 0, ant.r + Math.sin(animTick * 0.2) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        // 安全・通過可能（青緑の静止リング）
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.55)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, ant.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
 
       ctx.save();
       ctx.font = "bold 9px monospace";
       ctx.textAlign = "center";
-      ctx.fillStyle = jet.active ? "#e6ff00" : "#00f5d4";
-      ctx.fillText("🚀JET NOZZLE", jet.x, jet.y - jet.r - 2);
+      ctx.fillStyle = ant.isActive ? "#00f5d4" : (ant.isWarning ? "#e6ff00" : "#00f5d4");
+      ctx.fillText(ant.isActive ? "⚡SHOCK⚡" : (ant.isWarning ? "⚠️WARNING" : "OPEN GATE"), ant.x, ant.y - ant.r - 3);
       ctx.restore();
+    }
+
+    // 2. 左手奥ホログラム（照準＆レーザービーム描画）
+    const holo = state.boss.hologram;
+    if (holo) {
+      drawGuide(holo.x, holo.y, holo.r, "#ff007f", holo.flash, animTick * 0.02, "HOLOGRAM", holo.laserState === "fire" ? "⚡LASER FIRE⚡" : (holo.laserState === "charge" ? "⚠️CHARGING" : "STANDBY"));
+
+      if (holo.laserState === "charge") {
+        // 照準予測線（細い点線）
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 0, 127, 0.65)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(holo.x, holo.y);
+        ctx.lineTo(holo.x + Math.cos(holo.beamAngle) * holo.beamLength, holo.y + Math.sin(holo.beamAngle) * holo.beamLength);
+        ctx.stroke();
+        ctx.restore();
+      } else if (holo.laserState === "fire") {
+        // 強力なネオンレーザービーム本体！
+        ctx.save();
+        const ex = holo.x + Math.cos(holo.beamAngle) * holo.beamLength;
+        const ey = holo.y + Math.sin(holo.beamAngle) * holo.beamLength;
+
+        // ビーム外殻グロー
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.55)";
+        ctx.lineWidth = 12.0;
+        ctx.beginPath();
+        ctx.moveTo(holo.x, holo.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        // ビーム芯線
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 3. バウンスポイント（右肩・左肘）
+    const sh = state.boss.shoulderR;
+    if (sh) {
+      drawGuide(sh.x, sh.y, sh.r, sh.broken ? "#00f5d4" : "#e6ff00", sh.flash, animTick * 0.02, "R-SHOULDER", sh.broken ? "BROKEN" : `HP:${sh.hp}`);
+    }
+    const elb = state.boss.elbowL;
+    if (elb) {
+      drawGuide(elb.x, elb.y, elb.r, "#e6ff00", elb.flash, -animTick * 0.02, "L-ELBOW", "DEFLECT");
+    }
+
+    // 4. 胸の先端（JET SENSOR）
+    const bTip = state.boss.tipBust;
+    if (bTip) {
+      drawGuide(bTip.x, bTip.y, bTip.r, "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", "⚡JET SENSOR");
     }
   },
 
@@ -489,28 +653,49 @@ window.Stage2 = {
 
   getTargetDesc(state) {
     if (!state.boss) return "---";
-    if (state.boss.jet && state.boss.jet.active) {
-      return "⚠️JET OVERLOAD BLOWAWAY! 球が吹き飛ばされます！";
+    const ant = state.boss.antennaL;
+    if (ant && ant.isActive) {
+      return "⚡左アンテナ電撃放電中！ 停止タイミングでゲートを抜けろ！";
     }
-    return "TARGET: 胸の先端(BUST TIP)直撃で背中ジェット暴走点火！";
+    const holo = state.boss.hologram;
+    if (holo && holo.laserState === "charge") {
+      return "⚠️ホログラム砲台チャージ中！ 斜めレーザーに注意！";
+    }
+    return "TARGET: 右肩装甲(R-SHOULDER)破壊 ＆ 胸先端ヒットで背中ジェット暴走！";
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const dtArmR = document.getElementById("dtArmRStatus");
     if (dtArmR) {
-      dtArmR.textContent = state.boss.armorHandBroken ? "💥BROKEN!" : `EMITTER (${state.boss.handShield.hp}/8)`;
-      dtArmR.className = state.boss.armorHandBroken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      const sh = state.boss.shoulderR;
+      dtArmR.textContent = sh.broken ? "💥PURGED!" : `SHOULDER (${sh.hp}/8)`;
+      dtArmR.className = sh.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
     }
     const dtArmL = document.getElementById("dtArmLStatus");
     if (dtArmL) {
-      dtArmL.textContent = state.boss.armorHipBroken ? "💥BROKEN!" : `HIP UNIT (${state.boss.hipR.hp}/6)`;
-      dtArmL.className = state.boss.armorHipBroken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      const ant = state.boss.antennaL;
+      if (ant && ant.isActive) {
+        dtArmL.textContent = "⚡DISCHARGE!";
+        dtArmL.className = "font-bold text-[#00f5d4] animate-pulse";
+      } else {
+        dtArmL.textContent = "GATE OPEN";
+        dtArmL.className = "font-bold text-gray-400";
+      }
     }
     const dtChest = document.getElementById("dtChestStatus");
     if (dtChest) {
-      dtChest.textContent = `SENSITIVE (HP:${state.boss.tipBust.hp})`;
-      dtChest.className = "font-bold text-[#ff1493]";
+      const holo = state.boss.hologram;
+      if (holo && holo.laserState === "fire") {
+        dtChest.textContent = "⚡LASER FIRE!";
+        dtChest.className = "font-bold text-[#ff007f] animate-ping";
+      } else if (holo && holo.laserState === "charge") {
+        dtChest.textContent = "⚠️CHARGING...";
+        dtChest.className = "font-bold text-[#e6ff00]";
+      } else {
+        dtChest.textContent = "HOLOGRAM STANDBY";
+        dtChest.className = "font-bold text-gray-400";
+      }
     }
     const dtCrotch = document.getElementById("dtCrotchStatus");
     if (dtCrotch) {

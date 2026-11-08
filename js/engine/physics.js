@@ -193,8 +193,11 @@ window.Physics = {
     const dy = ball.y - qy;
     const dist = Math.hypot(dx, dy);
     const minDist = ball.r + cr;
-    if (dist < minDist && dist > 0.0001) {
-      return { qx, qy, nx: dx / dist, ny: dy / dist, minDist, t, abx, aby, abLenSq };
+    if (dist < minDist) {
+      const len = Math.sqrt(abLenSq);
+      const nx = dist > 0.0001 ? (dx / dist) : (-aby / len);
+      const ny = dist > 0.0001 ? (dy / dist) : (abx / len);
+      return { qx, qy, nx, ny, minDist, t, abx, aby, abLenSq };
     }
     return null;
   },

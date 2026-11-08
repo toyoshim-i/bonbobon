@@ -66,6 +66,9 @@ window.Stage2 = {
         x: 312,
         y: 75,
         r: 18,
+        hp: 4,
+        maxHP: 4,
+        broken: false,
         timer: 0,
         cycle: 190,          // 190フレーム周期 (~3.1秒)
         activeDuration: 65,  // 放電時間
@@ -81,6 +84,10 @@ window.Stage2 = {
         x: 45,
         y: 199,
         r: 22,
+        hp: 6,
+        maxHP: 6,
+        broken: false,
+        isShielded: true,
         glitchShift: 0,
         laserState: "idle",  // "idle" | "charge" | "fire"
         laserTimer: 0,
@@ -98,7 +105,8 @@ window.Stage2 = {
         x: 177,
         y: 284,
         r: 26,
-        hp: 8,
+        hp: 6,
+        maxHP: 6,
         broken: false,
         flash: 0,
         rot: 0
@@ -129,6 +137,8 @@ window.Stage2 = {
         y: 320,
         r: 15,
         hp: 6,
+        maxHP: 6,
+        broken: false,
         dx: 0,
         dy: 0,
         vx: 0,
@@ -136,6 +146,19 @@ window.Stage2 = {
         flash: 0,
         rot: 0
       },
+
+      // 6. メイン動力炉：プラズマ・リアクターコア（全装甲パージ後に露出・最終撃破ターゲット）
+      // 原画 (290, 680) -> キャンバス (153, 334)
+      core: {
+        x: 153,
+        y: 334,
+        r: 18,
+        hp: 12,
+        maxHP: 12,
+        unlocked: false,
+        flash: 0
+      },
+      allArmorsPurged: false,
 
       // 6. 背中ジェット噴射ノズル先端
       // 原画 (475, 770) のノズル開口部先端に精密配置 -> キャンバス (241, 376)
@@ -212,6 +235,9 @@ window.Stage2 = {
 
   update(state, engine) {
     if (!state.boss) return;
+
+    // 0. クリア演出進行（撃破時）
+    this.updateClearSequence(state, engine);
 
     // 1. 生き生きとした表情アニメーション・リップシンク制御
     const fa = state.boss.faceAnim || (state.boss.faceAnim = {});
@@ -303,30 +329,39 @@ window.Stage2 = {
     // 4. カチューシャのアンテナ先端の周期放電サイクル
     const ant = state.boss.antenna;
     if (ant) {
-      ant.timer = (ant.timer + 1) % ant.cycle;
-      if (ant.flash > 0) ant.flash--;
+      if (ant.broken) {
+        // 放電機構ショート大破：放電停止、時折小火花がパチパチ散る
+        ant.isActive = false;
+        ant.isWarning = false;
+        if (Math.random() < 0.12) {
+          Particles.add(state, ant.x + (Math.random() - 0.5) * 6, ant.y + (Math.random() - 0.5) * 6, "#e6ff00", 2, 2.0);
+        }
+      } else {
+        ant.timer = (ant.timer + 1) % ant.cycle;
+        if (ant.flash > 0) ant.flash--;
 
-      const isWarning = ant.timer >= (ant.cycle - ant.activeDuration - ant.warningDuration) &&
-                        ant.timer < (ant.cycle - ant.activeDuration);
-      const isActive = ant.timer >= (ant.cycle - ant.activeDuration);
+        const isWarning = ant.timer >= (ant.cycle - ant.activeDuration - ant.warningDuration) &&
+                          ant.timer < (ant.cycle - ant.activeDuration);
+        const isActive = ant.timer >= (ant.cycle - ant.activeDuration);
 
-      ant.isWarning = isWarning;
-      ant.isActive = isActive;
+        ant.isWarning = isWarning;
+        ant.isActive = isActive;
 
-      if (isActive) {
-        // 放電中：激しい電撃火花
-        if (Math.random() < 0.65) {
-          const arcAngle = Math.random() * Math.PI * 2;
-          const arcR = ant.r * (0.8 + Math.random() * 0.7);
-          state.particles.push({
-            x: ant.x + Math.cos(arcAngle) * arcR,
-            y: ant.y + Math.sin(arcAngle) * arcR,
-            vx: (Math.random() - 0.5) * 3.5,
-            vy: (Math.random() - 0.5) * 3.5,
-            color: Math.random() < 0.5 ? "#00f5d4" : "#e6ff00",
-            life: 10,
-            scale: 1.2
-          });
+        if (isActive) {
+          // 放電中：激しい電撃火花
+          if (Math.random() < 0.65) {
+            const arcAngle = Math.random() * Math.PI * 2;
+            const arcR = ant.r * (0.8 + Math.random() * 0.7);
+            state.particles.push({
+              x: ant.x + Math.cos(arcAngle) * arcR,
+              y: ant.y + Math.sin(arcAngle) * arcR,
+              vx: (Math.random() - 0.5) * 3.5,
+              vy: (Math.random() - 0.5) * 3.5,
+              color: Math.random() < 0.5 ? "#00f5d4" : "#e6ff00",
+              life: 10,
+              scale: 1.2
+            });
+          }
         }
       }
     }
@@ -334,21 +369,27 @@ window.Stage2 = {
     // 5. 左手奥ホログラムのラスターグリッジ ＆ レーザー発射
     const holo = state.boss.hologram;
     if (holo) {
-      if (holo.flash > 0) holo.flash--;
-      holo.glitchShift = (Math.random() < 0.3) ? (Math.random() - 0.5) * 10 : 0;
+      if (holo.broken) {
+        // ホログラム砲台大破：レーザー完全停止、グリッチ微小ノイズのみ
+        holo.laserState = "idle";
+        holo.flash = 0;
+        holo.glitchShift = (Math.random() < 0.15) ? (Math.random() - 0.5) * 6 : 0;
+      } else {
+        if (holo.flash > 0) holo.flash--;
+        holo.glitchShift = (Math.random() < 0.3) ? (Math.random() - 0.5) * 10 : 0;
 
-      if (holo.laserState === "idle") {
-        if (holo.cooldown > 0) {
-          holo.cooldown--;
-        } else {
-          holo.laserState = "charge";
-          holo.laserTimer = 55; // チャージ＆エイム時間
-          holo.isLocked = false;
-          if (window.sfx && window.sfx.capsuleCatch) {
-            window.sfx.capsuleCatch();
+        if (holo.laserState === "idle") {
+          if (holo.cooldown > 0) {
+            holo.cooldown--;
+          } else {
+            holo.laserState = "charge";
+            holo.laserTimer = 55; // チャージ＆エイム時間
+            holo.isLocked = false;
+            if (window.sfx && window.sfx.capsuleCatch) {
+              window.sfx.capsuleCatch();
+            }
           }
-        }
-      } else if (holo.laserState === "charge") {
+        } else if (holo.laserState === "charge") {
         holo.laserTimer--;
 
         // 1. 発射16フレーム前まではメインボールを追尾エイム！
@@ -534,6 +575,7 @@ window.Stage2 = {
         }
       }
     }
+  }
 
     // 6. 背中ジェット噴射機構（ノズル先端開口部から斜め下への指向性超音速噴流）
     const jet = state.boss.jet;
@@ -599,7 +641,7 @@ window.Stage2 = {
     if (s !== 0) return;
     const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, cb);
 
-    // 1. カチューシャのアンテナ先端（放電時は弾く、停止時は通り抜け可能！）
+    // 1. カチューシャのアンテナ先端（放電時は強烈に弾く、停止時は通過！ 接触でHP減少）
     const ant = state.boss.antenna;
     if (ant) {
       const dxA = ball.x - ant.x;
@@ -607,27 +649,61 @@ window.Stage2 = {
       const distA = Math.hypot(dxA, dyA);
 
       if (distA < ball.r + ant.r) {
-        if (ant.isActive) {
-          // 放電中：激しい電撃で弾き返す！
-          checkBumper(ant, 11.5, () => {
-            ant.flash = 24;
-            if (window.sfx) window.sfx.metalBumper();
-            Particles.add(state, ant.x, ant.y, "#00f5d4", 18, 5.0);
-            Particles.add(state, ant.x, ant.y, "#e6ff00", 12, 4.0);
-            this.setExpressionSequence(state, [
-              { expr: "shock", frames: 20 },
-              { expr: "shout", frames: 24 },
-              { expr: "wince", frames: 32 }
-            ]);
-            Systems.addScore(state, 4000, ant.x, ant.y, "⚡ELECTRIC SHOCK REPEL!⚡");
-          });
-        } else {
-          // 電撃停止中：通り抜け可能！ オービットゲート通過ボーナス
-          if (!ball._passedAntennaGate) {
-            ball._passedAntennaGate = true;
-            Systems.addScore(state, 8000, ant.x, ant.y, "★ORBIT GATE CLEAR!!★");
-            Particles.addPopup(state, ant.x, ant.y - 14, "★GATE PASS +8000★", "#e6ff00", 1.1);
-            if (window.sfx) window.sfx.capsuleCatch();
+        if (!ant.broken) {
+          if (ant.isActive) {
+            // 放電中：激しい電撃で弾き返す！
+            checkBumper(ant, 11.5, () => {
+              ant.flash = 24;
+              if (window.sfx) window.sfx.metalBumper();
+              Particles.add(state, ant.x, ant.y, "#00f5d4", 18, 5.0);
+              Particles.add(state, ant.x, ant.y, "#e6ff00", 12, 4.0);
+              this.setExpressionSequence(state, [
+                { expr: "shock", frames: 20 },
+                { expr: "shout", frames: 24 },
+                { expr: "wince", frames: 32 }
+              ]);
+
+              if (ant.hp > 0) {
+                ant.hp--;
+                Systems.addScore(state, 4000, ant.x, ant.y, `⚡ELECTRIC REPEL! HP:${ant.hp}`);
+                if (ant.hp === 0) {
+                  ant.broken = true;
+                  ant.isActive = false;
+                  ant.isWarning = false;
+                  Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
+                  UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
+                  Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
+                  Systems.spawnFloatingCapsule(state, 2, "buff");
+                  this.checkPhase1Clear(state);
+                }
+              }
+            });
+          } else {
+            // 電撃停止中：通り抜け可能！ オービットゲート通過ボーナス ＆ ダメージ
+            if (!ball._passedAntennaGate) {
+              ball._passedAntennaGate = true;
+              ant.flash = 18;
+              if (window.sfx) window.sfx.capsuleCatch();
+              Particles.add(state, ant.x, ant.y, "#00f5d4", 14, 4.0);
+
+              if (ant.hp > 0) {
+                ant.hp--;
+                Systems.addScore(state, 8000, ant.x, ant.y, `★GATE PASS! HP:${ant.hp}★`);
+                Particles.addPopup(state, ant.x, ant.y - 14, `★GATE PASS HP:${ant.hp}★`, "#e6ff00", 1.1);
+                if (ant.hp === 0) {
+                  ant.broken = true;
+                  ant.isActive = false;
+                  ant.isWarning = false;
+                  Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
+                  UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
+                  Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
+                  Systems.spawnFloatingCapsule(state, 2, "buff");
+                  this.checkPhase1Clear(state);
+                }
+              } else {
+                Systems.addScore(state, 8000, ant.x, ant.y, "★ORBIT GATE CLEAR!!★");
+              }
+            }
           }
         }
       } else {
@@ -660,6 +736,7 @@ window.Stage2 = {
             UI.showCutin(`💥【${sideLabel}肩装甲大破！】💥<br>肩部装甲パージ！ +30,000pts ボーナス！`, 200);
             Systems.addScore(state, 30000, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
             Systems.spawnFloatingCapsule(state, 2, "buff");
+            this.checkPhase1Clear(state);
           }
         } else {
           Systems.addScore(state, 3500, sh.x, sh.y, `⚡${sideLabel} SHOULDER SPARK!`);
@@ -686,7 +763,55 @@ window.Stage2 = {
     if (state.boss.elbowL) handleElbowHit(state.boss.elbowL, "L");
     if (state.boss.elbowR) handleElbowHit(state.boss.elbowR, "R");
 
-    // 4. 胸の先端（バネ振動 ＆ 背中ジェット暴走トリガーセンサー）
+    // 4. 左手奥ホログラム砲台コア（Phase 1はシールド防御、Phase 2で攻撃可能！）
+    const holo = state.boss.hologram;
+    if (holo) {
+      checkBumper(holo, 9.2, () => {
+        holo.flash = 22;
+        if (holo.broken) {
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, holo.x, holo.y, "#00f5d4", 10, 3.5);
+          Systems.addScore(state, 2000, holo.x, holo.y, "HOLO SCRAP");
+        } else if (holo.isShielded || state.phase < 2) {
+          // Phase 1: ホログラムシールドで反射
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, holo.x, holo.y, "#00f5d4", 14, 4.5);
+          Systems.addScore(state, 1500, holo.x, holo.y, "⚡HOLO SHIELDED⚡");
+        } else {
+          // Phase 2: シールド解除！ ホログラム砲台コアへ直接ダメージ
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, holo.x, holo.y, "#ff007f", 20, 5.5);
+          Particles.add(state, holo.x, holo.y, "#ffffff", 14, 4.5);
+
+          if (holo.hp > 0) {
+            holo.hp--;
+            this.setExpressionSequence(state, [
+              { expr: "shock", frames: 20 },
+              { expr: "wince", frames: 28 }
+            ]);
+            Systems.addScore(state, 6000, holo.x, holo.y, `💥HOLO CANNON! HP:${holo.hp}`);
+
+            if (holo.hp === 0) {
+              holo.broken = true;
+              holo.laserState = "idle";
+              holo.laserTimer = 0;
+              Particles.triggerArmorBreakEffect(state, "hologram_cannon", holo.x, holo.y);
+              this.setExpressionSequence(state, [
+                { expr: "shock", frames: 25 },
+                { expr: "shout", frames: 32 },
+                { expr: "open_blush", frames: 50 }
+              ]);
+              UI.showCutin("💥【ホログラム砲台 大破！】💥<br>レーザー主砲沈黙！ +40,000pts ボーナス！", 220);
+              Systems.addScore(state, 40000, holo.x, holo.y, "★HOLO CANNON DESTROYED!★");
+              Systems.spawnFloatingCapsule(state, 2, "buff");
+              this.checkPhase2Clear(state);
+            }
+          }
+        }
+      });
+    }
+
+    // 5. 胸の先端（バネ振動 ＆ 背中ジェット暴走トリガーセンサー ＆ Phase 2装甲パージ）
     const bust = state.boss.tipBust;
     if (bust) {
       checkBumper(bust, 8.5, () => {
@@ -703,13 +828,61 @@ window.Stage2 = {
           { expr: "open_blush", frames: 70 }
         ]);
         state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 30);
-
         this.triggerJetBlast(state);
-        Systems.addScore(state, 12000, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
+
+        if (!bust.broken && bust.hp > 0) {
+          bust.hp--;
+          Systems.addScore(state, 12000, bust.x, bust.y, `♥BUST SENSITIVE! HP:${bust.hp}♥`);
+          if (bust.hp === 0) {
+            bust.broken = true;
+            Particles.triggerArmorBreakEffect(state, "bust_armor", bust.x, bust.y);
+            UI.showCutin("♥【胸部装甲パージ！】♥<br>胸部センサー限界突破！ +30,000pts！", 200);
+            Systems.addScore(state, 30000, bust.x, bust.y, "★BUST ARMOR PURGED!★");
+            Systems.spawnFloatingCapsule(state, 2, "buff");
+            this.checkPhase2Clear(state);
+          }
+        } else {
+          Systems.addScore(state, 12000, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
+        }
       });
     }
 
-    // 5. 左足付け根の丸いパーツ（追加バウンスポイント ＆ お尻揺れトリガー）
+    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット！）
+    const core = state.boss.core;
+    if (core) {
+      checkBumper(core, 8.8, () => {
+        Systems.addFever(state, 6);
+        if (state.phase === 3 && core.unlocked && core.hp > 0) {
+          core.hp--;
+          core.flash = 26;
+          this.setExpressionSequence(state, [
+            { expr: "shock", frames: 25 },
+            { expr: "shout", frames: 30 },
+            { expr: "open_blush", frames: 60 }
+          ]);
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, core.x, core.y, "#00f5d4", 26, 6.0);
+          Particles.add(state, core.x, core.y, "#ffffff", 20, 5.0);
+          Systems.addScore(state, 15000, core.x, core.y - 18, `💥CORE HIT! HP:${core.hp}`);
+
+          if (core.hp === 0) {
+            this.triggerClear(state, engine);
+          }
+        } else if (core.unlocked) {
+          if (window.sfx) window.sfx.burstTrigger();
+          Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
+          Systems.addScore(state, 5000, core.x, core.y - 16, "★REACTOR OVERDRIVE!★");
+        } else {
+          core.flash = 12;
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, core.x, core.y, "#00f5d4", 10, 3.0);
+          Systems.addScore(state, 1500, core.x, core.y - 14, "⚡CORE SHIELDED⚡");
+        }
+        UI.updateHUD(state);
+      });
+    }
+
+    // 7. 左足付け根の丸いパーツ（追加バウンスポイント ＆ お尻揺れトリガー）
     const hip = state.boss.hipJointL;
     if (hip) {
       checkBumper(hip, 10.0, () => {
@@ -743,7 +916,7 @@ window.Stage2 = {
       });
     }
 
-    // 6. カチューシャ猫耳三角バウンス板（左猫耳＆右猫耳の鋭角エッジリフレクション）
+    // 8. カチューシャ猫耳三角バウンス板（左猫耳＆右猫耳の鋭角エッジリフレクション）
     const checkCatEarBumper = (ear, earName) => {
       if (!ear) return;
       const edges = [
@@ -775,6 +948,187 @@ window.Stage2 = {
     };
     checkCatEarBumper(state.boss.catEarL, "L");
     checkCatEarBumper(state.boss.catEarR, "R");
+  },
+
+  checkPhase1Clear(state) {
+    if (state.boss.shoulderL.broken && state.boss.antenna.broken && state.phase === 1) {
+      state.phase = 2;
+      state.boss.hologram.isShielded = false;
+      if (window.sfx) window.sfx.burstTrigger();
+      this.setExpressionSequence(state, [
+        { expr: "shock", frames: 30 },
+        { expr: "shout", frames: 35 },
+        { expr: "wince", frames: 50 }
+      ]);
+      UI.showCutin("🎉【PHASE 1 突破！】🎉<br>外郭防衛網壊滅！ ホログラム砲台のシールド解除！", 220);
+      Systems.spawnFloatingCapsule(state, 2, "buff");
+      UI.updateHUD(state);
+    }
+  },
+
+  checkPhase2Clear(state) {
+    if (state.boss.hologram.broken && state.boss.tipBust.broken && state.phase === 2) {
+      state.phase = 3;
+      state.boss.core.unlocked = true;
+      state.boss.allArmorsPurged = true;
+      if (window.sfx) window.sfx.burstTrigger();
+      Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 50, 8.5);
+      Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 40, 7.5);
+      Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 35, 7.0);
+
+      this.setExpressionSequence(state, [
+        { expr: "shock", frames: 35 },
+        { expr: "open_blush", frames: 999 }
+      ]);
+      Systems.addScore(state, 50000, state.boss.core.x, state.boss.core.y, "★ALL ARMORS PURGED! +50,000★");
+      UI.showCutin("✨【PHASE 2 突破！ 全装甲パージ！】✨<br>プラズマ・リアクターコア露出！ コアを直撃してK.O.せよ！", 240);
+      Systems.addFever(state, 100);
+      Systems.spawnFloatingCapsule(state, 3, "buff");
+      UI.updateHUD(state);
+    }
+  },
+
+  triggerClear(state, engine) {
+    if (state.stageCleared) return;
+    state.stageCleared = true;
+    state.clearSequence.active = true;
+    state.clearSequence.frame = 0;
+    state.clearSequence.phase = "shatter";
+
+    if (window.sfx) window.sfx.burstTrigger();
+    UI.showCutin("💥【CRITICAL K.O.】💥<br>セルティのプラズマコア臨界停止！ ステージクリア！", 240);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 60, 9.5);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 60, 8.5);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 60, 9.0);
+
+    state.clearSequence.shatterPieces = Particles.shatterTableFrame(Physics.TABLE_WALLS);
+
+    state.boss.expression = "open_blush";
+    state.boss.expressionTimer = 9999;
+
+    state.balls.forEach(ball => {
+      const a = Math.atan2(ball.y - state.boss.core.y, ball.x - state.boss.core.x) + (Math.random() - 0.5) * 0.5;
+      const spd = 7.5 + Math.random() * 4.0;
+      ball.vx = Math.cos(a) * spd;
+      ball.vy = Math.sin(a) * spd - 2.5;
+    });
+  },
+
+  spawnSmokeCloud(x, y, color = "#00f5d4") {
+    return {
+      x: x + (Math.random() - 0.5) * 36,
+      y: y + (Math.random() - 0.5) * 20,
+      vx: (Math.random() - 0.5) * 3.0,
+      vy: -1.5 - Math.random() * 2.5,
+      r: 20 + Math.random() * 18,
+      maxR: 65 + Math.random() * 35,
+      growth: 0.75 + Math.random() * 0.65,
+      color,
+      alpha: 0.1,
+      maxAlpha: 0.60 + Math.random() * 0.25,
+      life: 80 + Math.floor(Math.random() * 35),
+      maxLife: 100
+    };
+  },
+
+  updateClearSequence(state, engine) {
+    if (!state.clearSequence || !state.clearSequence.active) return;
+    const seq = state.clearSequence;
+    seq.frame++;
+
+    // Step 1: 0..45 Frame -> Shatter table frame pieces
+    seq.shatterPieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.16;
+      p.vx *= 0.98;
+      p.angle += p.vAngle;
+      p.life--;
+    });
+
+    // Step 2: 25..120 Frame -> Billowing Smoke & Whiteout
+    if (seq.frame >= 25 && seq.frame <= 120) {
+      for (let i = 0; i < 3; i++) {
+        const col = Math.random() > 0.5 ? "#00f5d4" : (Math.random() > 0.5 ? "#ff007f" : "#ffffff");
+        seq.smokeClouds.push(this.spawnSmokeCloud(state.boss.core.x, state.boss.core.y, col));
+      }
+      if (seq.frame % 2 === 0) {
+        seq.smokeClouds.push(this.spawnSmokeCloud(100 + Math.random() * 220, 580, "#ffffff"));
+      }
+    }
+
+    // Whiteout buildup
+    if (seq.frame >= 65 && seq.frame <= 105) {
+      seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 65) / 38);
+      if (seq.frame === 104 && window.sfx) {
+        window.sfx.burstTrigger();
+      }
+    }
+
+    // Step 3: Frame 105+ -> Soft glow & settle
+    if (seq.frame >= 105) {
+      seq.cgRevealAlpha = 1.0;
+      seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
+
+      if (seq.frame % 2 === 0) {
+        const colors = ["#ffffff", "#e0ffff", "#00f5d4", "#ff80df"];
+        const col = colors[Math.floor(Math.random() * colors.length)];
+        seq.smokeClouds.push({
+          x: state.boss.core.x + (Math.random() - 0.5) * 30,
+          y: state.boss.core.y + (Math.random() - 0.5) * 20,
+          vx: (Math.random() - 0.5) * 1.6,
+          vy: -1.0 - Math.random() * 2.0,
+          r: 16 + Math.random() * 14,
+          maxR: 50 + Math.random() * 25,
+          growth: 0.6 + Math.random() * 0.5,
+          color: col,
+          alpha: 0.15,
+          maxAlpha: 0.60 + Math.random() * 0.20,
+          life: 80 + Math.floor(Math.random() * 35),
+          maxLife: 95
+        });
+      }
+    }
+
+    // Update smoke clouds
+    for (let i = seq.smokeClouds.length - 1; i >= 0; i--) {
+      const smk = seq.smokeClouds[i];
+      smk.x += smk.vx;
+      smk.y += smk.vy;
+      smk.vy *= 0.98;
+      smk.vx *= 0.97;
+      if (smk.r < smk.maxR) smk.r += smk.growth;
+      smk.life--;
+      const progress = 1 - (smk.life / smk.maxLife);
+      if (progress < 0.2) {
+        smk.alpha = (progress / 0.2) * smk.maxAlpha;
+      } else {
+        smk.alpha = Math.max(0, (1 - (progress - 0.2) / 0.8) * smk.maxAlpha);
+      }
+      if (smk.life <= 0 || smk.alpha <= 0.01) {
+        seq.smokeClouds.splice(i, 1);
+      }
+    }
+
+    // Step 4: Frame 155+ -> Show Clear Modal
+    if (seq.frame >= 155 && !seq.uiShown) {
+      seq.uiShown = true;
+      UI.updateHUD(state);
+      const modal = document.getElementById("clearModal");
+      if (modal) {
+        // キャラクター名とセリフをステージ2（セルティ）用に設定
+        const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
+        if (nameEl) nameEl.textContent = "セルティ (CERTI)";
+        const quoteEl = modal.querySelector("p");
+        if (quoteEl) quoteEl.innerHTML = "「な、なによこれぇっ…！？ プラズマ炉がオーバーヒートだなんて……！<br>あ、熱い…装甲パージが止まらないわ……っ！」";
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        void modal.offsetWidth;
+        modal.classList.remove("opacity-0");
+        modal.classList.add("opacity-100");
+      }
+    }
   },
 
   getLaserEndPoint(holo, maxW = 420, maxH = 660) {
@@ -1034,12 +1388,33 @@ window.Stage2 = {
       ctx.restore();
     }
 
-    // 6. 背中ジェット噴射火炎は renderTargets にて最前面レイヤーで描画
+    // 6. クリア演出時のモクモクスモーククラウド描画
+    if (state.clearSequence && state.clearSequence.smokeClouds && state.clearSequence.smokeClouds.length > 0) {
+      ctx.save();
+      state.clearSequence.smokeClouds.forEach(smk => {
+        ctx.save();
+        ctx.globalAlpha = smk.alpha;
+        const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
+        grad.addColorStop(0, smk.color);
+        grad.addColorStop(0.65, smk.color);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
     ctx.restore();
   },
 
   renderTargets(ctx, state, engine) {
     if (!state.boss) return;
+    const isPostWhiteout = state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 105;
+    if (isPostWhiteout) return;
+
     const animTick = (typeof engine === "number") ? engine : (performance.now() * 0.06);
 
     const drawGuide = (x, y, r, color, flash, rot, label, sub) => {
@@ -1148,9 +1523,19 @@ window.Stage2 = {
       // 安全待機時：ターゲットマークは一切描画しない（原画のまま）
     }
 
-    // 2. 左手奥ホログラム（ターゲット円は廃止し、ド派手なエネルギー充填＆レーザー放射エフェクト）
+    // 2. 左手奥ホログラム砲台（Phase 1: シールド / Phase 2: 攻撃可能ターゲット / 破壊後: 沈黙）
     const holo = state.boss.hologram;
     if (holo) {
+      if (!holo.broken) {
+        if (state.phase < 2 || holo.isShielded) {
+          drawGuide(holo.x, holo.y, holo.r, "#00f5d4", holo.flash, 0, "HOLO CANNON", "SHIELDED");
+        } else {
+          drawGuide(holo.x, holo.y, holo.r, "#ff007f", holo.flash, animTick * 0.03, "HOLO CANNON", `HP:${holo.hp}`);
+        }
+      } else {
+        drawGuide(holo.x, holo.y, holo.r, "#555555", 0, 0, "HOLO CANNON", "DESTROYED");
+      }
+
       const endPt = this.getLaserEndPoint(holo, 420, 660);
       const ex = holo.beamEndX || endPt.x;
       const ey = holo.beamEndY || endPt.y;
@@ -1314,19 +1699,30 @@ window.Stage2 = {
       drawGuide(elbR.x, elbR.y, elbR.r, "#e6ff00", elbR.flash, animTick * 0.02, "R-ELBOW", "DEFLECT");
     }
 
-    // 5. 胸の先端（JET SENSOR）
+    // 5. 胸の先端（JET SENSOR ＆ BUST TARGET）
     const bTip = state.boss.tipBust;
     if (bTip) {
-      drawGuide(bTip.x, bTip.y, bTip.r, "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", "⚡JET SENSOR");
+      drawGuide(bTip.x, bTip.y, bTip.r, bTip.broken ? "#555555" : "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", bTip.broken ? "PURGED" : `HP:${bTip.hp}`);
     }
 
-    // 6. 左足付け根の丸いパーツ（CYBER BUMP）
+    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット）
+    const core = state.boss.core;
+    if (core) {
+      if (state.phase === 3 && core.unlocked) {
+        const pulseR = core.r + Math.sin(animTick * 0.1) * 3.5;
+        drawGuide(core.x, core.y, pulseR, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp} [K.O. TARGET]`);
+      } else if (core.unlocked) {
+        drawGuide(core.x, core.y, core.r, "#e6ff00", core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
+      }
+    }
+
+    // 7. 左足付け根の丸いパーツ（CYBER BUMP）
     const hip = state.boss.hipJointL;
     if (hip) {
       drawGuide(hip.x, hip.y, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
     }
 
-    // 7. カチューシャ猫耳三角バウンス板（原画の猫耳3点に精密フィットした鋭角エッジバンパー）
+    // 8. カチューシャ猫耳三角バウンス板（原画の猫耳3点に精密フィットした鋭角エッジバンパー）
     const drawCatEar = (ear, label) => {
       if (!ear) return;
       ctx.save();
@@ -1374,7 +1770,7 @@ window.Stage2 = {
     drawCatEar(state.boss.catEarL, "L-EAR");
     drawCatEar(state.boss.catEarR, "R-EAR");
 
-    // 8. 背中ジェット噴射火炎（ノズル先端開口部から吹き出る指向性超音速プラズマ噴流）
+    // 9. 背中ジェット噴射火炎（ノズル先端開口部から吹き出る指向性超音速プラズマ噴流）
     const jet = state.boss.jet;
     if (jet && jet.active) {
       ctx.save();
@@ -1456,19 +1852,80 @@ window.Stage2 = {
   },
 
   renderHUD(ctx, state) {},
-  renderOverlays(ctx, state) {},
+
+  renderOverlays(ctx, state) {
+    if (!state.clearSequence || !state.clearSequence.active) return;
+    const seq = state.clearSequence;
+
+    // 1. シャッターピース（粉砕されたテーブル外枠破片）
+    if (seq.shatterPieces && seq.shatterPieces.length > 0) {
+      ctx.save();
+      seq.shatterPieces.forEach(p => {
+        if (p.life <= 0) return;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color || "#00f5d4";
+        ctx.globalAlpha = Math.max(0, Math.min(1.0, p.life / 30));
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    // 2. モクモクスモーククラウド
+    if (seq.smokeClouds && seq.smokeClouds.length > 0) {
+      ctx.save();
+      seq.smokeClouds.forEach(smk => {
+        ctx.save();
+        ctx.globalAlpha = smk.alpha;
+        const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
+        grad.addColorStop(0, smk.color);
+        grad.addColorStop(0.65, smk.color);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    // 3. ホワイトアウト閃光フラッシュ
+    if (seq.whiteoutAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1.0, seq.whiteoutAlpha);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 420, 660);
+      ctx.restore();
+    }
+  },
 
   getTargetDesc(state) {
     if (!state.boss) return "---";
+    if (state.stageCleared) {
+      return "✨セルティ撃破完了！ STAGE 2 CLEAR!!✨";
+    }
+
+    if (state.phase === 3) {
+      return "💥CRITICAL TARGET: 露出したプラズマ・リアクターコア(CORE)を直撃せよ！";
+    }
+
+    if (state.phase === 2) {
+      const holo = state.boss.hologram;
+      if (holo && holo.laserState === "charge") {
+        return holo.isLocked ? "⚠️レーザー照準ロックオン！緊急回避せよ！" : "⚠️ホログラム砲台がボールを追尾中！停止するな！";
+      }
+      return "TARGET: ホログラム砲台(HOLO CANNON) ＆ 胸部先端センサーを破壊せよ！";
+    }
+
+    // Phase 1
     const ant = state.boss.antenna;
     if (ant && ant.isActive) {
       return "⚡アンテナ電撃放電中！ 停止タイミングでゲートを抜けろ！";
     }
-    const holo = state.boss.hologram;
-    if (holo && holo.laserState === "charge") {
-      return holo.isLocked ? "⚠️レーザー照準ロックオン！高速移動で緊急回避せよ！" : "⚠️ホログラム砲台がボールを照準中！停止するな！";
-    }
-    return "TARGET: 手前の左肩装甲破壊 ＆ 胸・足付け根ヒットでギミック発動！";
+    return "TARGET: 左肩装甲(L-SHOULDER) ＆ カチューシャアンテナを破壊せよ！";
   },
 
   updateStatusMonitor(state) {
@@ -1481,32 +1938,33 @@ window.Stage2 = {
     const dtArmL = document.getElementById("dtArmLStatus");
     if (dtArmL) {
       const shL = state.boss.shoulderL;
-      dtArmL.textContent = shL.broken ? "💥PURGED!" : `L-SHOULDER (${shL.hp}/8)`;
+      dtArmL.textContent = shL.broken ? "💥PURGED!" : `L-SHOULDER (${shL.hp}/6)`;
       dtArmL.className = shL.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
     }
     const dtChest = document.getElementById("dtChestStatus");
     if (dtChest) {
-      const holo = state.boss.hologram;
-      if (holo && holo.laserState === "fire") {
-        dtChest.textContent = "⚡LASER FIRE!";
-        dtChest.className = "font-bold text-[#ff007f] animate-ping";
-      } else if (holo && holo.laserState === "charge") {
-        dtChest.textContent = "⚠️CHARGING...";
-        dtChest.className = "font-bold text-[#e6ff00]";
+      const bTip = state.boss.tipBust;
+      if (state.phase === 3) {
+        const core = state.boss.core;
+        dtChest.textContent = core.hp === 0 ? "💥CORE K.O.!" : `★CORE (${core.hp}/12)`;
+        dtChest.className = "font-bold text-[#00f5d4] animate-pulse";
       } else {
-        dtChest.textContent = "HOLOGRAM STANDBY";
-        dtChest.className = "font-bold text-gray-400";
+        dtChest.textContent = bTip.broken ? "💥BUST PURGED!" : `BUST TIP (${bTip.hp}/6)`;
+        dtChest.className = bTip.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#ff007f]";
       }
     }
     const dtCrotch = document.getElementById("dtCrotchStatus");
     if (dtCrotch) {
-      const jet = state.boss.jet;
-      if (jet && jet.active) {
-        dtCrotch.textContent = "🔥JET PROPULSION!";
-        dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
+      const holo = state.boss.hologram;
+      if (holo.broken) {
+        dtCrotch.textContent = "💥HOLO SILENCED";
+        dtCrotch.className = "font-bold text-[#ff1493]";
+      } else if (holo.isShielded || state.phase < 2) {
+        dtCrotch.textContent = "HOLO [SHIELDED]";
+        dtCrotch.className = "font-bold text-[#00f5d4]";
       } else {
-        dtCrotch.textContent = "STANDBY";
-        dtCrotch.className = "font-bold text-gray-400";
+        dtCrotch.textContent = `HOLO CANNON (${holo.hp}/6)`;
+        dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
       }
     }
 

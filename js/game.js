@@ -170,8 +170,8 @@ function createInitialState() {
       gaze: { x: 0, y: 0 },
 
       // 2D Spring oscillators for Bust (Default r: 24 for good spacing, r: 36 in Fever!)
-      bustL: { x: 160, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
-      bustR: { x: 236, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
+      bustL: { x: 160, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0, rot: 0 },
+      bustR: { x: 236, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0, rot: 0 },
 
       // Mecha Colliders (Calibrated 1:1 with centerpiece pixel art landmarks)
       // Drones (Spherical pods)
@@ -197,9 +197,9 @@ function createInitialState() {
       // Shoulder Armor Clusters (Spherical collider tracing outer shoulder pad radius R)
       podL:   { x: 108, y: 290, r: 23, flash: 0, rot: 0 },
       podR:   { x: 288, y: 290, r: 23, flash: 0, rot: 0 },
-      // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
-      hipL:   { x: 126, y: 465, r: 16, flash: 0, rot: 0, hp: 4 },
-      hipR:   { x: 270, y: 465, r: 16, flash: 0, rot: 0, hp: 4 },
+      // Waist / Hip Cyber Units (Belt side units, active and animated from Phase 1)
+      hipL:   { x: 110, y: 450, r: 15, flash: 0, rot: 0, hp: 4 },
+      hipR:   { x: 285, y: 450, r: 15, flash: 0, rot: 0, hp: 4 },
       // Crotch Secret Gravity Well (Activated when chest armor is shattered; powerful gravitational suction!)
       crotch: { x: 198, y: 556, r: 17, gravRadius: 120, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
       // Core Gem at chest center
@@ -599,18 +599,19 @@ function triggerArmorBreakEffect(type, cx, cy) {
   addParticles(cx, cy, "#e6ff00", 22, 6.0);
 }
 
-function spawnHeartParticle(x, y) {
+function spawnHeartParticle(x, y, isSmall = false) {
   state.hearts.push({
-    x: x + (Math.random() - 0.5) * 24,
-    y: y + (Math.random() - 0.5) * 16,
-    vx: (Math.random() - 0.5) * 2.2,
-    vy: -1.8 - Math.random() * 2.2, // Rising up
-    size: 10 + Math.random() * 8,
+    x: x + (Math.random() - 0.5) * (isSmall ? 10 : 24),
+    y: y + (Math.random() - 0.5) * (isSmall ? 8 : 16),
+    vx: (Math.random() - 0.5) * (isSmall ? 0.9 : 2.2),
+    vy: isSmall ? (-0.9 - Math.random() * 0.9) : (-1.8 - Math.random() * 2.2), // Rising up
+    size: isSmall ? (4.5 + Math.random() * 3.5) : (10 + Math.random() * 8),
     scale: 0.2,
-    maxScale: 1.0 + Math.random() * 0.4,
-    life: 50 + Math.floor(Math.random() * 25),
-    maxLife: 75,
-    alpha: 1.0
+    maxScale: isSmall ? 0.7 : (1.0 + Math.random() * 0.4),
+    life: isSmall ? (30 + Math.floor(Math.random() * 18)) : (50 + Math.floor(Math.random() * 25)),
+    maxLife: isSmall ? 48 : 75,
+    alpha: 1.0,
+    color: isSmall ? "#ff69b4" : "#ff1493"
   });
 }
 
@@ -1598,36 +1599,34 @@ function stepPhysics() {
           });
         });
 
-        // Waist / Hip Cyber Units (Exposed when chest armor is shattered in Phase 2/3)
-        if (state.boss.chestArmorBroken) {
-          [
-            { hip: state.boss.hipL, tag: "L-HIP", side: "L" },
-            { hip: state.boss.hipR, tag: "R-HIP", side: "R" }
-          ].forEach(({ hip, tag, side }) => {
-            checkCircleBumper(hip, 7.5, () => {
-              sfx.metalBumper();
-              addFever(4);
-              addParticles(hip.x, hip.y, "#ff66b2", 14, 4.5);
-              addParticles(hip.x, hip.y, "#00f5d4", 8, 3.5);
-              if (hip.hp > 0) {
-                hip.hp--;
-                addScore(2500, hip.x, hip.y - 12, `${tag} HIT! HP:${hip.hp}`);
-                if (hip.hp === 0) {
-                  sfx.armorBreak();
-                  triggerArmorBreakEffect(side === "L" ? "shoulder_l" : "shoulder_r", hip.x, hip.y);
-                  addScore(8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
-                  showCutin(`💥【${side === "L" ? "左" : "右"}腰ユニット過熱】<br>冷却系ダウン！ スコア倍率UP！`, 160);
-                  state.baseMultiplier += 0.5;
-                  addFever(15);
-                }
-              } else {
-                sfx.exSpark();
-                addScore(3000, hip.x, hip.y - 12, "⚡HIP SPARK!");
+        // Waist / Hip Cyber Units (Belt side units, active and animated from Phase 1!)
+        [
+          { hip: state.boss.hipL, tag: "L-HIP", side: "L" },
+          { hip: state.boss.hipR, tag: "R-HIP", side: "R" }
+        ].forEach(({ hip, tag, side }) => {
+          checkCircleBumper(hip, 7.5, () => {
+            sfx.metalBumper();
+            addFever(4);
+            addParticles(hip.x, hip.y, "#ff66b2", 14, 4.5);
+            addParticles(hip.x, hip.y, "#00f5d4", 8, 3.5);
+            if (hip.hp > 0) {
+              hip.hp--;
+              addScore(2500, hip.x, hip.y - 12, `${tag} HIT! HP:${hip.hp}`);
+              if (hip.hp === 0) {
+                sfx.armorBreak();
+                triggerArmorBreakEffect(side === "L" ? "shoulder_l" : "shoulder_r", hip.x, hip.y);
+                addScore(8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
+                showCutin(`💥【${side === "L" ? "左" : "右"}腰ユニット過熱】<br>冷却系ダウン！ スコア倍率UP！`, 160);
+                state.baseMultiplier += 0.5;
+                addFever(15);
               }
-              updateHUD();
-            });
+            } else {
+              sfx.exSpark();
+              addScore(3000, hip.x, hip.y - 12, "⚡HIP SPARK!");
+            }
+            updateHUD();
           });
-        }
+        });
 
         // Crotch Secret Gravity Well (Active ONLY after Chest Armor is broken; strong gravitational pull & orbital curve!)
         if (state.boss.chestArmorBroken) {
@@ -1657,6 +1656,11 @@ function stepPhysics() {
                 scale: 1.1
               });
             }
+
+            // Subtle tiny hearts floating when pulled deep into crotch gravity!
+            if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.08) {
+              spawnHeartParticle(ball.x, ball.y, true);
+            }
           }
 
           // 2. Core Penetration & Slingshot Dynamics (Traversing the inner event horizon)
@@ -1665,6 +1669,8 @@ function stepPhysics() {
               ball.crotchHitTimer = 40; // Debounce per traversal
               crotch.flash = 18;
               sfx.burstTrigger();
+              // Spawn modest little heart on crotch core penetration
+              spawnHeartParticle(crotch.x, crotch.y, true);
 
               // Tangential deflection boost: curves the ball through and ejects toward flippers
               const spinDir = ball.vx >= 0 ? 1 : -1;
@@ -1896,6 +1902,7 @@ function stepPhysics() {
     state.boss.earL, state.boss.earR,
     state.boss.podL, state.boss.podR,
     state.boss.hipL, state.boss.hipR,
+    state.boss.bustL, state.boss.bustR,
     state.boss.crotch,
     state.boss.core
   ].forEach(g => {
@@ -1969,14 +1976,6 @@ function renderTable() {
           const sh = (b.r * 2) * srcScaleY;
 
           ctx.drawImage(centerpieceImg, sx, sy, sw, sh, -b.r, -b.r, b.r * 2, b.r * 2);
-
-          if (b.flash > 0 || state.fever.active) {
-            ctx.strokeStyle = state.fever.active ? "#e6ff00" : "rgba(255, 20, 147, 0.75)";
-            ctx.lineWidth = b.flash > 0 ? 3 : 2;
-            ctx.beginPath();
-            ctx.arc(0, 0, b.r - 1.5, 0, Math.PI * 2);
-            ctx.stroke();
-          }
           ctx.restore();
         };
         drawSpringBustPatch(state.boss.bustL);
@@ -2220,15 +2219,22 @@ function renderTable() {
     drawCyberTargetGuide(pL.x, pL.y, pL.r, colL, pL.flash, pL.rot, "L-ARMOR", shL_HP === 0 ? "⚡EX-SPARK" : (pL_shielded ? "🛡️SHIELD" : `HP:${shL_HP}`));
     drawCyberTargetGuide(pR.x, pR.y, pR.r, colR, pR.flash, pR.rot, "R-ARMOR", shR_HP === 0 ? "⚡EX-SPARK" : (pR_shielded ? "🛡️SHIELD" : `HP:${shR_HP}`));
 
-    // 3. Waist / Hip Mecha Units (Active when chest armor is shattered in Phase 2/3)
+    // 3. Waist / Hip Cyber Units (Belt side units, animated from Phase 1!)
+    const hL = state.boss.hipL;
+    const hR = state.boss.hipR;
+    drawCyberTargetGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
+    drawCyberTargetGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
+
+    // 4. Exposed Bust Cyber Targets (Activated when chest armor is shattered in Phase 2/3)
     if (state.boss.chestArmorBroken) {
-      const hL = state.boss.hipL;
-      const hR = state.boss.hipR;
-      drawCyberTargetGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
-      drawCyberTargetGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
+      const bL = state.boss.bustL;
+      const bR = state.boss.bustR;
+      const bustCol = state.fever.active ? "#e6ff00" : "#ff1493";
+      drawCyberTargetGuide(bL.x + bL.dx, bL.y + bL.dy, bL.r, bustCol, bL.flash, bL.rot, "L-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
+      drawCyberTargetGuide(bR.x + bR.dx, bR.y + bR.dy, bR.r, bustCol, bR.flash, bR.rot, "R-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
     }
 
-    // 4. Crotch Secret Gravity Well (Activated ONLY after Chest Armor is purged!)
+    // 5. Crotch Secret Gravity Well (Activated ONLY after Chest Armor is purged!)
     if (state.boss.chestArmorBroken) {
       const cr = state.boss.crotch;
       const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
@@ -2618,16 +2624,16 @@ function renderTable() {
     ctx.restore();
   });
 
-  // 3. Floating Pink Hearts (Bust hit splash)
+  // 3. Floating Pink Hearts (Bust / Crotch hit splash)
   state.hearts.forEach(h => {
     ctx.save();
     ctx.globalAlpha = h.alpha;
     ctx.translate(h.x, h.y);
     ctx.scale(h.scale, h.scale);
 
-    ctx.fillStyle = "#ff1493";
+    ctx.fillStyle = h.color || "#ff1493";
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = h.size < 8 ? 1.0 : 1.5;
     ctx.beginPath();
     const topCurveHeight = h.size * 0.3;
     ctx.moveTo(0, topCurveHeight);

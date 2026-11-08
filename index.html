@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>桃色装甲ボンぼや〜ジュッ！ - MOMOIRO SOUKOU BON-VOYAGE!</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <link rel="stylesheet" href="./css/style.css?v=11" />
+  <link rel="stylesheet" href="./css/style.css?v=12" />
   <link rel="icon" href="data:," />
 </head>
 <body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-2 box-border">
@@ -79,51 +79,51 @@
         <div class="scanlines pointer-events-none absolute inset-0"></div>
 
         <!-- DIALOGUE / CUT-IN BANNER OVERLAY (HIGH TRANSPARENCY TO PRESERVE BACKDROP EFFECTS) -->
-        <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center justify-center px-3 py-1.5 rounded-lg bg-[#120326]/35 backdrop-blur-[2px] border border-[#e6ff00]/80 shadow-lg text-center transition-all duration-300">
+        <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center justify-center px-3 py-1.5 rounded-lg bg-[#120326]/45 border border-[#e6ff00]/80 shadow-lg text-center transition-all duration-300">
           <span id="cutinText" class="text-[11px] sm:text-xs font-bold text-[#e6ff00] tracking-wide leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"></span>
         </div>
 
         <!-- STAGE CLEAR OVERLAY (WITHIN CANVAS PLAYFIELD FRAME, FIXED SURROUNDING UI) -->
         <div id="clearModal" class="absolute inset-0 z-30 hidden flex-col justify-end p-2 pointer-events-auto opacity-0 transition-opacity duration-700">
 
-          <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (ULTRA-TRANSLUCENT SO REAL-TIME SMOKE & CLEAR CG ARE FULLY VISIBLE) -->
+          <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (PURE TRANSLUCENT ALPHA, NO BACKDROP-FILTER BUG) -->
           <div class="w-full p-2 bg-gradient-to-t from-[#090218]/45 via-[#090218]/20 to-transparent rounded-b-lg flex flex-col gap-1.5 shrink-0 border-t border-[#ff1493]/30">
-            <!-- CHARACTER DIALOGUE BOX (RETRO-16BIT ADV STYLE, HIGH-TRANSLUCENCY FROSTED GLASS) -->
-            <div class="bg-[#0e0224]/30 backdrop-blur-[2px] border border-[#ff1493]/60 rounded p-1.5 shadow-lg">
+            <!-- CHARACTER DIALOGUE BOX (RETRO-16BIT ADV STYLE, PURE TRANSLUCENT OVERLAY) -->
+            <div class="bg-[#0b031c]/50 border border-[#ff1493]/70 rounded p-1.5 shadow-lg">
               <div class="flex items-center justify-between mb-0.5">
-                <span class="text-[10px] font-bold text-[#ff66b2] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">リリス (LILITH)</span>
-                <span class="text-[8px] text-gray-200 font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">大破・戦闘不能</span>
+                <span class="text-[10px] font-bold text-[#ff66b2] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">リリス (LILITH)</span>
+                <span class="text-[8px] text-gray-200 font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">大破・戦闘不能</span>
               </div>
-              <p class="text-[10px] sm:text-xs text-white leading-relaxed font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+              <p class="text-[10px] sm:text-xs text-white leading-relaxed font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
                 「くっ……こんな整備不良の機体じゃなければ……！ 覚えてなさいよっ！」
               </p>
             </div>
 
-            <!-- RELIC SELECTION (TRANSLUCENT GLASS) -->
-            <div class="bg-[#09031c]/30 backdrop-blur-[2px] border border-[#00f5d4]/45 rounded p-1.5 shadow-md">
+            <!-- RELIC SELECTION (PURE TRANSLUCENT OVERLAY) -->
+            <div class="bg-[#0b031c]/50 border border-[#00f5d4]/50 rounded p-1.5 shadow-md">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-[9px] font-bold text-[#00f5d4] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">⚙️ 鹵獲パーツ選択 (次ステージ持越)</span>
-                <span class="text-[8px] text-[#e6ff00] font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">SELECT 1</span>
+                <span class="text-[9px] font-bold text-[#00f5d4] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">⚙️ 鹵獲パーツ選択 (次ステージ持越)</span>
+                <span class="text-[8px] text-[#e6ff00] font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">SELECT 1</span>
               </div>
               <div class="grid grid-cols-3 gap-1" id="relicOptions">
-                <button class="relic-btn p-1 rounded bg-[#16063b]/35 hover:bg-[#ff1493]/40 active:scale-95 border border-[#00f5d4]/50 text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
-                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">ウサミミ・レーダー</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">通過スコア2倍＆コア解錠短縮</div>
+                <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
+                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">ウサミミ・レーダー</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">通過スコア2倍＆コア解錠短縮</div>
                 </button>
-                <button class="relic-btn p-1 rounded bg-[#16063b]/35 hover:bg-[#ff1493]/40 active:scale-95 border border-[#00f5d4]/50 text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
-                  <div class="font-bold text-[10px] text-[#00f5d4] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">電磁スプリング</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">フリッパー反発力+25%＆弾速UP</div>
+                <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
+                  <div class="font-bold text-[10px] text-[#00f5d4] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">電磁スプリング</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">フリッパー反発力+25%＆弾速UP</div>
                 </button>
-                <button class="relic-btn p-1 rounded bg-[#16063b]/35 hover:bg-[#ff1493]/40 active:scale-95 border border-[#00f5d4]/50 text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
-                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">支援ドローン</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">投入時ストッパー自動展開</div>
+                <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
+                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">支援ドローン</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">投入時ストッパー自動展開</div>
                 </button>
               </div>
             </div>
 
             <!-- ACTION BUTTONS -->
             <div class="flex items-center gap-1.5 mt-0.5">
-              <button id="btnClearReplay" class="flex-1 py-1.5 rounded bg-[#200c47]/75 hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-[10px] cursor-pointer transition backdrop-blur-[2px]">
+              <button id="btnClearReplay" class="flex-1 py-1.5 rounded bg-[#200c47]/80 hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-[10px] cursor-pointer transition">
                 もう一度遊ぶ
               </button>
               <button id="btnClearNext" class="flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110">
@@ -258,8 +258,8 @@
     </div>
   </div>
 
-  <script src="./js/stage1_assets.js?v=30"></script>
-  <script src="./js/audio.js?v=30"></script>
-  <script src="./js/game.js?v=30"></script>
+  <script src="./js/stage1_assets.js?v=31"></script>
+  <script src="./js/audio.js?v=31"></script>
+  <script src="./js/game.js?v=31"></script>
 </body>
 </html>

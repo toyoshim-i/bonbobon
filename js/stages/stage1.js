@@ -41,6 +41,15 @@ window.Stage1 = {
     this.assets.defeatCgImg.onload = check;
   },
 
+  // 表情アニメーションシーケンス開始ヘルパー
+  setExpressionSequence(state, seq) {
+    if (!state.boss || !state.boss.faceAnim || !seq || seq.length === 0) return;
+    state.boss.faceAnim.sequence = seq;
+    state.boss.faceAnim.seqIdx = 0;
+    state.boss.faceAnim.seqTimer = seq[0].frames;
+    state.boss.expression = seq[0].expr;
+  },
+
   createBossState() {
     return {
       droneL_HP: 3,
@@ -72,6 +81,15 @@ window.Stage1 = {
       blinkTimer: 120,
       winkTimer: 0,
       talkTimer: 0,
+      faceAnim: {
+        idleTimer: 70,
+        blinkFrame: 0,
+        talkFrame: 0,
+        winkFrame: 0,
+        sequence: null,
+        seqIdx: 0,
+        seqTimer: 0
+      },
       animTick: 0,
       hairSpring: { dx: 0, dy: 0, vx: 0, vy: 0, phase: 0 },
       gaze: { x: 0, y: 0 },
@@ -110,10 +128,15 @@ window.Stage1 = {
       hipL: { x: 110, y: 450, r: 15, flash: 0, rot: 0, hp: 4 },
       hipR: { x: 285, y: 450, r: 15, flash: 0, rot: 0, hp: 4 },
 
+      // Chest Armor Exhaust Vents (両胸下の黄色と黒の排気口：胴体装甲の真の弱点)
+      // 原画の左右排気口グラフィックに完全一致配置
+      ventL: { x: 145, y: 368, r: 18, hp: 4, flash: 0 },
+      ventR: { x: 251, y: 368, r: 18, hp: 4, flash: 0 },
+
       // Crotch Secret Gravity Well
       crotch: { x: 198, y: 556, r: 17, gravRadius: 135, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
 
-      // Core Gem
+      // Core Gem (首元の黄色い六角ジュエル)
       core: { x: 198, y: 310, r: 16, flash: 0 }
     };
   },
@@ -269,33 +292,63 @@ window.Stage1 = {
     hs.dy = Math.max(-8, Math.min(8, hs.dy + hs.vy));
 
     state.boss.animTick++;
-    state.boss.blinkTimer--;
-    if (state.boss.blinkTimer <= -10) {
-      state.boss.blinkTimer = 130 + Math.floor(Math.random() * 110);
-    }
-    if (state.boss.winkTimer > 0) state.boss.winkTimer--;
-    if (state.boss.talkTimer > 0) state.boss.talkTimer--;
 
-    // Bust excitement decay (natural cooldown for crotch suction)
-    if (state.boss.bustExcitement > 0) {
-      state.boss.bustExcitement = Math.max(0, state.boss.bustExcitement - 0.42);
-    }
+    // 生き生きとした表情アニメーション・リップシンク制御
+    const fa = state.boss.faceAnim || (state.boss.faceAnim = {});
+    const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
 
-    // Gaze tracking
-    if (state.balls.length > 0) {
-      const b = state.balls[0];
-      const targetGx = Math.max(-2.3, Math.min(2.3, (b.x - 198) * 0.015));
-      const targetGy = Math.max(-1.8, Math.min(2.3, (b.y - 194) * 0.011));
-      state.boss.gaze.x += (targetGx - state.boss.gaze.x) * 0.25;
-      state.boss.gaze.y += (targetGy - state.boss.gaze.y) * 0.25;
-    }
+    // 感情遷移アニメーションシーケンス実行中
+    if (fa.sequence && fa.sequence.length > 0) {
+      fa.seqTimer--;
+      if (fa.seqTimer <= 0) {
+        fa.seqIdx++;
+        if (fa.seqIdx < fa.sequence.length) {
+          const step = fa.sequence[fa.seqIdx];
+          state.boss.expression = step.expr;
+          fa.seqTimer = step.frames;
+        } else {
+          fa.sequence = null;
+          state.boss.expression = "smile";
+        }
+      }
+    } else {
+      if (state.boss.expressionTimer > 0) {
+        state.boss.expressionTimer--;
+        if (state.boss.expressionTimer <= 0) {
+          state.boss.expression = "smile";
+        }
+      }
 
-    if (state.boss.expressionTimer > 0) {
-      state.boss.expressionTimer--;
-      if (state.boss.expressionTimer === 0) {
-        state.boss.expression = "smile";
+      // アイドル時の自然な表情アニメーション（瞬き・ダブル瞬き・ウインク・吐息）
+      if (state.boss.expression === "smile") {
+        fa.idleTimer = (fa.idleTimer || 0) - 1;
+        if (fa.idleTimer <= 0) {
+          const r = Math.random();
+          if (r < 0.45) {
+            // パチッ（単発瞬き 9フレーム）
+            fa.blinkFrame = 9;
+            fa.idleTimer = 80 + Math.floor(Math.random() * 85);
+          } else if (r < 0.72) {
+            // パチパチッ（ダブル瞬き 20フレーム）
+            fa.blinkFrame = 20;
+            fa.idleTimer = 110 + Math.floor(Math.random() * 95);
+          } else if (r < 0.88) {
+            // ウインク（28フレーム）
+            fa.winkFrame = 28;
+            fa.idleTimer = 135 + Math.floor(Math.random() * 110);
+          } else {
+            // 吐息・囁き口パク（16フレーム）
+            fa.talkFrame = 16;
+            fa.idleTimer = 90 + Math.floor(Math.random() * 85);
+          }
+        }
       }
     }
+
+    if (fa.blinkFrame > 0) fa.blinkFrame--;
+    if (fa.winkFrame > 0) fa.winkFrame--;
+    if (fa.talkFrame > 0) fa.talkFrame--;
+    if (state.boss.talkTimer > 0) state.boss.talkTimer--;
 
     // Target reticles rotation and flash decay
     [
@@ -332,7 +385,58 @@ window.Stage1 = {
 
     // 1. Chest Armor Plate vs Exposed Bust
     if (!state.boss.chestArmorBroken) {
-      const hit = checkEllipse(198, 353, 54, 26);
+      // A. 両胸下の黄色と黒の排気口（左右の弱点スポット）
+      const checkVentHit = (vent, sideLabel) => {
+        checkBumper(vent, 9.8, v => {
+          v.flash = 22;
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(state, v.x, v.y, "#e6ff00", 16, 4.5);
+          Particles.add(state, v.x, v.y, "#ff007f", 12, 3.5);
+
+          if (v.hp > 0) {
+            v.hp--;
+            state.boss.chestArmorHP = (state.boss.ventL ? state.boss.ventL.hp : 0) + (state.boss.ventR ? state.boss.ventR.hp : 0);
+            Systems.addFever(state, 8);
+            Systems.addScore(state, 4000, v.x, v.y, `${sideLabel}-VENT HIT! HP:${v.hp}`);
+            this.setExpressionSequence(state, [
+              { expr: "shock", frames: 14 },
+              { expr: "wince", frames: 20 },
+              { expr: "open_blush", frames: 35 }
+            ]);
+
+            if (state.boss.chestArmorHP === 0) {
+              state.boss.chestArmorBroken = true;
+              Particles.triggerArmorBreakEffect(state, "chest", 198, 353);
+              this.setExpressionSequence(state, [
+                { expr: "shock", frames: 22 },
+                { expr: "shout", frames: 28 },
+                { expr: "open_blush", frames: 70 }
+              ]);
+              UI.showCutin("💥【胸部装甲パージ！】💥<br>左右排気口破壊により装甲強制パージ！<br>秘密のグラビティコア起動！", 220);
+              Systems.addScore(state, 20000, 198, 353, "TORSO PURGED!!");
+              Systems.spawnFloatingCapsule(state, 2, "buff");
+              Systems.spawnFloatingCapsule(state, 5, "buff");
+
+              if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
+                state.boss.allArmorsPurged = true;
+                Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+                UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+                Systems.startFeverMode(state);
+              }
+            } else if (v.hp === 0) {
+              UI.showCutin(`⚠️【${sideLabel}排気口破壊！】⚠️<br>胸部オーバーヒート！ 逆側を狙え！`, 160);
+              Particles.triggerArmorBreakEffect(state, "chest", v.x, v.y);
+            }
+          }
+          UI.updateHUD(state);
+        });
+      };
+
+      if (state.boss.ventL) checkVentHit(state.boss.ventL, "L");
+      if (state.boss.ventR) checkVentHit(state.boss.ventR, "R");
+
+      // B. 装甲板本体（排気口以外の胸部装甲ヒット）
+      const hit = checkEllipse(198, 353, 48, 22);
       if (hit) {
         ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
         ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
@@ -341,16 +445,14 @@ window.Stage1 = {
         if (window.sfx) window.sfx.metalBumper();
 
         if (state.boss.chestArmorHP > 0) {
-          state.boss.chestArmorHP--;
-          Particles.add(state, hit.cx, hit.cy, "#ff1493", 16, 5.0);
-          Systems.addFever(state, 6);
+          if (state.boss.ventL && state.boss.ventL.hp > 0) state.boss.ventL.hp--;
+          else if (state.boss.ventR && state.boss.ventR.hp > 0) state.boss.ventR.hp--;
+          state.boss.chestArmorHP = (state.boss.ventL ? state.boss.ventL.hp : 0) + (state.boss.ventR ? state.boss.ventR.hp : 0);
 
-          if (state.boss.chestArmorHP === 4) {
-            UI.showCutin("⚠️【胴体装甲に亀裂発生】<br>第1チェスト装甲破壊！ あと4回直撃でパージ！", 180);
-            Particles.triggerArmorBreakEffect(state, "chest", hit.cx, hit.cy);
-            state.boss.expression = "shock";
-            state.boss.expressionTimer = 60;
-          } else if (state.boss.chestArmorHP === 0) {
+          Particles.add(state, hit.cx, hit.cy, "#ff1493", 14, 4.5);
+          Systems.addFever(state, 5);
+
+          if (state.boss.chestArmorHP === 0) {
             state.boss.chestArmorBroken = true;
             Particles.triggerArmorBreakEffect(state, "chest", hit.cx, hit.cy);
             state.boss.expression = "blush";
@@ -360,7 +462,6 @@ window.Stage1 = {
             Systems.spawnFloatingCapsule(state, 2, "buff");
             Systems.spawnFloatingCapsule(state, 5, "buff");
 
-            // Check full armor strip bonus
             if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
               state.boss.allArmorsPurged = true;
               Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
@@ -409,8 +510,11 @@ window.Stage1 = {
           b.flash = 22;
           if (window.sfx) window.sfx.softPuru();
 
-          state.boss.expression = "blush";
-          state.boss.expressionTimer = 85;
+          this.setExpressionSequence(state, [
+            { expr: "shock", frames: 12 },
+            { expr: "wince", frames: 16 },
+            { expr: "open_blush", frames: 60 }
+          ]);
           state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
 
           // Boost bust excitement (scales crotch suction heavily!)
@@ -1002,24 +1106,29 @@ window.Stage1 = {
       }
     }
 
-    // Face Patch Compositing
+    // Face Patch Compositing (瞬き・ダブル瞬き・ウインク・感情遷移シーケンス・口パク)
     let activePatchKey = null;
     if (!isDefeat) {
-      const isTalking = state.boss.talkTimer > 0;
-      const talkPhase = Math.floor(state.boss.animTick / 5) % 3;
-      const isBriefFlinch = state.boss.expressionTimer > 38;
+      const fa = state.boss.faceAnim || {};
+      const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
+      const talkCycle = Math.floor(performance.now() * 0.009) % 3;
 
-      if (state.boss.expression === "angry_emp" || state.boss.expression === "shock") {
-        activePatchKey = isBriefFlinch ? "shout" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
-      } else if (state.boss.expression === "blush") {
-        activePatchKey = isBriefFlinch ? "wince" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
-      } else if (state.boss.winkTimer > 0) {
-        activePatchKey = "wink";
-      } else if (state.boss.blinkTimer <= 0 && state.boss.blinkTimer >= -5) {
-        activePatchKey = "blink";
+      if (state.boss.expression && state.boss.expression !== "smile") {
+        activePatchKey = state.boss.expression === "blush" ? "open_blush" :
+                         state.boss.expression === "angry_emp" ? "shout" : state.boss.expression;
       } else if (isTalking) {
-        if (talkPhase === 0) activePatchKey = "talk";
-        else if (talkPhase === 1) activePatchKey = "talk_sm";
+        activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
+      } else if (fa.winkFrame > 0) {
+        activePatchKey = "wink";
+      } else if (fa.blinkFrame > 0) {
+        // ダブル瞬き対応 (20..13: 1回目瞬き, 12..8: 薄目開き, 7..0: 2回目瞬き)
+        if (fa.blinkFrame > 12 || fa.blinkFrame <= 7) {
+          activePatchKey = "blink";
+        } else {
+          activePatchKey = null;
+        }
+      } else if (fa.talkFrame > 0) {
+        activePatchKey = "talk_sm";
       }
     }
 
@@ -1117,9 +1226,36 @@ window.Stage1 = {
     drawGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
     drawGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
 
-    // 4. Torso Armor / Exposed Bust Targets
+    // 4. Chest Armor Vents / Exposed Bust Targets
     if (!state.boss.chestArmorBroken) {
-      drawGuide(198, 353, 30, "#ff1493", 0, animTick * 0.02, "TORSO", `HP:${state.boss.chestArmorHP}`);
+      // 中央の不要な赤丸ターゲットを廃止し、両胸下の黄色と黒の排気口に左右の破壊ターゲットを配置
+      const vL = state.boss.ventL;
+      const vR = state.boss.ventR;
+      if (vL) {
+        drawGuide(vL.x, vL.y, vL.r, vL.hp > 0 ? "#e6ff00" : "#ff1493", vL.flash, -animTick * 0.02, "L-VENT", vL.hp > 0 ? `HP:${vL.hp}` : "DAMAGED");
+      }
+      if (vR) {
+        drawGuide(vR.x, vR.y, vR.r, vR.hp > 0 ? "#e6ff00" : "#ff1493", vR.flash, animTick * 0.02, "R-VENT", vR.hp > 0 ? `HP:${vR.hp}` : "DAMAGED");
+      }
+
+      // 首元の黄色いジュエル（CORE JEWEL）：六角形の精密フレーム（開始前は静かに存在）
+      const core = state.boss.core;
+      if (core) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(230, 255, 0, 0.45)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const ang = (Math.PI / 3) * i - Math.PI / 6;
+          const px = core.x + Math.cos(ang) * (core.r - 2);
+          const py = core.y + Math.sin(ang) * (core.r - 2);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
     } else {
       const bL = state.boss.bustL;
       const bR = state.boss.bustR;

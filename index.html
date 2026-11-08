@@ -8,13 +8,76 @@
   <meta http-equiv="Expires" content="0" />
   <title>桃色装甲ボンぼや〜ジュッ！ - MOMOIRO SOUKOU BON-VOYAGE!</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <link rel="stylesheet" href="./css/style.css?v=12" />
+  <link rel="stylesheet" href="./css/style.css?v=13" />
   <link rel="icon" href="data:," />
 </head>
-<body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-2 box-border">
+<body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-3 box-border">
   
-  <!-- SMARTPHONE VERTICAL PINBALL CABINET (FIXED FULLSCREEN, NO SCROLL) -->
-  <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] retro-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
+  <!-- DESKTOP RESPONSIVE WRAPPER (CENTERED CABINET WITH SIDEBARS) -->
+  <div class="relative w-full h-full max-h-[100dvh] flex items-center justify-center gap-3 xl:gap-6">
+
+    <!-- DESKTOP LEFT SIDEBAR: CONTROLS & AUDIO SPECS -->
+    <aside id="desktopLeftSidebar" class="hidden lg:flex flex-col justify-between w-[220px] xl:w-[260px] h-full max-h-[96vh] bg-[#0c0422]/90 border border-[#00f5d4]/40 rounded-xl p-3.5 shadow-2xl backdrop-blur-sm shrink-0 overflow-y-auto text-xs space-y-3">
+      <!-- SYSTEM HEADER -->
+      <div class="border-b border-[#00f5d4]/30 pb-2">
+        <div class="text-[10px] text-[#00f5d4] font-bold tracking-widest uppercase">System Console</div>
+        <div class="text-sm font-black text-white tracking-wider flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-ping"></span>
+          RETRO-16BIT MODE
+        </div>
+      </div>
+
+      <!-- KEYBOARD CONTROLS GUIDE -->
+      <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#00f5d4]/20">
+        <div class="text-[11px] font-extrabold text-[#e6ff00] flex items-center gap-1 border-b border-[#e6ff00]/20 pb-1">
+          <span>⌨️ KEY CONTROLS</span>
+        </div>
+        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5 text-[11px] items-center pt-1">
+          <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-center">A / ←</kbd>
+          <span class="text-gray-300">左パドル</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-center">D / →</kbd>
+          <span class="text-gray-300">右パドル</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-[#36092f] border border-[#ff1493]/60 text-[#ff1493] font-bold text-center">S / ↓</kbd>
+          <span class="text-gray-300">プランジャー(長押し)</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-[#36092f] border border-[#e6ff00]/60 text-[#e6ff00] font-bold text-center">SPACE</kbd>
+          <span class="text-gray-300">BURST解放</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/40 text-white font-bold text-center">W / Q / E</kbd>
+          <span class="text-gray-300">台揺らし(ナッジ)</span>
+        </div>
+      </div>
+
+      <!-- SOUND / AUDIO ENGINE -->
+      <div class="space-y-1 bg-[#140730]/90 p-2.5 rounded-lg border border-[#ff1493]/20">
+        <div class="text-[11px] font-extrabold text-[#ff66b2] flex items-center gap-1 border-b border-[#ff1493]/20 pb-1">
+          <span>🔊 SOUND SYSTEM</span>
+        </div>
+        <div class="text-[10px] text-gray-300 leading-tight space-y-0.5 pt-1">
+          <div>CH: FM 6音 / SSG 3音 相当</div>
+          <div class="text-[#00f5d4] font-bold">YM2608 OPNA FM Synth</div>
+          <div class="text-[9px] text-gray-400">リアルタイムFM変調サウンド</div>
+        </div>
+      </div>
+
+      <!-- TACTICAL TIPS -->
+      <div class="space-y-1 bg-[#140730]/90 p-2.5 rounded-lg border border-[#e6ff00]/20">
+        <div class="text-[11px] font-extrabold text-[#e6ff00] flex items-center gap-1 border-b border-[#e6ff00]/20 pb-1">
+          <span>💡 TACTICAL TIPS</span>
+        </div>
+        <ul class="text-[10px] text-gray-300 leading-relaxed list-disc list-inside space-y-0.5 pt-1">
+          <li>パワー70〜85%でスキルショット！</li>
+          <li>ボールが停滞したら迷わず台揺らし！</li>
+          <li>肩アーマー破壊で胸部パージへ！</li>
+        </ul>
+      </div>
+
+      <!-- FOOTER VERSION -->
+      <div class="text-[9px] text-gray-500 text-center font-mono border-t border-white/10 pt-2">
+        MOMOIRO SOUKOU BON-VOYAGE!
+      </div>
+    </aside>
+
+    <!-- SMARTPHONE VERTICAL PINBALL CABINET (FIXED FULLSCREEN, NO SCROLL) -->
+    <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] retro-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
     
     <!-- TOP TITLE & STATUS BAR -->
     <div class="w-full flex items-center justify-between px-2 py-1 bg-[#160836] border border-[#ff1493]/60 rounded text-[11px] shrink-0">
@@ -170,6 +233,81 @@
     </div>
   </div>
 
+  <!-- DESKTOP RIGHT SIDEBAR: MECHA TELEMETRY & TARGET SPECS -->
+  <aside id="desktopRightSidebar" class="hidden lg:flex flex-col justify-between w-[220px] xl:w-[260px] h-full max-h-[96vh] bg-[#0c0422]/90 border border-[#ff1493]/40 rounded-xl p-3.5 shadow-2xl backdrop-blur-sm shrink-0 overflow-y-auto text-xs space-y-3">
+    <!-- TARGET UNIT SPECS -->
+    <div class="border-b border-[#ff1493]/30 pb-2">
+      <div class="text-[10px] text-[#ff1493] font-bold tracking-widest uppercase">Target Telemetry</div>
+      <div class="text-sm font-black text-[#ff66b2] tracking-wider flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>
+        TYPE-LILITH (リリス)
+      </div>
+    </div>
+
+    <!-- ARMOR DESTRUCTION GUIDE -->
+    <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#ff1493]/20">
+      <div class="text-[11px] font-extrabold text-[#ff1493] flex items-center gap-1 border-b border-[#ff1493]/20 pb-1">
+        <span>🎯 装甲部位ステータス</span>
+      </div>
+      <div class="space-y-1.5 text-[10px] pt-1">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">L/R ドローン:</span>
+          <span id="dtDroneStatus" class="font-bold text-[#00f5d4]">ACTIVE</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">両肩アーマー:</span>
+          <span id="dtShoulderStatus" class="font-bold text-[#e6ff00]">ARMORED</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">胸部装甲:</span>
+          <span id="dtChestStatus" class="font-bold text-gray-400">LOCKED</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">クロッチ重力場:</span>
+          <span id="dtCrotchStatus" class="font-bold text-gray-400">STANDBY</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEVER & BURST TELEMETRY -->
+    <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#00f5d4]/20">
+      <div class="text-[11px] font-extrabold text-[#00f5d4] flex items-center gap-1 border-b border-[#00f5d4]/20 pb-1">
+        <span>⚡ リアルタイム解析</span>
+      </div>
+      <div class="space-y-1 text-[10px] pt-1">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">残機数:</span>
+          <span id="dtBallCount" class="font-black text-[#00f5d4]">●●●</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">バースト倍率:</span>
+          <span id="dtMultiplier" class="font-black text-[#ff1493]">B×1.0</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-300">フィーバー蓄積:</span>
+          <span id="dtFeverGauge" class="font-black text-[#e6ff00]">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 1 STORY BRIEF -->
+    <div class="space-y-1 bg-[#140730]/90 p-2.5 rounded-lg border border-purple-500/20">
+      <div class="text-[11px] font-extrabold text-[#b84dff] border-b border-purple-500/20 pb-1">
+        <span>📜 BRIEFING</span>
+      </div>
+      <p class="text-[9px] text-gray-300 leading-relaxed pt-1">
+        「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」
+      </p>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="text-[9px] text-[#ff1493] text-center font-bold tracking-wider border-t border-white/10 pt-2 animate-pulse">
+      MISSION: FULL PURGE TARGET
+    </div>
+  </aside>
+
+</div><!-- END DESKTOP RESPONSIVE WRAPPER -->
+
   <!-- POPUP DRAWER MODAL: BUILD STATUS & DEBUG CONTROLS -->
   <div id="menuDrawer" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-40 hidden flex-col items-center justify-center p-3">
     <div class="relative bg-[#11052c] retro-border rounded-xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl p-3">
@@ -258,14 +396,14 @@
     </div>
   </div>
 
-  <script src="./js/stage1_assets.js?v=61"></script>
-  <script src="./js/audio.js?v=61"></script>
-  <script src="./js/engine/particles.js?v=61"></script>
-  <script src="./js/engine/physics.js?v=61"></script>
-  <script src="./js/engine/systems.js?v=61"></script>
-  <script src="./js/engine/ui.js?v=61"></script>
-  <script src="./js/stages/stage1.js?v=61"></script>
-  <script src="./js/engine/game_engine.js?v=61"></script>
-  <script src="./js/main.js?v=61"></script>
+  <script src="./js/stage1_assets.js?v=62"></script>
+  <script src="./js/audio.js?v=62"></script>
+  <script src="./js/engine/particles.js?v=62"></script>
+  <script src="./js/engine/physics.js?v=62"></script>
+  <script src="./js/engine/systems.js?v=62"></script>
+  <script src="./js/engine/ui.js?v=62"></script>
+  <script src="./js/stages/stage1.js?v=62"></script>
+  <script src="./js/engine/game_engine.js?v=62"></script>
+  <script src="./js/main.js?v=62"></script>
 </body>
 </html>

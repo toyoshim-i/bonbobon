@@ -136,6 +136,45 @@ window.UI = {
         pHint.className = "text-[9px] text-gray-400 leading-none mt-0.5";
       }
     }
+
+    // Desktop Right Sidebar Telemetry Sync
+    const dtBall = document.getElementById("dtBallCount");
+    if (dtBall) dtBall.textContent = "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining));
+    const dtMult = document.getElementById("dtMultiplier");
+    if (dtMult) dtMult.textContent = `B×${state.burstMultiplier.toFixed(1)}`;
+    const dtFever = document.getElementById("dtFeverGauge");
+    if (dtFever) dtFever.textContent = state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`;
+
+    if (state.boss) {
+      const dtDrone = document.getElementById("dtDroneStatus");
+      if (dtDrone) {
+        const dHp = (state.boss.droneL_HP || 0) + (state.boss.droneR_HP || 0);
+        dtDrone.textContent = dHp <= 0 ? "DESTROYED" : `ACTIVE (${dHp}/6)`;
+        dtDrone.className = dHp <= 0 ? "font-bold text-[#ff1493]" : "font-bold text-[#00f5d4]";
+      }
+      const dtShoulder = document.getElementById("dtShoulderStatus");
+      if (dtShoulder) {
+        const sHp = (state.boss.podL_HP || 0) + (state.boss.podR_HP || 0);
+        dtShoulder.textContent = sHp <= 0 ? "SHATTERED" : (state.boss.droneL_HP <= 0 && state.boss.droneR_HP <= 0 ? `VULNERABLE (${sHp}/10)` : "SHIELDED");
+        dtShoulder.className = sHp <= 0 ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      }
+      const dtChest = document.getElementById("dtChestStatus");
+      if (dtChest) {
+        dtChest.textContent = state.boss.chestArmorBroken ? "PURGED (SOFT)" : "ARMORED";
+        dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-gray-400";
+      }
+      const dtCrotch = document.getElementById("dtCrotchStatus");
+      if (dtCrotch) {
+        if (state.boss.chestArmorBroken && state.boss.crotch) {
+          const ch = state.boss.crotch.charge || 0;
+          dtCrotch.textContent = state.boss.crotch.cooldown > 0 ? "COOLING" : `ACTIVE [${"◆".repeat(ch)}${"◇".repeat(3-ch)}]`;
+          dtCrotch.className = "font-bold text-[#e6ff00]";
+        } else {
+          dtCrotch.textContent = "INACTIVE";
+          dtCrotch.className = "font-bold text-gray-400";
+        }
+      }
+    }
   },
 
   initControls(engine) {

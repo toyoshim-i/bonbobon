@@ -11,6 +11,7 @@ window.Stage2 = {
     armoredImg: new Image(),
     bareImg: new Image(),
     defeatCgImg: new Image(),
+    hologramImg: new Image(),
     facePatchImgs: {},
     loaded: false
   },
@@ -18,6 +19,12 @@ window.Stage2 = {
   initAssets() {
     this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg";
     this.assets.armoredImg.src = "./assets/stage2/centerpiece.jpg";
+
+    if (window.STAGE2_HOLOGRAM_DATA) {
+      this.assets.hologramImg.src = window.STAGE2_HOLOGRAM_DATA;
+    } else {
+      this.assets.hologramImg.src = "./assets/stage2/hologram.png";
+    }
 
     const faceData = window.STAGE2_FACE_PATCHES || {};
     Object.entries(faceData).forEach(([k, uri]) => {
@@ -114,13 +121,17 @@ window.Stage2 = {
         rot: 0
       },
 
-      // 5. 胸の先端（背中ジェット噴射トリガーセンサー）
+      // 5. 胸の先端（バネ振動 ＆ 背中ジェット噴射トリガーセンサー）
       // 原画 (205, 680) -> キャンバス (113, 334)
       tipBust: {
         x: 113,
         y: 334,
         r: 16,
         hp: 6,
+        dx: 0,
+        dy: 0,
+        vx: 0,
+        vy: 0,
         flash: 0,
         rot: 0
       },
@@ -133,6 +144,28 @@ window.Stage2 = {
         r: 26,
         active: false,
         timer: 0
+      },
+
+      // 7. 左足付け根の丸いパーツ（追加バウンスポイント）
+      // 原画 (298, 1091) -> キャンバス (157, 527)
+      hipJointL: {
+        x: 157,
+        y: 527,
+        r: 28,
+        flash: 0,
+        rot: 0
+      },
+
+      // 8. お尻（バネ振動スプリング）
+      // 原画 (490, 1080) -> キャンバス (248, 521)
+      butt: {
+        x: 248,
+        y: 521,
+        r: 48,
+        dx: 0,
+        dy: 0,
+        vx: 0,
+        vy: 0
       },
 
       defeatTriggered: false
@@ -157,7 +190,37 @@ window.Stage2 = {
       }
     }
 
-    // 2. カチューシャのアンテナ先端の周期放電サイクル
+    // 2. 胸のバネ物理（ぷるぷる振動）
+    const bust = state.boss.tipBust;
+    if (bust) {
+      const stiffness = 0.12;
+      const damping = 0.88;
+      const ax = -stiffness * bust.dx;
+      const ay = -stiffness * bust.dy;
+      bust.vx = (bust.vx + ax) * damping;
+      bust.vy = (bust.vy + ay) * damping;
+      bust.dx += bust.vx;
+      bust.dy += bust.vy;
+      bust.dx = Math.max(-14, Math.min(14, bust.dx));
+      bust.dy = Math.max(-14, Math.min(14, bust.dy));
+    }
+
+    // 3. お尻のバネ物理（ぷるんぷるん振動）
+    const butt = state.boss.butt;
+    if (butt) {
+      const stiffness = 0.12;
+      const damping = 0.87;
+      const ax = -stiffness * butt.dx;
+      const ay = -stiffness * butt.dy;
+      butt.vx = (butt.vx + ax) * damping;
+      butt.vy = (butt.vy + ay) * damping;
+      butt.dx += butt.vx;
+      butt.dy += butt.vy;
+      butt.dx = Math.max(-16, Math.min(16, butt.dx));
+      butt.dy = Math.max(-16, Math.min(16, butt.dy));
+    }
+
+    // 4. カチューシャのアンテナ先端の周期放電サイクル
     const ant = state.boss.antenna;
     if (ant) {
       ant.timer = (ant.timer + 1) % ant.cycle;
@@ -188,11 +251,11 @@ window.Stage2 = {
       }
     }
 
-    // 3. 左手奥ホログラムのラスターグリッジ ＆ レーザー発射
+    // 5. 左手奥ホログラムのラスターグリッジ ＆ レーザー発射
     const holo = state.boss.hologram;
     if (holo) {
       if (holo.flash > 0) holo.flash--;
-      holo.glitchShift = (Math.random() < 0.3) ? (Math.random() - 0.5) * 12 : 0;
+      holo.glitchShift = (Math.random() < 0.3) ? (Math.random() - 0.5) * 10 : 0;
 
       if (holo.laserState === "idle") {
         if (holo.cooldown > 0) {
@@ -285,7 +348,7 @@ window.Stage2 = {
       }
     }
 
-    // 4. 背中ジェット噴射機構
+    // 6. 背中ジェット噴射機構
     const jet = state.boss.jet;
     if (jet && jet.timer > 0) {
       jet.timer--;
@@ -328,7 +391,7 @@ window.Stage2 = {
     }
 
     // Flash decay
-    [state.boss.shoulderL, state.boss.shoulderR, state.boss.elbowL, state.boss.elbowR, state.boss.tipBust].forEach(t => {
+    [state.boss.shoulderL, state.boss.shoulderR, state.boss.elbowL, state.boss.elbowR, state.boss.tipBust, state.boss.hipJointL].forEach(t => {
       if (t && t.flash > 0) t.flash--;
     });
   },
@@ -413,11 +476,13 @@ window.Stage2 = {
     if (state.boss.elbowL) handleElbowHit(state.boss.elbowL, "L");
     if (state.boss.elbowR) handleElbowHit(state.boss.elbowR, "R");
 
-    // 4. 胸の先端（背中ジェット暴走トリガーセンサー）
+    // 4. 胸の先端（バネ振動 ＆ 背中ジェット暴走トリガーセンサー）
     const bust = state.boss.tipBust;
     if (bust) {
       checkBumper(bust, 8.5, () => {
         bust.flash = 22;
+        bust.vx += (ball.vx || 2.5) * 1.3;
+        bust.vy += (ball.vy || -3.0) * 1.3;
         if (window.sfx) window.sfx.softPuru();
         Particles.add(state, bust.x, bust.y, "#ff1493", 18, 5.0);
         Particles.spawnHeart(state, bust.x, bust.y, false);
@@ -428,6 +493,28 @@ window.Stage2 = {
 
         this.triggerJetBlast(state);
         Systems.addScore(state, 12000, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
+      });
+    }
+
+    // 5. 左足付け根の丸いパーツ（追加バウンスポイント ＆ お尻揺れトリガー）
+    const hip = state.boss.hipJointL;
+    if (hip) {
+      checkBumper(hip, 10.0, () => {
+        hip.flash = 22;
+        if (window.sfx) window.sfx.metalBumper();
+        Particles.add(state, hip.x, hip.y, "#00f5d4", 18, 5.0);
+        Particles.add(state, hip.x, hip.y, "#ff007f", 12, 4.0);
+
+        // 当たったとき、お尻がぷるんと揺れる！
+        const butt = state.boss.butt;
+        if (butt) {
+          butt.vx += (ball.vx > 0 ? 1 : -1) * 3.8 + (Math.random() - 0.5) * 1.5;
+          butt.vy += Math.abs(ball.vy) * 0.9 + 3.2;
+        }
+
+        state.boss.expression = "wince";
+        state.boss.expressionTimer = 45;
+        Systems.addScore(state, 4500, hip.x, hip.y, "⚡HIP CYBER BUMPER!⚡");
       });
     }
   },
@@ -463,37 +550,100 @@ window.Stage2 = {
     }
 
     ctx.save();
+    // 1. ベース原画描画
     ctx.drawImage(this.assets.bareImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
-    // ラスターグリッジノイズ処理（左手奥のホログラム領域: 原画の x: 20..160, y: 340..460 に対応）
-    const holo = state.boss.hologram;
-    if (holo) {
-      const hx = IMG_BOX.x + (20 / 768) * IMG_BOX.w;
-      const hy = IMG_BOX.y + (340 / 1376) * IMG_BOX.h;
-      const hw = (140 / 768) * IMG_BOX.w;
-      const hh = (130 / 1376) * IMG_BOX.h;
+    const srcScaleX = this.assets.bareImg.width / IMG_BOX.w;
+    const srcScaleY = this.assets.bareImg.height / IMG_BOX.h;
 
-      // ラスター走査線スライス変形（ホログラムのちらつき表現）
+    // 2. 胸のぷるぷる揺れ処理（tipBustの振動変形）
+    const bust = state.boss.tipBust;
+    if (bust && Math.hypot(bust.dx, bust.dy) > 0.3) {
+      ctx.save();
+      const cx = bust.x + bust.dx;
+      const cy = bust.y + bust.dy;
+      const scaleX = 1 + (bust.dx * 0.015) - (bust.dy * 0.010);
+      const scaleY = 1 + (bust.dy * 0.015) - (bust.dx * 0.010);
+
+      ctx.translate(cx, cy);
+      ctx.scale(scaleX, scaleY);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 24, 28, -0.2, 0, Math.PI * 2);
+      ctx.clip();
+
+      const sx = (bust.x - 24 - IMG_BOX.x) * srcScaleX;
+      const sy = (bust.y - 28 - IMG_BOX.y) * srcScaleY;
+      const sw = 48 * srcScaleX;
+      const sh = 56 * srcScaleY;
+
+      ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, -24, -28, 48, 56);
+      ctx.restore();
+    }
+
+    // 3. お尻のぷるんぷるん揺れ処理（左足付け根ヒット時）
+    const butt = state.boss.butt;
+    if (butt && Math.hypot(butt.dx, butt.dy) > 0.3) {
+      ctx.save();
+      const bx = butt.x + butt.dx;
+      const by = butt.y + butt.dy;
+      const scaleX = 1 + (butt.dx * 0.012) - (butt.dy * 0.008);
+      const scaleY = 1 + (butt.dy * 0.012) - (butt.dx * 0.008);
+
+      ctx.translate(bx, by);
+      ctx.scale(scaleX, scaleY);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 52, 45, 0, 0, Math.PI * 2);
+      ctx.clip();
+
+      const sx = (butt.x - 52 - IMG_BOX.x) * srcScaleX;
+      const sy = (butt.y - 45 - IMG_BOX.y) * srcScaleY;
+      const sw = 104 * srcScaleX;
+      const sh = 90 * srcScaleY;
+
+      ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, -52, -45, 104, 90);
+      ctx.restore();
+    }
+
+    // 4. 左手奥ホログラム：対象物（シアンのホログラム投影）のみに限定したラスターグリッジノイズ
+    // 重なっている指や背景には一切影響を与えない
+    const holo = state.boss.hologram;
+    if (holo && this.assets.hologramImg && this.assets.hologramImg.complete) {
+      const hx = IMG_BOX.x + (3 / 768) * IMG_BOX.w;
+      const hy = IMG_BOX.y + (341 / 1376) * IMG_BOX.h;
+      const hw = (129 / 768) * IMG_BOX.w;
+      const hh = (123 / 1376) * IMG_BOX.h;
+
       const slices = 8;
       const sliceH = hh / slices;
-      for (let i = 0; i < slices; i++) {
-        if (Math.random() < 0.45) {
-          const shift = (Math.random() - 0.5) * 8.0 + (holo.glitchShift || 0);
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(hx - 10, hy + i * sliceH, hw + 20, sliceH);
-          ctx.clip();
-          ctx.drawImage(this.assets.bareImg, IMG_BOX.x + shift, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+      const srcSliceH = this.assets.hologramImg.height / slices;
 
-          // RGB色ズレ（シアン＆マゼンタゴースト）
-          ctx.fillStyle = Math.random() < 0.5 ? "rgba(0, 245, 212, 0.25)" : "rgba(255, 0, 127, 0.22)";
-          ctx.fillRect(hx - 10, hy + i * sliceH, hw + 20, sliceH);
+      for (let i = 0; i < slices; i++) {
+        const isGlitching = Math.random() < 0.35 || holo.laserState === "charge";
+        const shift = isGlitching ? (Math.random() - 0.5) * 6.5 + (holo.glitchShift || 0) : 0;
+
+        if (Math.abs(shift) > 0.5) {
+          ctx.save();
+          // シアン/マゼンタの色ズレゴースト
+          if (Math.random() < 0.5) {
+            ctx.globalAlpha = 0.55;
+            ctx.drawImage(
+              this.assets.hologramImg,
+              0, i * srcSliceH, this.assets.hologramImg.width, srcSliceH,
+              hx + shift * 1.4, hy + i * sliceH, hw, sliceH
+            );
+          }
+          ctx.globalAlpha = 0.85;
+          ctx.drawImage(
+            this.assets.hologramImg,
+            0, i * srcSliceH, this.assets.hologramImg.width, srcSliceH,
+            hx + shift, hy + i * sliceH, hw, sliceH
+          );
           ctx.restore();
         }
       }
     }
 
-    // Dynamic Face Expression Patch
+    // 5. Dynamic Face Expression Patch
     const isDefeat = state.clearSequence && state.clearSequence.active;
     const activePatchKey = isDefeat ? "open_blush" : (
       state.boss.expression === "open_blush" ? "open_blush" :
@@ -512,7 +662,7 @@ window.Stage2 = {
       ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
     }
 
-    // 背中ジェット噴射火炎
+    // 6. 背中ジェット噴射火炎
     const jet = state.boss.jet;
     if (jet && jet.active) {
       ctx.save();
@@ -695,6 +845,12 @@ window.Stage2 = {
     if (bTip) {
       drawGuide(bTip.x, bTip.y, bTip.r, "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", "⚡JET SENSOR");
     }
+
+    // 6. 左足付け根の丸いパーツ（CYBER BUMP）
+    const hip = state.boss.hipJointL;
+    if (hip) {
+      drawGuide(hip.x, hip.y, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
+    }
   },
 
   renderHUD(ctx, state) {},
@@ -710,7 +866,7 @@ window.Stage2 = {
     if (holo && holo.laserState === "charge") {
       return "⚠️ホログラム砲台チャージ中！ 斜めレーザーに注意！";
     }
-    return "TARGET: 両肩装甲(SHOULDER)破壊 ＆ 胸先端ヒットで背中ジェット暴走！";
+    return "TARGET: 両肩装甲破壊 ＆ 胸・足付け根ヒットでギミック発動！";
   },
 
   updateStatusMonitor(state) {

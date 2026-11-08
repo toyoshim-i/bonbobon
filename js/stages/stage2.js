@@ -12,6 +12,7 @@ window.Stage2 = {
     bareImg: new Image(),
     defeatCgImg: new Image(),
     hologramImg: new Image(),
+    hipJointImg: new Image(),
     facePatchImgs: {},
     loaded: false
   },
@@ -19,6 +20,7 @@ window.Stage2 = {
   initAssets() {
     this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg";
     this.assets.armoredImg.src = "./assets/stage2/centerpiece.jpg";
+    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png";
 
     if (window.STAGE2_HOLOGRAM_DATA) {
       this.assets.hologramImg.src = window.STAGE2_HOLOGRAM_DATA;
@@ -172,29 +174,31 @@ window.Stage2 = {
         timer: 0
       },
 
-      // 7. 左足付け根の丸いパーツ（追加バウンスポイント）
-      // 原画 (298, 1091) -> キャンバス (157, 527)
+      // 7. 左足付け根の丸い装甲パーツ（剛体レイヤー分離バウンスポイント）
+      // 原画 (298, 1091) -> キャンバス (158, 526, r: 26)
       hipJointL: {
-        x: 157,
-        y: 527,
-        r: 28,
+        x: 158,
+        y: 526,
+        r: 26,
         flash: 0,
         rot: 0
       },
 
-      // 8. お尻（左右2つの円で近似 ＆ 中心強く周辺馴染ませスプリング）
+      // 8. お尻（左右2つの球体中央から揺らす ＆ 水着ライン全体を完全カバー）
+      // 左臀部: 原画 (430, 1144) -> キャンバス (220, 550, rx: 28, ry: 45)
       buttL: {
         x: 220,
-        y: 521,
-        rx: 26,
-        ry: 30,
+        y: 550,
+        rx: 28,
+        ry: 45,
         dx: 0, dy: 0, vx: 0, vy: 0
       },
+      // 右臀部: 原画 (532, 1116) -> キャンバス (266, 538, rx: 32, ry: 46)
       buttR: {
-        x: 262,
-        y: 512,
-        rx: 26,
-        ry: 32,
+        x: 266,
+        y: 538,
+        rx: 32,
+        ry: 46,
         dx: 0, dy: 0, vx: 0, vy: 0
       },
       // 互換参照
@@ -885,17 +889,24 @@ window.Stage2 = {
       });
     }
 
-    // 7. 左足付け根の丸いパーツ（追加バウンスポイント ＆ お尻揺れトリガー）
+    // 7. 左足付け根の丸い装甲パーツ（剛体バンパー ＆ お尻揺れトリガー）
     const hip = state.boss.hipJointL;
     if (hip) {
-      checkBumper(hip, 10.0, () => {
+      const bL = state.boss.buttL;
+      const jDx = (bL ? bL.dx : 0) * 0.35;
+      const jDy = (bL ? bL.dy : 0) * 0.35;
+      const dynamicHip = {
+        x: hip.x + jDx,
+        y: hip.y + jDy,
+        r: hip.r
+      };
+      checkBumper(dynamicHip, 10.0, () => {
         hip.flash = 22;
         if (window.sfx) window.sfx.metalBumper();
-        Particles.add(state, hip.x, hip.y, "#00f5d4", 18, 5.0);
-        Particles.add(state, hip.x, hip.y, "#ff007f", 12, 4.0);
+        Particles.add(state, dynamicHip.x, dynamicHip.y, "#00f5d4", 18, 5.0);
+        Particles.add(state, dynamicHip.x, dynamicHip.y, "#ff007f", 12, 4.0);
 
-        // 当たったとき、お尻（左右2つの円）が自然にぷるんと揺れる！
-        const bL = state.boss.buttL;
+        // 当たったとき、お尻（左右2つの球体）が自然にぷるんと揺れる！
         const bR = state.boss.buttR;
         const impX = (ball.vx > 0 ? 1 : -1) * 3.6 + (Math.random() - 0.5) * 1.5;
         const impY = Math.abs(ball.vy) * 0.85 + 3.2;
@@ -915,7 +926,7 @@ window.Stage2 = {
           { expr: "wince", frames: 25 },
           { expr: "open_blush", frames: 55 }
         ]);
-        Systems.addScore(state, 4500, hip.x, hip.y, "⚡HIP CYBER BUMPER!⚡");
+        Systems.addScore(state, 4500, dynamicHip.x, dynamicHip.y, "⚡HIP CYBER BUMPER!⚡");
       });
     }
 
@@ -1256,11 +1267,12 @@ window.Stage2 = {
       const disp = Math.hypot(b.dx, b.dy);
       if (disp < 0.25) return;
 
-      // 3層同心変形（外周は原画と自然に馴染み、中心ほど強く弾むソフトブレンド）
+      // 4層同心変形（外周は滑らかなアルファブレンドで水着ラインの千切れを根絶し、中心ほど豊かに揺れる）
       const layers = [
-        { ratio: 1.00, weight: 0.15, alpha: 0.40 },
-        { ratio: 0.72, weight: 0.55, alpha: 0.70 },
-        { ratio: 0.42, weight: 1.00, alpha: 1.00 }
+        { ratio: 1.05, weight: 0.12, alpha: 0.35 },
+        { ratio: 0.85, weight: 0.45, alpha: 0.65 },
+        { ratio: 0.60, weight: 0.80, alpha: 0.85 },
+        { ratio: 0.35, weight: 1.00, alpha: 1.00 }
       ];
 
       layers.forEach(layer => {
@@ -1269,8 +1281,8 @@ window.Stage2 = {
         const curDy = b.dy * layer.weight;
         const cx = b.x + curDx;
         const cy = b.y + curDy;
-        const scaleX = 1 + (curDx * 0.012) - (curDy * 0.008);
-        const scaleY = 1 + (curDy * 0.012) - (curDx * 0.008);
+        const scaleX = 1 + (curDx * 0.010) - (curDy * 0.006);
+        const scaleY = 1 + (curDy * 0.010) - (curDx * 0.006);
 
         ctx.translate(cx, cy);
         ctx.scale(scaleX, scaleY);
@@ -1290,6 +1302,21 @@ window.Stage2 = {
     };
     renderCheekJiggle(state.boss.buttL);
     renderCheekJiggle(state.boss.buttR);
+
+    // 3.5. 左足付け根の丸い装甲パーツ：剛体レイヤー分離描画
+    // お尻の変形によって装甲が撓むのを完全に防ぎ、形を保ったままお尻の揺れに引かれて少しだけ連動（35%）
+    if (this.assets.hipJointImg && this.assets.hipJointImg.complete) {
+      ctx.save();
+      const bL = state.boss.buttL;
+      const jDx = (bL ? bL.dx : 0) * 0.35;
+      const jDy = (bL ? bL.dy : 0) * 0.35;
+      const jw = (140 / 768) * IMG_BOX.w;
+      const jh = (140 / 1376) * IMG_BOX.h;
+      const jx = IMG_BOX.x + (298 / 768) * IMG_BOX.w + jDx;
+      const jy = IMG_BOX.y + (1091 / 1376) * IMG_BOX.h + jDy;
+      ctx.drawImage(this.assets.hipJointImg, jx - jw / 2, jy - jh / 2, jw, jh);
+      ctx.restore();
+    }
 
     // 4. 左手奥ホログラム：対象物（シアンのホログラム投影）のみに限定したラスターグリッジノイズ
     // 重なっている指や背景には一切影響を与えない
@@ -1680,10 +1707,13 @@ window.Stage2 = {
       }
     }
 
-    // 7. 左足付け根の丸いパーツ（CYBER BUMP）
+    // 7. 左足付け根の丸い装甲パーツ（剛体CYBER BUMP：お尻連動オフセット）
     const hip = state.boss.hipJointL;
     if (hip) {
-      drawGuide(hip.x, hip.y, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
+      const bL = state.boss.buttL;
+      const jDx = (bL ? bL.dx : 0) * 0.35;
+      const jDy = (bL ? bL.dy : 0) * 0.35;
+      drawGuide(hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
     }
 
     // 8. カチューシャ猫耳三角バウンス板（原画の猫耳3点に精密フィットした鋭角エッジバンパー）

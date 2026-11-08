@@ -59,6 +59,7 @@ window.Stage2 = {
       winkTimer: 0,
       talkTimer: 0,
       blushGauge: 0,
+      animTick: 0,
 
       // 1. カチューシャのアンテナ先端（周期電撃バリア ＆ 通過ゲート）
       // 原画 768x1376 の (625, 125) に正確に配置
@@ -235,6 +236,8 @@ window.Stage2 = {
 
   update(state, engine) {
     if (!state.boss) return;
+
+    state.boss.animTick = (state.boss.animTick || 0) + 1;
 
     // 0. クリア演出進行（撃破時）
     this.updateClearSequence(state, engine);
@@ -1415,47 +1418,9 @@ window.Stage2 = {
     const isPostWhiteout = state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 105;
     if (isPostWhiteout) return;
 
-    const animTick = (typeof engine === "number") ? engine : (performance.now() * 0.06);
-
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) => {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(rot || 0);
-
-      const f = flash || 0;
-      ctx.strokeStyle = f > 0 ? "#ffffff" : color;
-      ctx.lineWidth = f > 0 ? 3.0 : 1.8;
-      ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.22)";
-
-      ctx.beginPath();
-      ctx.arc(0, 0, r + (f > 0 ? 3 : 0), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      for (let i = 0; i < 4; i++) {
-        ctx.rotate(Math.PI / 2);
-        ctx.beginPath();
-        ctx.moveTo(r - 3, 0);
-        ctx.lineTo(r + 4, 0);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-
-      if (label) {
-        ctx.save();
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillStyle = color;
-        ctx.fillText(label, x, y - r - 3);
-        if (sub) {
-          ctx.font = "bold 8px monospace";
-          ctx.fillStyle = "#ffffff";
-          ctx.fillText(sub, x, y + r + 10);
-        }
-        ctx.restore();
-      }
-    };
+    const animTick = state.boss.animTick || 0;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
 
     // 1. カチューシャのアンテナ先端（ターゲットマーク不要：放電中・予兆時のみ電撃エフェクトを描画）
     const ant = state.boss.antenna;
@@ -1709,8 +1674,7 @@ window.Stage2 = {
     const core = state.boss.core;
     if (core) {
       if (state.phase === 3 && core.unlocked) {
-        const pulseR = core.r + Math.sin(animTick * 0.1) * 3.5;
-        drawGuide(core.x, core.y, pulseR, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp} [K.O. TARGET]`);
+        drawGuide(core.x, core.y, core.r, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp} [K.O. TARGET]`);
       } else if (core.unlocked) {
         drawGuide(core.x, core.y, core.r, "#e6ff00", core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
       }

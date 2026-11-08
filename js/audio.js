@@ -90,6 +90,12 @@ class RetroSoundEngine {
     setTimeout(() => this.playFM(440, 220, 200, 0.15, "square", 880, 0.14), 30);
   }
 
+  // Elastic soft damp "Funyon" sound for rabbit ear tips
+  earBoing() {
+    this.playFM(260, 22, 120, 0.26, "sine", 160, 0.16);
+    setTimeout(() => this.playFM(180, 14, 90, 0.22, "sine", 280, 0.14), 70);
+  }
+
   // Plunger pull / ratchet click sound
   plungerPullClick() {
     this.playFM(420, 840, 90, 0.025, "triangle", 320, 0.08);

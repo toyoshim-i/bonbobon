@@ -171,8 +171,9 @@ function createInitialState() {
       // Mecha Colliders
       droneL: { x: 58,  y: 174, r: 24, flash: 0 },
       droneR: { x: 338, y: 174, r: 24, flash: 0 },
-      earL:   { x: 140, y: 68,  r: 20, flash: 0 },
-      earR:   { x: 256, y: 68,  r: 20, flash: 0 },
+      // Hanging Rabbit Ear Tips (Soft-Spring Damper & Sensor)
+      earL:   { x: 74,  y: 92,  r: 22, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
+      earR:   { x: 322, y: 92,  r: 22, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
       podL:   { x: 111, y: 296, r: 25, flash: 0 },
       podR:   { x: 285, y: 296, r: 25, flash: 0 },
       core:   { x: 198, y: 307, r: 17, flash: 0 }
@@ -777,6 +778,14 @@ function impulseBust(which, vxImpact, vyImpact) {
   updateHUD();
 }
 
+function impulseEar(which, vxImpact, vyImpact) {
+  const ear = which === "L" ? state.boss.earL : state.boss.earR;
+  sfx.earBoing();
+  ear.vx += vxImpact * 1.25;
+  ear.vy += vyImpact * 1.25;
+  ear.flash = 18;
+}
+
 function updateBossSprings() {
   const stiffness = 0.26;
   const damping = 0.80;
@@ -790,6 +799,21 @@ function updateBossSprings() {
     b.dx = Math.max(-18, Math.min(18, b.dx));
     b.dy = Math.max(-18, Math.min(18, b.dy));
     if (b.flash > 0) b.flash--;
+  });
+
+  // Hanging Rabbit Ear Tips Soft Elastic Spring Physics ("ふにょん" damping)
+  const earStiffness = 0.16;
+  const earDamping = 0.84;
+  [state.boss.earL, state.boss.earR].forEach(ear => {
+    const ax = -earStiffness * ear.dx;
+    const ay = -earStiffness * ear.dy;
+    ear.vx = (ear.vx + ax) * earDamping;
+    ear.vy = (ear.vy + ay) * earDamping;
+    ear.dx += ear.vx;
+    ear.dy += ear.vy;
+    ear.dx = Math.max(-16, Math.min(16, ear.dx));
+    ear.dy = Math.max(-16, Math.min(16, ear.dy));
+    if (ear.flash > 0) ear.flash--;
   });
 
   const hs = state.boss.hairSpring;
@@ -1258,45 +1282,61 @@ function stepPhysics() {
           });
         });
 
-        // Bunny Ear Sensors (Skill Shot target & Core unlock)
-        checkCircleBumper(state.boss.earL, 8.2, ear => {
-          sfx.metalBumper();
-          state.boss.leftEarLit = true;
-          addFever(10);
-          if (state.skillShotEligible) {
-            state.skillShotEligible = false;
-            addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
-            showCutin("🎯【SKILL SHOT 炸裂】<br>+25,000pts ＆ レアカプセル出現！", 180);
-            spawnFloatingCapsule(2, "buff");
-          } else {
-            addScore(1200, ear.x, ear.y, "L-EAR SENSOR!");
-          }
-          if (state.boss.leftEarLit && state.boss.rightEarLit && !state.boss.coreUnlocked) {
-            state.boss.coreUnlocked = true;
-            showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
-            spawnFloatingCapsule(5, "buff");
-          }
-          updateHUD();
-        });
+        // Hanging Rabbit Ear Tips (Soft "ふにょん" Spring Damper & Skill Shot Sensor)
+        [
+          { which: "L", ear: state.boss.earL, litKey: "leftEarLit", tag: "L-EAR" },
+          { which: "R", ear: state.boss.earR, litKey: "rightEarLit", tag: "R-EAR" }
+        ].forEach(({ which, ear, litKey, tag }) => {
+          const cx = ear.x + ear.dx;
+          const cy = ear.y + ear.dy;
+          const dx = ball.x - cx;
+          const dy = ball.y - cy;
+          const dist = Math.hypot(dx, dy);
+          const minDist = ball.r + ear.r;
+          if (dist < minDist && dist > 0.001) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            ball.x = cx + nx * (minDist + 2);
+            ball.y = cy + ny * (minDist + 2);
 
-        checkCircleBumper(state.boss.earR, 8.2, ear => {
-          sfx.metalBumper();
-          state.boss.rightEarLit = true;
-          addFever(10);
-          if (state.skillShotEligible) {
-            state.skillShotEligible = false;
-            addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
-            showCutin("🎯【SKILL SHOT 炸裂】<br>+25,000pts ＆ レアカプセル出現！", 180);
-            spawnFloatingCapsule(2, "buff");
-          } else {
-            addScore(1200, ear.x, ear.y, "R-EAR SENSOR!");
+            // "ふにょん" speed damper: Absorbs & kills excess velocity, cushioning the ball
+            const speed = Math.hypot(ball.vx, ball.vy);
+            const dampSpeed = Math.max(2.8, Math.min(5.2, speed * 0.44));
+            ball.vx = nx * dampSpeed;
+            ball.vy = ny * dampSpeed + 0.8; // Gentle downward elastic release
+
+            // Impulse on the ear tip spring!
+            impulseEar(which, -nx * Math.min(10, speed * 1.2), -ny * Math.min(10, speed * 1.2));
+
+            // Soft elastic sound & cute violet/cyan particles
+            sfx.earBoing();
+            addParticles(cx, cy, "#b84dff", 10, 3.5);
+            addParticles(cx, cy, "#00f5d4", 6, 2.5);
+
+            state.boss[litKey] = true;
+            addFever(12);
+
+            if (state.skillShotEligible) {
+              state.skillShotEligible = false;
+              addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
+              showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！ +25,000pts ＆ レアカプセル！", 180);
+              spawnFloatingCapsule(2, "buff");
+            } else {
+              addScore(2000, ear.x, ear.y, "🐰FUNYON DAMP!");
+              addPopup(cx, cy - 18, "🐰ふにょん (SPEED DAMP)", "#e6ff00", 1.0);
+            }
+
+            // Boss tickled reaction
+            state.boss.expression = "wink";
+            state.boss.winkTimer = 35;
+
+            if (state.boss.leftEarLit && state.boss.rightEarLit && !state.boss.coreUnlocked) {
+              state.boss.coreUnlocked = true;
+              showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
+              spawnFloatingCapsule(5, "buff");
+            }
+            updateHUD();
           }
-          if (state.boss.leftEarLit && state.boss.rightEarLit && !state.boss.coreUnlocked) {
-            state.boss.coreUnlocked = true;
-            showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
-            spawnFloatingCapsule(5, "buff");
-          }
-          updateHUD();
         });
 
         // Left Shoulder Armor Pod (Phase 1 Target, HP 5 -> Overheat Generator)
@@ -1622,9 +1662,63 @@ function renderTable() {
       };
       drawSpringBustPatch(state.boss.bustL);
       drawSpringBustPatch(state.boss.bustR);
-    } else {
-      // In Phase 2 (Chest Armor under active attack), show cyber-lock targeting bracket & HP
-      if (state.phase === 2) {
+    }
+
+    // Dynamic "ふにょん" Hanging Ear Tip Springs (Always active in table mode)
+    if (!isDefeat) {
+      const drawSpringEarPatch = (ear, which) => {
+        const isLit = which === "L" ? state.boss.leftEarLit : state.boss.rightEarLit;
+        const disp = Math.hypot(ear.dx, ear.dy);
+        ctx.save();
+        const cx = ear.x + ear.dx;
+        const cy = ear.y + ear.dy;
+
+        // Soft elastic "ふにょん" squash & stretch
+        const scaleX = 1 + (ear.dx * 0.015) - (ear.dy * 0.010);
+        const scaleY = 1 + (ear.dy * 0.015) - (ear.dx * 0.010);
+
+        ctx.translate(cx, cy);
+        ctx.scale(scaleX, scaleY);
+        ctx.beginPath();
+        // Oval shape matching the hanging rabbit ear curve
+        ctx.ellipse(0, 0, ear.r * 1.12, ear.r * 1.22, which === "L" ? -0.22 : 0.22, 0, Math.PI * 2);
+        ctx.clip();
+
+        const srcScaleX = centerpieceImg.width / IMG_BOX.w;
+        const srcScaleY = centerpieceImg.height / IMG_BOX.h;
+        const sx = (ear.x - ear.r * 1.12 - IMG_BOX.x) * srcScaleX;
+        const sy = (ear.y - ear.r * 1.22 - IMG_BOX.y) * srcScaleY;
+        const sw = (ear.r * 2.24) * srcScaleX;
+        const sh = (ear.r * 2.44) * srcScaleY;
+
+        const baseImg = (!state.boss.chestArmorBroken && centerpieceArmoredImg.complete) ? centerpieceArmoredImg : centerpieceImg;
+        ctx.drawImage(baseImg, sx, sy, sw, sh, -ear.r * 1.12, -ear.r * 1.22, ear.r * 2.24, ear.r * 2.44);
+
+        // Cybernetic soft neon rim glow
+        if (ear.flash > 0 || isLit || disp > 0.4) {
+          ctx.strokeStyle = ear.flash > 0 ? "#ffffff" : (isLit ? "#e6ff00" : "rgba(184, 77, 255, 0.75)");
+          ctx.lineWidth = ear.flash > 0 ? 3 : (isLit ? 2.5 : 1.6);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, ear.r * 1.12 - 1.5, ear.r * 1.22 - 1.5, which === "L" ? -0.22 : 0.22, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Ear Sensor state indicator label
+        ctx.save();
+        ctx.fillStyle = isLit ? "#e6ff00" : "#ff66b2";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(isLit ? "🐰OK!" : `🐰EAR`, cx, cy - ear.r * 1.22 - 3);
+        ctx.restore();
+      };
+
+      drawSpringEarPatch(state.boss.earL, "L");
+      drawSpringEarPatch(state.boss.earR, "R");
+    }
+
+    // In Phase 2 (Chest Armor under active attack), show cyber-lock targeting bracket & HP
+    if (state.phase === 2 && !state.boss.chestArmorBroken) {
         ctx.save();
         const ax = 198, ay = 352;
         const pulse = (Math.floor(state.boss.animTick / 8) % 2 === 0);
@@ -1648,7 +1742,6 @@ function renderTable() {
         ctx.fillText(`CHEST ARMOR [${"■".repeat(state.boss.chestArmorHP)}]`, ax, ay + bh + 12);
         ctx.restore();
       }
-    }
 
     // Face Patch Compositing (Skip if in Defeat CG)
     let activePatchKey = null;
@@ -1755,9 +1848,6 @@ function renderTable() {
         ctx.restore();
       }
     });
-
-    drawRingGimmick(state.boss.earL, state.boss.leftEarLit ? "#e6ff00" : "#ff1493", state.boss.leftEarLit ? "EAR:OK" : "EAR-L");
-    drawRingGimmick(state.boss.earR, state.boss.rightEarLit ? "#e6ff00" : "#ff1493", state.boss.rightEarLit ? "EAR:OK" : "EAR-R");
 
     // Shoulder Armor HP & Overheat Generator
     [
@@ -2277,6 +2367,10 @@ function triggerDirectionalNudge(dirX = 0, dirY = -1, intensity = 1.0) {
     impulseBust("L", nx * 5.5 * intensity, ny * 5.5 * intensity);
     impulseBust("R", nx * 5.5 * intensity, ny * 5.5 * intensity);
   }
+
+  // Inertial reaction on Lilith's hanging ears
+  impulseEar("L", nx * 4.2 * intensity, ny * 4.2 * intensity);
+  impulseEar("R", nx * 4.2 * intensity, ny * 4.2 * intensity);
 
   // Direction label for visual feedback popup
   let dirLabel = "UP";

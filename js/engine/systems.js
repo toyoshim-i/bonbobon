@@ -88,7 +88,7 @@ window.Systems = {
     state.fever.gauge = 100;
     state.fever.mult = 5.0;
 
-    if (window.sfx) window.sfx.feverStart();
+    if (window.sfx && window.sfx.feverStart) window.sfx.feverStart();
 
     // Spawn 2 multiballs (total 3 on screen)
     while (state.balls.length < 3) {

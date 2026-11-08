@@ -266,9 +266,9 @@ window.UI = {
           const dx = e.clientX - t.clientStartX;
           const dy = e.clientY - t.clientStartY;
           const dist = Math.hypot(dx, dy);
-          if (dist > 38) {
+          if (dist > 20) {
             t.hasNudged = true;
-            Physics.triggerDirectionalNudge(engine.state, dx, dy, Math.min(1.5, dist / 45));
+            Physics.triggerDirectionalNudge(engine.state, dx, dy, Math.min(1.5, dist / 28));
           }
         }
       }

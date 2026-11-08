@@ -97,23 +97,26 @@ window.Physics = {
 
     if (window.sfx) window.sfx.flip();
 
-    state.nudgeOffset.x = nx * 14 * intensity;
-    state.nudgeOffset.y = ny * 14 * intensity;
+    state.nudgeOffset.x = (nx * 20 + (Math.random() - 0.5) * 6) * intensity;
+    state.nudgeOffset.y = (ny * 20 + (Math.random() - 0.5) * 6) * intensity;
 
     state.balls.forEach(b => {
-      b.vx += nx * 4.6 * intensity;
-      b.vy += ny * 4.6 * intensity;
+      b.vx += nx * 6.2 * intensity;
+      b.vy += ny * 6.2 * intensity;
 
-      // Release crotch trapped balls upon NUDGE!
-      if (b.crotchTrapped) {
-        b.crotchTrapped = false;
-        b.crotchHitTimer = 45;
-        b.vy = Math.max(3.8, ny * 4.0 + 4.5);
-        b.vx = nx * 5.2 + (Math.random() - 0.5) * 2.0;
-        if (window.sfx) window.sfx.metalBumper();
-        if (state.boss && state.boss.crotch) {
-          Particles.addPopup(state, state.boss.crotch.x, state.boss.crotch.y - 25, "💨NUDGE RELEASE!", "#00f5d4", 1.25);
-          Particles.add(state, state.boss.crotch.x, state.boss.crotch.y, "#e6ff00", 18, 5.0);
+      // If ball was nearly stationary, give an extra impulse to break friction/traps
+      if (Math.hypot(b.vx, b.vy) < 2.0) {
+        b.vx += (Math.random() - 0.5) * 4.5;
+        b.vy += -3.5 * intensity;
+      }
+
+      // If near crotch gravity well, give immediate outward kick
+      if (state.boss && state.boss.crotch) {
+        const dCr = Math.hypot(b.x - state.boss.crotch.x, b.y - state.boss.crotch.y);
+        if (dCr < 50) {
+          b.crotchHitTimer = 35;
+          b.vy += (ny < 0 ? -4.5 : 4.5);
+          b.vx += nx * 5.0 + (Math.random() - 0.5) * 3.0;
         }
       }
     });
@@ -207,26 +210,6 @@ window.Physics = {
       return;
     }
 
-    // Crotch magnetic gravity lock
-    if (ball.crotchTrapped) {
-      const cr = state.boss.crotch;
-      ball.crotchTrapTimer = (ball.crotchTrapTimer || 0) + 1;
-      const jiggle = Math.sin(ball.crotchTrapTimer * 0.4) * 1.5;
-      ball.x = cr.x + jiggle;
-      ball.y = cr.y + Math.cos(ball.crotchTrapTimer * 0.4) * 1.0;
-      ball.vx = 0;
-      ball.vy = 0;
-
-      if (ball.crotchTrapTimer > 150 * SUBSTEPS) {
-        ball.crotchTrapped = false;
-        ball.crotchHitTimer = 50;
-        ball.vy = 5.2;
-        ball.vx = (Math.random() - 0.5) * 4.0;
-        if (window.sfx) window.sfx.burstTrigger();
-        Particles.addPopup(state, cr.x, cr.y - 25, "💥ENERGY BURST!", "#ff1493", 1.2);
-      }
-      return;
-    }
 
     ball.vy += gravity;
     ball.x += ball.vx / SUBSTEPS;

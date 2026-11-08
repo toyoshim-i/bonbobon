@@ -203,8 +203,8 @@ window.GameEngine = {
       }
     }
 
-    state.nudgeOffset.x *= 0.82;
-    state.nudgeOffset.y *= 0.82;
+    state.nudgeOffset.x *= 0.86;
+    state.nudgeOffset.y *= 0.86;
 
     if (this.currentStage) this.currentStage.update(state, this);
     Physics.updateFlippers(state);
@@ -230,6 +230,29 @@ window.GameEngine = {
       ball.trail.push({ x: ball.x, y: ball.y });
       if (ball.trail.length > 9) ball.trail.shift();
       if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
+
+      // Ball Stagnation / Stuck Detection (Universal pinball feature)
+      const speed = Math.hypot(ball.vx, ball.vy);
+      const isTrappedInWell = (state.boss && state.boss.crotch && state.boss.chestArmorBroken &&
+                               Math.hypot(ball.x - state.boss.crotch.x, ball.y - state.boss.crotch.y) < 22);
+      const isStuck = !ball.inShooterLane && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
+
+      if (isStuck) {
+        ball.stuckTimer = (ball.stuckTimer || 0) + 1;
+        if (ball.stuckTimer >= 85 && (ball.stuckTimer - 85) % 180 === 0) {
+          // Casual reminder to nudge the table if ball is stuck anywhere
+          UI.showCutin("⚠️【ボール停滞中】<br>スワイプ または SPACE で台を揺らそう！", 120);
+        } else if (ball.stuckTimer > 360) {
+          // Machine auto-kick (Pinball Ball Search mechanism) to prevent deadlock
+          ball.vy = -5.8;
+          ball.vx = (Math.random() - 0.5) * 6.2;
+          ball.stuckTimer = 0;
+          if (window.sfx) window.sfx.flip();
+          Particles.addPopup(state, ball.x, ball.y - 15, "⚡BALL SEARCH KICK!", "#00f5d4", 1.1);
+        }
+      } else {
+        ball.stuckTimer = Math.max(0, (ball.stuckTimer || 0) - 2);
+      }
 
       if (ball.y > this.H + 18) {
         state.balls.splice(bi, 1);

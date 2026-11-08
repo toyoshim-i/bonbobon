@@ -545,90 +545,89 @@ window.Stage1 = {
       const dyCr = crotch.y - ball.y;
       const distCr = Math.hypot(dxCr, dyCr);
 
-      if (!ball.crotchTrapped) {
-        // Gravitational Pull
-        if (distCr < crotch.gravRadius && distCr > 2.0) {
-          const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.25);
-          const force = 1.35 * pullFactor;
-          ball.vx += (dxCr / distCr) * force;
-          ball.vy += (dyCr / distCr) * force;
+      // Natural Gravitational Pull
+      if (distCr < crotch.gravRadius && distCr > 1.5) {
+        const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.35);
+        const force = 0.48 * pullFactor;
+        ball.vx += (dxCr / distCr) * force;
+        ball.vy += (dyCr / distCr) * force;
 
-          if (distCr < 55) {
-            ball.vx *= 0.94;
-            ball.vy *= 0.94;
-          }
-
-          if (Math.random() < 0.75) {
-            const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
-            state.particles.push({
-              x: ball.x,
-              y: ball.y,
-              vx: Math.cos(pAngle) * (3.0 + Math.random() * 2.5),
-              vy: Math.sin(pAngle) * (3.0 + Math.random() * 2.5),
-              color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
-              life: 16,
-              scale: 1.1
-            });
-          }
-
-          if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.1) {
-            Particles.spawnHeart(state, ball.x, ball.y, true);
-          }
+        // Subtle damping near the core so weak balls can naturally balance against downward gravity
+        if (distCr < 40) {
+          ball.vx *= 0.982;
+          ball.vy *= 0.982;
+        }
+        if (distCr < 18) {
+          ball.vx *= 0.92;
+          ball.vy *= 0.92;
         }
 
-        // Magnetic Suction Trap
-        if (distCr < ball.r + crotch.r + 2.0) {
-          if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
-            ball.crotchTrapped = true;
-            ball.crotchTrapTimer = 0;
-            crotch.flash = 22;
-            if (window.sfx) {
-              window.sfx.burstTrigger();
-              window.sfx.softPuru();
-            }
-            Particles.spawnHeart(state, crotch.x, crotch.y, true);
+        if (Math.random() < 0.70) {
+          const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
+          state.particles.push({
+            x: ball.x,
+            y: ball.y,
+            vx: Math.cos(pAngle) * (2.8 + Math.random() * 2.2),
+            vy: Math.sin(pAngle) * (2.8 + Math.random() * 2.2),
+            color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
+            life: 15,
+            scale: 1.05
+          });
+        }
 
-            if (crotch.cooldown && crotch.cooldown > 0) {
-              if (window.sfx) window.sfx.metalBumper();
-              Systems.addScore(state, 1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
-            } else {
-              crotch.charge++;
-              state.boss.expression = "blush";
-              state.boss.expressionTimer = 90;
-              state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
-              Particles.add(state, crotch.x, crotch.y, "#e6ff00", 22, 5.0);
-              Particles.add(state, crotch.x, crotch.y, "#ff1493", 16, 4.0);
+        if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.1) {
+          Particles.spawnHeart(state, ball.x, ball.y, true);
+        }
+      }
 
-              if (crotch.charge < crotch.maxCharge) {
-                Systems.addScore(state, 5000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY CAPTURE ${crotch.charge}/${crotch.maxCharge}`);
-                Particles.addPopup(state, crotch.x, crotch.y - 30, "「きゃあっ……吸い付いちゃった……！？ は、離してっ！」", "#ff66b2", 1.1);
-                UI.showCutin("🧲【クロッチ吸着！】<br>台揺らし（画面スワイプ/SPACE）ではがせ！", 150);
-              } else {
-                crotch.charge = 0;
-                crotch.cooldown = 60 * 18;
-                if (window.sfx) {
-                  window.sfx.burstTrigger();
-                  window.sfx.exSpark();
-                }
-                Systems.addScore(state, 30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
-                Particles.addPopup(state, crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
-                UI.showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
-
-                ball.crotchTrapped = false;
-                ball.crotchHitTimer = 50;
-                ball.vy = -8.5;
-                ball.vx = (Math.random() - 0.5) * 6;
-
-                if (state.balls.length < 3) {
-                  Systems.spawnBall(state, crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
-                }
-                Systems.startFeverMode(state);
-                state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
-                state.burstTimer = 360;
-              }
-            }
-            UI.updateHUD(state);
+      // Core Touch & Charge
+      if (distCr < ball.r + crotch.r + 2.0) {
+        if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
+          ball.crotchHitTimer = 35;
+          crotch.flash = 22;
+          if (window.sfx) {
+            window.sfx.softPuru();
           }
+          Particles.spawnHeart(state, crotch.x, crotch.y, true);
+
+          if (crotch.cooldown && crotch.cooldown > 0) {
+            if (window.sfx) window.sfx.metalBumper();
+            Systems.addScore(state, 1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
+          } else {
+            crotch.charge++;
+            state.boss.expression = "blush";
+            state.boss.expressionTimer = 85;
+            state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
+            Particles.add(state, crotch.x, crotch.y, "#e6ff00", 18, 4.0);
+            Particles.add(state, crotch.x, crotch.y, "#ff1493", 14, 3.5);
+
+            if (crotch.charge < crotch.maxCharge) {
+              Systems.addScore(state, 5000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY TRAP ${crotch.charge}/${crotch.maxCharge}`);
+              Particles.addPopup(state, crotch.x, crotch.y - 30, "「あっ……吸い付いちゃった……！？ 早く落としてよっ」", "#ff66b2", 1.05);
+            } else {
+              crotch.charge = 0;
+              crotch.cooldown = 60 * 18;
+              if (window.sfx) {
+                window.sfx.burstTrigger();
+                window.sfx.exSpark();
+              }
+              Systems.addScore(state, 30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
+              Particles.addPopup(state, crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
+              UI.showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
+
+              ball.crotchHitTimer = 45;
+              ball.vy = -8.5;
+              ball.vx = (Math.random() - 0.5) * 6;
+
+              if (state.balls.length < 3) {
+                Systems.spawnBall(state, crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
+              }
+              Systems.startFeverMode(state);
+              state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
+              state.burstTimer = 360;
+            }
+          }
+          UI.updateHUD(state);
         }
       }
     }
@@ -1023,9 +1022,8 @@ window.Stage1 = {
       const cr = state.boss.crotch;
       const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
       const isCooling = cr.cooldown && cr.cooldown > 0;
-      const isTrapped = state.balls.some(b => b.crotchTrapped);
-      const sub = isTrapped ? "⚠️SHAKE TO FREE!" : (isCooling ? "COOLING" : `[${crChargeStr}]`);
-      const col = isTrapped ? "#e6ff00" : (isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493"));
+      const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
+      const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
 
       // Gravitational Pull Waves
       ctx.save();

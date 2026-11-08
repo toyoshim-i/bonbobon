@@ -55,6 +55,10 @@ class RetroSoundEngine {
     this.playFM(220, 90, 60, 0.065, "triangle", 520, 0.12);
   }
 
+  slingshot() {
+    this.playFM(580, 290, 180, 0.08, "triangle", 840, 0.14);
+  }
+
   metalBumper() {
     this.playFM(680, 340, 220, 0.11, "square", 1280, 0.13);
   }
@@ -101,6 +105,13 @@ class RetroSoundEngine {
     this.playFM(420, 840, 90, 0.025, "triangle", 320, 0.08);
   }
 
+  // Fever start fanfare arpeggio
+  feverStart() {
+    [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => {
+      setTimeout(() => this.playFM(f, f * 0.5, 140, 0.16, "square", f * 1.08, 0.16), i * 40);
+    });
+  }
+
   // Spring release & ball launch: "BASHIIIN!! Biyo-yo-yo-n!"
   plungerLaunch(powerPct = 80) {
     if (!this.enabled) return;
@@ -124,4 +135,13 @@ class RetroSoundEngine {
   }
 }
 
-window.sfx = new RetroSoundEngine();
+const rawSfx = new RetroSoundEngine();
+window.sfx = new Proxy(rawSfx, {
+  get(target, prop) {
+    if (prop in target) {
+      const val = target[prop];
+      return typeof val === "function" ? val.bind(target) : val;
+    }
+    return () => {}; // Safe fallback for undefined audio methods
+  }
+});

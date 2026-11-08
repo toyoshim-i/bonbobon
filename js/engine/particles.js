@@ -264,16 +264,19 @@ window.Particles = {
 
     // 4. Hit Shockwave Ring
     if (isHit) {
-      const waveR = r * (1.0 + (12 - flash) * 0.15);
+      const maxFlash = 24;
+      const progress = Math.max(0, Math.min(1.0, 1.0 - flash / maxFlash));
+      const waveR = Math.max(1, r * (1.0 + progress * 0.8));
+      const alpha = Math.min(1.0, Math.max(0, flash / 14));
       ctx.save();
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2.5;
-      ctx.globalAlpha = flash / 12;
+      ctx.globalAlpha = alpha;
       ctx.beginPath();
       ctx.arc(0, 0, waveR, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = color;
-      ctx.globalAlpha = (flash / 12) * 0.28;
+      ctx.globalAlpha = alpha * 0.28;
       ctx.fill();
       ctx.restore();
     }

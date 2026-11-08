@@ -1640,7 +1640,7 @@ function stepPhysics() {
             sfx.burstTrigger();
             state.boss.expression = "shock";
             state.boss.expressionTimer = 90;
-            showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>PHASE 2: 胸部複合装甲 (HP 10) を破壊せよ！", 240);
+            showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>PHASE 2: 胸部装甲＆秘密のデルタコア露出！", 240);
             spawnFloatingCapsule(2, "buff");
           }
         }
@@ -2131,7 +2131,7 @@ function renderTable() {
       drawCyberTargetGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
     }
 
-    // 4. Crotch Secret Delta Reactor Gimmick!
+    // 4. Crotch Secret Delta Reactor (Hidden Easter-Egg in Phase 1; Unlocks into visible target in Phase 2 or Fever!)
     const cr = state.boss.crotch;
     const isUnlocked = state.phase >= 2 || state.fever.active;
     if (isUnlocked) {
@@ -2140,8 +2140,15 @@ function renderTable() {
       const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
       const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
       drawCyberTargetGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "DELTA CORE", sub);
-    } else {
-      drawCyberTargetGuide(cr.x, cr.y, cr.r, "rgba(255, 102, 178, 0.45)", cr.flash, cr.rot, "DELTA", "🔒SHIELDED");
+    } else if (cr.flash > 0) {
+      // In Phase 1, strictly NO target mark (no spoilers!) - only a subtle impact spark when hit accidentally
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 102, 178, 0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cr.x, cr.y, cr.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 5. Chest Core Gem Flash (Phase 3 Core Gem)

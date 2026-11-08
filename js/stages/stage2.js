@@ -994,54 +994,70 @@ window.Stage2 = {
       }
     };
 
-    // 1. カチューシャのアンテナ先端（周期電撃バリア）
+    // 1. カチューシャのアンテナ先端（ターゲットマーク不要：放電中・予兆時のみ電撃エフェクトを描画）
     const ant = state.boss.antenna;
     if (ant) {
-      ctx.save();
-      ctx.translate(ant.x, ant.y);
       if (ant.isActive) {
-        // 放電中：ジグザグの電撃アークリング
-        ctx.strokeStyle = "#00f5d4";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        const steps = 12;
-        for (let i = 0; i <= steps; i++) {
-          const a = (i / steps) * Math.PI * 2;
-          const r = ant.r + ((i % 2 === 0) ? 5 : -4) + Math.random() * 4;
-          const px = Math.cos(a) * r;
-          const py = Math.sin(a) * r;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.stroke();
+        // 放電中：激しいプラズマコアと四方八方に走る稲妻アーク放電
+        ctx.save();
+        ctx.translate(ant.x, ant.y);
 
-        ctx.fillStyle = "rgba(0, 245, 212, 0.3)";
+        const pulse = 1.0 + Math.sin(performance.now() * 0.08) * 0.25;
+        const gradCore = ctx.createRadialGradient(0, 0, 2, 0, 0, 16 * pulse);
+        gradCore.addColorStop(0, "#ffffff");
+        gradCore.addColorStop(0.35, "rgba(0, 245, 212, 0.90)");
+        gradCore.addColorStop(0.7, "rgba(0, 245, 212, 0.40)");
+        gradCore.addColorStop(1, "rgba(0, 245, 212, 0)");
+        ctx.fillStyle = gradCore;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16 * pulse, 0, Math.PI * 2);
         ctx.fill();
-      } else if (ant.isWarning) {
-        // 放電予告（黄色点滅）
-        ctx.strokeStyle = "#e6ff00";
-        ctx.lineWidth = 2.0;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(0, 0, ant.r + Math.sin(animTick * 0.2) * 3, 0, Math.PI * 2);
-        ctx.stroke();
-      } else {
-        // 安全・通過可能（青緑の静止リング）
-        ctx.strokeStyle = "rgba(0, 245, 212, 0.55)";
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.arc(0, 0, ant.r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
 
-      ctx.save();
-      ctx.font = "bold 9px monospace";
-      ctx.textAlign = "center";
-      ctx.fillStyle = ant.isActive ? "#00f5d4" : (ant.isWarning ? "#e6ff00" : "#00f5d4");
-      ctx.fillText(ant.isActive ? "⚡SHOCK⚡" : (ant.isWarning ? "⚠️WARNING" : "OPEN GATE"), ant.x, ant.y - ant.r - 3);
-      ctx.restore();
+        // 激しく走る稲妻放電ボルト（5本）
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.8;
+        ctx.shadowColor = "#00f5d4";
+        ctx.shadowBlur = 8;
+
+        const bolts = 5;
+        for (let b = 0; b < bolts; b++) {
+          const baseAngle = (b / bolts) * Math.PI * 2 + (performance.now() * 0.006);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          let curX = 0;
+          let curY = 0;
+          const segments = 4;
+          const boltLen = (ant.r + 6 + Math.random() * 8) / segments;
+          for (let s = 1; s <= segments; s++) {
+            const jag = (Math.random() - 0.5) * 8;
+            const a = baseAngle + jag * 0.15;
+            curX += Math.cos(a) * boltLen + (Math.random() - 0.5) * 3;
+            curY += Math.sin(a) * boltLen + (Math.random() - 0.5) * 3;
+            ctx.lineTo(curX, curY);
+          }
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      } else if (ant.isWarning) {
+        // 放電予兆：アンテナ先端から時折パチパチと散る小スパーク
+        if (Math.random() < 0.65) {
+          ctx.save();
+          ctx.translate(ant.x, ant.y);
+          ctx.strokeStyle = Math.random() < 0.5 ? "#ffffff" : "#e6ff00";
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = "#e6ff00";
+          ctx.shadowBlur = 6;
+          const a = Math.random() * Math.PI * 2;
+          const d = 5 + Math.random() * 9;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * 3, Math.sin(a) * 3);
+          ctx.lineTo(Math.cos(a) * d + (Math.random() - 0.5) * 4, Math.sin(a) * d + (Math.random() - 0.5) * 4);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+      // 安全待機時：ターゲットマークは一切描画しない（原画のまま）
     }
 
     // 2. 左手奥ホログラム（ターゲット円は廃止し、ド派手なエネルギー充填＆レーザー放射エフェクト）

@@ -301,6 +301,110 @@ window.Particles = {
       ctx.fillStyle = "#ffffff";
       ctx.globalAlpha = 0.95;
       ctx.fillText(subInfo, 0, rMain + 10);
+
+      // HP セグメントバー（subInfo が "HP:x" または "HP:x/y" の場合、視覚的なHPブロックを描画）
+      const hpMatch = subInfo.match(/HP:(\d+)(?:\/(\d+))?/);
+      if (hpMatch) {
+        const curHP = parseInt(hpMatch[1], 10);
+        const maxHP = hpMatch[2] ? parseInt(hpMatch[2], 10) : Math.max(curHP, 5);
+        const barW = Math.max(20, r * 1.2);
+        const barH = 3;
+        const startX = -barW / 2;
+        const startY = rMain + 13;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(startX - 1, startY - 1, barW + 2, barH + 2);
+
+        const segW = barW / maxHP;
+        for (let seg = 0; seg < maxHP; seg++) {
+          if (seg < curHP) {
+            ctx.fillStyle = curHP <= 1 ? "#ff0055" : (curHP <= 2 ? "#e6ff00" : "#00f5d4");
+            ctx.fillRect(startX + seg * segW + 0.5, startY + 0.5, segW - 1, barH - 1);
+          }
+        }
+      }
+    }
+
+    ctx.restore();
+  },
+
+  // 破壊不能バウンスバンパー専用ガイド描画（照準マークなし・シアン波紋クッションリング・HP表示なし）
+  drawBounceBumperGuide(ctx, animTick, x, y, r, color, flash, label, sub) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    const isHit = flash > 0;
+    const pulse = 1.0 + Math.sin(animTick * 0.06) * 0.08;
+    const bColor = color || "#00f5d4";
+
+    // 1. クッション同心円リング（外周波紋）
+    const rOuter = r * pulse;
+    ctx.save();
+    ctx.strokeStyle = bColor;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = isHit ? 0.8 : 0.35;
+    ctx.beginPath();
+    ctx.arc(0, 0, rOuter, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 内周リング
+    ctx.lineWidth = isHit ? 2.5 : 1.6;
+    ctx.globalAlpha = isHit ? 1.0 : 0.70;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 放射状クッションピン（4方向の小丸ピン）
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI / 2) + (animTick * 0.015);
+      const px = Math.cos(a) * (r * 0.86);
+      const py = Math.sin(a) * (r * 0.86);
+      ctx.fillStyle = isHit ? "#ffffff" : bColor;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 2. 被弾時の弾性衝撃波
+    if (isHit) {
+      const waveR = r * (1.0 + (1.0 - flash / 20) * 0.6);
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.0;
+      ctx.globalAlpha = flash / 20;
+      ctx.beginPath();
+      ctx.arc(0, 0, waveR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = bColor;
+      ctx.globalAlpha = (flash / 20) * 0.25;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 3. ラベル（上部: 名前、下部: BOUNCE / BUMPER）※HPバーは絶対に表示しない！
+    if (label && !isHit) {
+      ctx.font = "bold 8px monospace";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2.0;
+      ctx.strokeText(label, 0, -rOuter - 3);
+      ctx.fillStyle = bColor;
+      ctx.globalAlpha = 0.90;
+      ctx.fillText(label, 0, -rOuter - 3);
+    }
+    if (sub && !isHit) {
+      ctx.font = "bold 7px monospace";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2.0;
+      ctx.strokeText(sub, 0, rOuter + 9);
+      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 0.85;
+      ctx.fillText(sub, 0, rOuter + 9);
     }
 
     ctx.restore();

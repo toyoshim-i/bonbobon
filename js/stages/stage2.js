@@ -13,6 +13,9 @@ window.Stage2 = {
     defeatCgImg: new Image(),
     hologramImg: new Image(),
     hipJointImg: new Image(),
+    gauntletLBrokenImg: new Image(),
+    gauntletRBrokenImg: new Image(),
+    nozzlesBrokenImg: new Image(),
     facePatchImgs: {},
     loaded: false
   },
@@ -20,7 +23,10 @@ window.Stage2 = {
   initAssets() {
     this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg";
     this.assets.armoredImg.src = "./assets/stage2/centerpiece.jpg";
-    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png";
+    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png?v=108";
+    this.assets.gauntletLBrokenImg.src = "./assets/stage2/gauntlet_l_broken.png?v=108";
+    this.assets.gauntletRBrokenImg.src = "./assets/stage2/gauntlet_r_broken.png?v=108";
+    this.assets.nozzlesBrokenImg.src = "./assets/stage2/nozzles_broken.png?v=108";
 
     if (window.STAGE2_HOLOGRAM_DATA) {
       this.assets.hologramImg.src = window.STAGE2_HOLOGRAM_DATA;
@@ -28,10 +34,16 @@ window.Stage2 = {
       this.assets.hologramImg.src = "./assets/stage2/hologram.png";
     }
 
+    // 表情差分パッチ初期化
+    const faceKeys = ["blink", "wink", "shout", "shock", "wince", "open_blush", "talk", "talk_sm"];
     const faceData = window.STAGE2_FACE_PATCHES || {};
-    Object.entries(faceData).forEach(([k, uri]) => {
+    faceKeys.forEach(k => {
       const im = new Image();
-      im.src = uri;
+      if (faceData[k]) {
+        im.src = faceData[k];
+      } else {
+        im.src = `./assets/stage2/face_${k}.png`;
+      }
       this.assets.facePatchImgs[k] = im;
     });
 
@@ -102,7 +114,7 @@ window.Stage2 = {
         flash: 0
       },
 
-      // 3. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
+      // 3. バウンスポイント：手前の左肩装甲（Phase 1 破壊対象：HP 6）
       // 左肩: 原画 (340, 573) -> キャンバス (177, 284)
       shoulderL: {
         x: 177,
@@ -115,25 +127,31 @@ window.Stage2 = {
         rot: 0
       },
 
-      // 4. バウンスポイント：肘（左肘＆右肘）
-      // 左肘: 原画 (200, 835) -> キャンバス (111, 407)
+      // 4. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象）
+      // 左肘: 原画 (200, 835) -> キャンバス (111, 407, r: 22, HP: 5)
       elbowL: {
         x: 111,
         y: 407,
-        r: 20,
+        r: 22,
+        hp: 5,
+        maxHP: 5,
+        broken: false,
         flash: 0,
         rot: 0
       },
-      // 右肘: 原画 (722, 776) -> キャンバス (358, 379)
+      // 右肘: 原画 (722, 776) -> キャンバス (358, 379, r: 22, HP: 5)
       elbowR: {
         x: 358,
         y: 379,
-        r: 20,
+        r: 22,
+        hp: 5,
+        maxHP: 5,
+        broken: false,
         flash: 0,
         rot: 0
       },
 
-      // 5. 胸の先端（バネ振動 ＆ 背中ジェット噴射トリガーセンサー）
+      // 5. 胸の先端（バネ振動 ＆ 背中ジェット噴射トリガーセンサー：Phase 2 破壊対象 HP 6）
       // 原画 (207, 650) の胸の最先端ピンク突起・ハイライトに正確配置 -> キャンバス (114, 320)
       tipBust: {
         x: 114,
@@ -150,7 +168,7 @@ window.Stage2 = {
         rot: 0
       },
 
-      // 6. メイン動力炉：プラズマ・リアクターコア（全装甲パージ後に露出・最終撃破ターゲット）
+      // 6. メイン動力炉：プラズマ・リアクターコア（全装甲パージ後に露出・最終撃破ターゲット：Phase 3 HP 12）
       // 原画 (290, 680) -> キャンバス (153, 334)
       core: {
         x: 153,
@@ -163,15 +181,50 @@ window.Stage2 = {
       },
       allArmorsPurged: false,
 
-      // 6. 背中ジェット噴射ノズル先端
-      // 原画 (475, 770) のノズル開口部先端に精密配置 -> キャンバス (241, 376)
-      jet: {
-        x: 241,
+      // 7. 背中ジェット噴射ノズル先端（左右2基の推進スラスター：Phase 2 破壊対象 各HP 4）
+      // 左ノズル: 原画 (472, 775) -> キャンバス (240, 379, r: 16)
+      nozzleL: {
+        x: 240,
+        y: 379,
+        r: 16,
+        hp: 4,
+        maxHP: 4,
+        broken: false,
+        flash: 0,
+        rot: 0,
+        angle: Math.PI * 0.46
+      },
+      // 右ノズル: 原画 (540, 770) -> キャンバス (272, 376, r: 16)
+      nozzleR: {
+        x: 272,
         y: 376,
-        angle: Math.PI * 0.46,
-        r: 26,
+        r: 16,
+        hp: 4,
+        maxHP: 4,
+        broken: false,
+        flash: 0,
+        rot: 0,
+        angle: Math.PI * 0.46
+      },
+
+      jet: {
         active: false,
-        timer: 0
+        timer: 0,
+        get nozzles() {
+          const arr = [];
+          if (window.state && window.state.boss) {
+            const b = window.state.boss;
+            if (b.nozzleL) arr.push(b.nozzleL);
+            if (b.nozzleR) arr.push(b.nozzleR);
+          }
+          return arr.length > 0 ? arr : [
+            { x: 240, y: 379, angle: Math.PI * 0.46, r: 16 },
+            { x: 272, y: 376, angle: Math.PI * 0.46, r: 16 }
+          ];
+        },
+        get x() { return 240; },
+        get y() { return 379; },
+        get angle() { return Math.PI * 0.46; }
       },
 
       // 7. 左足付け根の丸い装甲パーツ（剛体レイヤー分離バウンスポイント）
@@ -205,21 +258,21 @@ window.Stage2 = {
       get butt() { return this.buttL; },
 
       // 9. カチューシャ猫耳三角バウンス板（左猫耳＆右猫耳）
-      // 原画の猫耳3頂点に1ピクセル単位で正確に一致
-      // 左耳: Tip (299, 92) -> (158, 59), BaseL (276, 149) -> (147, 86), BaseR (350, 144) -> (182, 83)
+      // 原画の猫耳3頂点に1ピクセル単位で正確に完全一致（右耳は外側約45度傾斜）
+      // 左耳: Tip (288, 78) -> (152.5, 52.5), BaseL (268, 155) -> (143.0, 88.5), BaseR (340, 138) -> (177.2, 80.6)
       catEarL: {
-        v1: { x: 158, y: 59 }, // Tip
-        v2: { x: 147, y: 86 }, // Base Left
-        v3: { x: 182, y: 83 }, // Base Right
-        cx: 162, cy: 76, r: 18,
+        v1: { x: 152.5, y: 52.5 }, // Tip
+        v2: { x: 143.0, y: 88.5 }, // Base Left
+        v3: { x: 177.2, y: 80.6 }, // Base Right
+        cx: 157.6, cy: 73.9, r: 18,
         flash: 0
       },
-      // 右耳: Tip (494, 129) -> (250, 76), BaseL (464, 208) -> (236, 113), BaseR (540, 193) -> (272, 106)
+      // 右耳: Tip (544, 112) -> (273.8, 68.4), BaseL (454, 164) -> (231.2, 92.7), BaseR (522, 214) -> (263.4, 116.2)
       catEarR: {
-        v1: { x: 250, y: 76 },  // Tip
-        v2: { x: 236, y: 113 }, // Base Left
-        v3: { x: 272, y: 106 }, // Base Right
-        cx: 253, cy: 98, r: 18,
+        v1: { x: 273.8, y: 68.4 },  // Tip
+        v2: { x: 231.2, y: 92.7 },  // Base Left
+        v3: { x: 263.4, y: 116.2 }, // Base Right
+        cx: 256.1, cy: 92.4, r: 18,
         flash: 0
       },
 
@@ -584,62 +637,65 @@ window.Stage2 = {
     }
   }
 
-    // 6. 背中ジェット噴射機構（ノズル先端開口部から斜め下への指向性超音速噴流）
+    // 6. 背中ジェット噴射機構（左右2基のノズル先端開口部から斜め下への指向性超音速噴流）
     const jet = state.boss.jet;
     if (jet && jet.timer > 0) {
       jet.timer--;
       jet.active = true;
 
-      // ノズル軸方向（斜め下）への高速火炎プラズマ粒子噴射
-      const jetAngle = jet.angle || (Math.PI * 0.46);
-      for (let i = 0; i < 4; i++) {
-        const spread = (Math.random() - 0.5) * 0.35;
-        const pAngle = jetAngle + spread;
-        const speed = 7.0 + Math.random() * 8.5;
-        state.particles.push({
-          x: jet.x + (Math.random() - 0.5) * 6,
-          y: jet.y + (Math.random() - 0.5) * 6,
-          vx: Math.cos(pAngle) * speed,
-          vy: Math.sin(pAngle) * speed,
-          color: Math.random() < 0.5 ? "#ffffff" : (Math.random() < 0.6 ? "#00f5d4" : "#e6ff00"),
-          life: 14,
-          scale: 1.5 + Math.random() * 0.8
-        });
-      }
-
-      state.balls.forEach(ball => {
-        const dx = ball.x - jet.x;
-        const dy = ball.y - jet.y;
-        const dist = Math.hypot(dx, dy);
-        const blastRadius = 210;
-
-        if (dist < blastRadius && dist > 1.0) {
-          // ノズル噴射コーン（斜め下方向）への指向性風圧
-          const ballAngle = Math.atan2(dy, dx);
-          let angleDiff = Math.abs(ballAngle - jetAngle);
-          if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-
-          // 噴流の中心コーン（広がり角90度以内）ほど強力に吹き飛ばす
-          const coneFactor = Math.max(0.2, Math.cos(Math.min(Math.PI / 2, angleDiff)));
-          const force = 16.0 * Math.pow(1.0 - dist / blastRadius, 1.1) * coneFactor;
-
-          // 噴射軸方向＋放射方向の合成ベクトルで吹き飛ばす
-          ball.vx += (Math.cos(jetAngle) * 0.6 + (dx / dist) * 0.4) * force;
-          ball.vy += (Math.sin(jetAngle) * 0.6 + (dy / dist) * 0.4) * force;
-
-          const spd = Math.hypot(ball.vx, ball.vy);
-          if (spd > 24.0) {
-            ball.vx = (ball.vx / spd) * 24.0;
-            ball.vy = (ball.vy / spd) * 24.0;
-          }
+      const nozzles = jet.nozzles || [{ x: jet.x, y: jet.y, angle: jet.angle || (Math.PI * 0.46) }];
+      nozzles.forEach(noz => {
+        // ノズル軸方向（斜め下）への高速火炎プラズマ粒子噴射
+        const jetAngle = noz.angle || (Math.PI * 0.46);
+        for (let i = 0; i < 3; i++) {
+          const spread = (Math.random() - 0.5) * 0.35;
+          const pAngle = jetAngle + spread;
+          const speed = 7.0 + Math.random() * 8.5;
+          state.particles.push({
+            x: noz.x + (Math.random() - 0.5) * 6,
+            y: noz.y + (Math.random() - 0.5) * 6,
+            vx: Math.cos(pAngle) * speed,
+            vy: Math.sin(pAngle) * speed,
+            color: Math.random() < 0.5 ? "#ffffff" : (Math.random() < 0.6 ? "#00f5d4" : "#e6ff00"),
+            life: 14,
+            scale: 1.5 + Math.random() * 0.8
+          });
         }
+
+        state.balls.forEach(ball => {
+          const dx = ball.x - noz.x;
+          const dy = ball.y - noz.y;
+          const dist = Math.hypot(dx, dy);
+          const blastRadius = 210;
+
+          if (dist < blastRadius && dist > 1.0) {
+            // ノズル噴射コーン（斜め下方向）への指向性風圧
+            const ballAngle = Math.atan2(dy, dx);
+            let angleDiff = Math.abs(ballAngle - jetAngle);
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+            // 噴流の中心コーン（広がり角90度以内）ほど強力に吹き飛ばす
+            const coneFactor = Math.max(0.2, Math.cos(Math.min(Math.PI / 2, angleDiff)));
+            const force = 12.0 * Math.pow(1.0 - dist / blastRadius, 1.1) * coneFactor;
+
+            // 噴射軸方向＋放射方向の合成ベクトルで吹き飛ばす
+            ball.vx += (Math.cos(jetAngle) * 0.6 + (dx / dist) * 0.4) * force;
+            ball.vy += (Math.sin(jetAngle) * 0.6 + (dy / dist) * 0.4) * force;
+
+            const spd = Math.hypot(ball.vx, ball.vy);
+            if (spd > 24.0) {
+              ball.vx = (ball.vx / spd) * 24.0;
+              ball.vy = (ball.vy / spd) * 24.0;
+            }
+          }
+        });
       });
     } else if (jet) {
       jet.active = false;
     }
 
     // Flash decay
-    [state.boss.shoulderL, state.boss.elbowL, state.boss.elbowR, state.boss.tipBust, state.boss.hipJointL, state.boss.catEarL, state.boss.catEarR].forEach(t => {
+    [state.boss.shoulderL, state.boss.elbowL, state.boss.elbowR, state.boss.nozzleL, state.boss.nozzleR, state.boss.tipBust, state.boss.hipJointL, state.boss.catEarL, state.boss.catEarR].forEach(t => {
       if (t && t.flash > 0) t.flash--;
     });
   },
@@ -753,22 +809,94 @@ window.Stage2 = {
 
     if (state.boss.shoulderL) handleShoulderHit(state.boss.shoulderL, "L");
 
-    // 3. バウンスポイント：肘（左肘＆右肘）
+    // 3. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象 各HP: 5）
     const handleElbowHit = (elb, sideLabel) => {
-      checkBumper(elb, 9.8, () => {
-        elb.flash = 20;
+      if (!elb) return;
+      checkBumper(elb, 10.0, () => {
+        elb.flash = 22;
         if (window.sfx) window.sfx.metalBumper();
-        Particles.add(state, elb.x, elb.y, "#e6ff00", 16, 4.5);
-        this.setExpressionSequence(state, [
-          { expr: "wince", frames: 25 },
-          { expr: "talk_sm", frames: 18 }
-        ]);
-        Systems.addScore(state, 3500, elb.x, elb.y, `⚡${sideLabel} ELBOW DEFLECT!`);
+        Particles.add(state, elb.x, elb.y, "#ff007f", 18, 5.0);
+
+        if (elb.hp > 0) {
+          elb.hp--;
+          this.setExpressionSequence(state, [
+            { expr: "wince", frames: 25 },
+            { expr: "talk_sm", frames: 18 }
+          ]);
+          Systems.addScore(state, 3500, elb.x, elb.y, `${sideLabel}-ARM! HP:${elb.hp}`);
+
+          if (elb.hp === 0) {
+            elb.broken = true;
+            Particles.triggerArmorBreakEffect(state, `${sideLabel.toLowerCase()}_arm`, elb.x, elb.y);
+            this.setExpressionSequence(state, [
+              { expr: "shock", frames: 25 },
+              { expr: "shout", frames: 30 },
+              { expr: "wince", frames: 40 }
+            ]);
+            UI.showCutin(`💥【${sideLabel}腕部装甲 大破！】💥<br>関節サーボ破損・装甲欠損！ +30,000pts!`, 200);
+            Systems.addScore(state, 30000, elb.x, elb.y, `★${sideLabel} ARM DESTROYED!★`);
+            Systems.spawnFloatingCapsule(state, 2, "buff");
+            this.checkPhase1Clear(state);
+          }
+        } else {
+          // 破壊後：小スパーク散布
+          Particles.add(state, elb.x, elb.y, "#e6ff00", 12, 3.5);
+          Systems.addScore(state, 2500, elb.x, elb.y, `⚡${sideLabel} ARM SPARK!`);
+        }
       });
     };
 
     if (state.boss.elbowL) handleElbowHit(state.boss.elbowL, "L");
     if (state.boss.elbowR) handleElbowHit(state.boss.elbowR, "R");
+
+    // 3.5. 背中ブースターノズル噴射口ターゲット（左右2基のノズル：Phase 2 破壊対象 各HP: 4）
+    const handleNozzleHit = (noz, nozLabel) => {
+      if (!noz) return;
+      checkBumper(noz, 10.5, () => {
+        noz.flash = 24;
+        if (window.sfx) window.sfx.metalBumper();
+        Particles.add(state, noz.x, noz.y, "#ff007f", 16, 4.5);
+
+        if (noz.hp > 0) {
+          noz.hp--;
+          this.setExpressionSequence(state, [
+            { expr: "shock", frames: 20 },
+            { expr: "wince", frames: 25 }
+          ]);
+          Systems.addScore(state, 4000, noz.x, noz.y, `NOZZLE-${nozLabel}! HP:${noz.hp}`);
+
+          if (noz.hp === 0) {
+            noz.broken = true;
+            Particles.triggerArmorBreakEffect(state, `nozzle_${nozLabel.toLowerCase()}`, noz.x, noz.y);
+            this.setExpressionSequence(state, [
+              { expr: "shock", frames: 28 },
+              { expr: "shout", frames: 32 }
+            ]);
+            UI.showCutin(`💥【${nozLabel}ノズル 噴射口大破！】💥<br>スラスター破損・推進力低下！ +25,000pts!`, 200);
+            Systems.addScore(state, 25000, noz.x, noz.y, `★NOZZLE-${nozLabel} DESTROYED!★`);
+            Systems.spawnFloatingCapsule(state, 2, "buff");
+
+            // 両ノズル大破チェック
+            const bothBroken = state.boss.nozzleL.broken && state.boss.nozzleR.broken;
+            if (bothBroken) {
+              if (state.boss.jet) {
+                state.boss.jet.timer = 0;
+                state.boss.jet.active = false;
+              }
+              UI.showCutin("💥【背中推進機関 完全大破！】💥<br>両スラスター停止！ ジェット風圧消失！ +30,000pts!", 220);
+              Systems.addScore(state, 30000, noz.x, noz.y, "★ALL THRUSTERS DOWN!★");
+              this.checkPhase2Clear(state);
+            }
+          }
+        } else {
+          Particles.add(state, noz.x, noz.y, "#555555", 8, 2.5);
+          Systems.addScore(state, 2000, noz.x, noz.y, "⚡NOZZLE SCRAP");
+        }
+      });
+    };
+
+    if (state.boss.nozzleL) handleNozzleHit(state.boss.nozzleL, "L");
+    if (state.boss.nozzleR) handleNozzleHit(state.boss.nozzleR, "R");
 
     // 4. 左手奥ホログラム砲台コア（Phase 1はシールド防御、Phase 2で攻撃可能！）
     const holo = state.boss.hologram;
@@ -965,36 +1093,40 @@ window.Stage2 = {
   },
 
   checkPhase1Clear(state) {
-    if (state.boss.shoulderL.broken && state.boss.antenna.broken && state.phase === 1) {
+    const b = state.boss;
+    const isArmsBroken = b.elbowL.broken && b.elbowR.broken;
+    if (b.shoulderL.broken && b.antenna.broken && isArmsBroken && state.phase === 1) {
       state.phase = 2;
-      state.boss.hologram.isShielded = false;
+      b.hologram.isShielded = false;
       if (window.sfx) window.sfx.burstTrigger();
       this.setExpressionSequence(state, [
         { expr: "shock", frames: 30 },
         { expr: "shout", frames: 35 },
         { expr: "wince", frames: 50 }
       ]);
-      UI.showCutin("🎉【PHASE 1 突破！】🎉<br>外郭防衛網壊滅！ ホログラム砲台のシールド解除！", 220);
+      UI.showCutin("🎉【PHASE 1 突破！】🎉<br>外郭防衛網＆両腕関節装甲壊滅！ ホログラム砲台のシールド解除！", 220);
       Systems.spawnFloatingCapsule(state, 2, "buff");
       UI.updateHUD(state);
     }
   },
 
   checkPhase2Clear(state) {
-    if (state.boss.hologram.broken && state.boss.tipBust.broken && state.phase === 2) {
+    const b = state.boss;
+    const isNozzlesBroken = (!b.nozzleL || b.nozzleL.broken) && (!b.nozzleR || b.nozzleR.broken);
+    if (b.hologram.broken && b.tipBust.broken && isNozzlesBroken && state.phase === 2) {
       state.phase = 3;
-      state.boss.core.unlocked = true;
-      state.boss.allArmorsPurged = true;
+      b.core.unlocked = true;
+      b.allArmorsPurged = true;
       if (window.sfx) window.sfx.burstTrigger();
-      Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 50, 8.5);
-      Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 40, 7.5);
-      Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 35, 7.0);
+      Particles.add(state, b.core.x, b.core.y, "#00f5d4", 50, 8.5);
+      Particles.add(state, b.core.x, b.core.y, "#ffffff", 40, 7.5);
+      Particles.add(state, b.core.x, b.core.y, "#ff007f", 35, 7.0);
 
       this.setExpressionSequence(state, [
         { expr: "shock", frames: 35 },
         { expr: "open_blush", frames: 999 }
       ]);
-      Systems.addScore(state, 50000, state.boss.core.x, state.boss.core.y, "★ALL ARMORS PURGED! +50,000★");
+      Systems.addScore(state, 50000, b.core.x, b.core.y, "★ALL ARMORS PURGED! +50,000★");
       UI.showCutin("✨【PHASE 2 突破！ 全装甲パージ！】✨<br>プラズマ・リアクターコア露出！ コアを直撃してK.O.せよ！", 240);
       Systems.addFever(state, 100);
       Systems.spawnFloatingCapsule(state, 3, "buff");
@@ -1357,6 +1489,59 @@ window.Stage2 = {
       }
     }
 
+    // 4.5. パーツブレイク破損差分描画（左腕・右腕・背中ノズル）
+    // A. 左腕関節装甲（大破時：装甲欠損・火花・内部フレーム露出差分をオーバーレイ描画）
+    if (state.boss.elbowL && state.boss.elbowL.broken && this.assets.gauntletLBrokenImg && this.assets.gauntletLBrokenImg.complete) {
+      ctx.save();
+      const gx = IMG_BOX.x + (40 / 768) * IMG_BOX.w;
+      const gy = IMG_BOX.y + (360 / 1376) * IMG_BOX.h;
+      const gw = (180 / 768) * IMG_BOX.w;
+      const gh = (160 / 1376) * IMG_BOX.h;
+      ctx.drawImage(this.assets.gauntletLBrokenImg, gx, gy, gw, gh);
+      if (Math.random() < 0.15) {
+        Particles.add(state, state.boss.elbowL.x + (Math.random() - 0.5) * 16, state.boss.elbowL.y + (Math.random() - 0.5) * 16, "#e6ff00", 2, 2.0);
+      }
+      ctx.restore();
+    }
+
+    // B. 右腕関節装甲（大破時：装甲欠損・火花差分をオーバーレイ描画）
+    if (state.boss.elbowR && state.boss.elbowR.broken && this.assets.gauntletRBrokenImg && this.assets.gauntletRBrokenImg.complete) {
+      ctx.save();
+      const gx = IMG_BOX.x + (580 / 768) * IMG_BOX.w;
+      const gy = IMG_BOX.y + (650 / 1376) * IMG_BOX.h;
+      const gw = (188 / 768) * IMG_BOX.w;
+      const gh = (200 / 1376) * IMG_BOX.h;
+      ctx.drawImage(this.assets.gauntletRBrokenImg, gx, gy, gw, gh);
+      if (Math.random() < 0.15) {
+        Particles.add(state, state.boss.elbowR.x + (Math.random() - 0.5) * 18, state.boss.elbowR.y + (Math.random() - 0.5) * 18, "#e6ff00", 2, 2.0);
+      }
+      ctx.restore();
+    }
+
+    // C. 背中ブースターノズル（大破時：破損ノズル・黒煙差分をオーバーレイ描画）
+    const isThrustersBroken = (state.boss.nozzleL && state.boss.nozzleL.broken) || (state.boss.nozzleR && state.boss.nozzleR.broken);
+    if (isThrustersBroken && this.assets.nozzlesBrokenImg && this.assets.nozzlesBrokenImg.complete) {
+      ctx.save();
+      const nx = IMG_BOX.x + (440 / 768) * IMG_BOX.w;
+      const ny = IMG_BOX.y + (720 / 1376) * IMG_BOX.h;
+      const nw = (140 / 768) * IMG_BOX.w;
+      const nh = (110 / 1376) * IMG_BOX.h;
+      ctx.drawImage(this.assets.nozzlesBrokenImg, nx, ny, nw, nh);
+      if (Math.random() < 0.25) {
+        const nozPos = (state.boss.nozzleL && state.boss.nozzleL.broken) ? state.boss.nozzleL : state.boss.nozzleR;
+        state.particles.push({
+          x: nozPos.x + (Math.random() - 0.5) * 14,
+          y: nozPos.y + (Math.random() - 0.5) * 10,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -1.5 - Math.random() * 2.0,
+          color: Math.random() < 0.5 ? "#333333" : "#552244",
+          life: 20,
+          scale: 1.8
+        });
+      }
+      ctx.restore();
+    }
+
     // 5. Dynamic Face Expression Patch (透過アルファスプライトによる自然な瞬き・ウインク・感情遷移)
     const isDefeat = state.clearSequence && state.clearSequence.active;
     const fa = state.boss.faceAnim || {};
@@ -1675,55 +1860,70 @@ window.Stage2 = {
       }
     }
 
-    // 3. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
+    // 3. バウンスポイント：手前の左肩装甲（Phase 1 破壊対象 HP 6）
     const shL = state.boss.shoulderL;
     if (shL) {
-      drawGuide(shL.x, shL.y, shL.r, shL.broken ? "#00f5d4" : "#e6ff00", shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}`);
+      drawGuide(shL.x, shL.y, shL.r, shL.broken ? "#555555" : "#ff007f", shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}/6`);
     }
 
-    // 4. バウンスポイント：肘（左肘＆右肘）
+    // 4. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象 各HP 5）
     const elbL = state.boss.elbowL;
     if (elbL) {
-      drawGuide(elbL.x, elbL.y, elbL.r, "#e6ff00", elbL.flash, -animTick * 0.02, "L-ELBOW", "DEFLECT");
+      drawGuide(elbL.x, elbL.y, elbL.r, elbL.broken ? "#555555" : "#ff007f", elbL.flash, -animTick * 0.02, "L-ARM", elbL.broken ? "DESTROYED" : `HP:${elbL.hp}/5`);
     }
     const elbR = state.boss.elbowR;
     if (elbR) {
-      drawGuide(elbR.x, elbR.y, elbR.r, "#e6ff00", elbR.flash, animTick * 0.02, "R-ELBOW", "DEFLECT");
+      drawGuide(elbR.x, elbR.y, elbR.r, elbR.broken ? "#555555" : "#ff007f", elbR.flash, animTick * 0.02, "R-ARM", elbR.broken ? "DESTROYED" : `HP:${elbR.hp}/5`);
     }
 
-    // 5. 胸の先端（JET SENSOR ＆ BUST TARGET）
+    // 4.5. 背中ブースターノズル噴射口ターゲット（左右2基：Phase 2 破壊対象 各HP 4）
+    const nozL = state.boss.nozzleL;
+    if (nozL) {
+      const colL = nozL.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff007f");
+      const subL = nozL.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozL.hp}/4`);
+      drawGuide(nozL.x, nozL.y, nozL.r, colL, nozL.flash, animTick * 0.025, "NOZZLE-L", subL);
+    }
+    const nozR = state.boss.nozzleR;
+    if (nozR) {
+      const colR = nozR.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff007f");
+      const subR = nozR.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozR.hp}/4`);
+      drawGuide(nozR.x, nozR.y, nozR.r, colR, nozR.flash, -animTick * 0.025, "NOZZLE-R", subR);
+    }
+
+    // 5. 胸の先端（JET SENSOR ＆ BUST TARGET：Phase 2 破壊対象 HP 6）
     const bTip = state.boss.tipBust;
     if (bTip) {
-      drawGuide(bTip.x, bTip.y, bTip.r, bTip.broken ? "#555555" : "#ff1493", bTip.flash, animTick * 0.03, "♥BUST TIP", bTip.broken ? "PURGED" : `HP:${bTip.hp}`);
+      const colB = bTip.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff1493");
+      drawGuide(bTip.x, bTip.y, bTip.r, colB, bTip.flash, animTick * 0.03, "♥BUST TIP", bTip.broken ? "PURGED" : `HP:${bTip.hp}/6`);
     }
 
-    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット）
+    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット HP 12）
     const core = state.boss.core;
     if (core) {
       if (state.phase === 3 && core.unlocked) {
-        drawGuide(core.x, core.y, core.r, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp} [K.O. TARGET]`);
+        drawGuide(core.x, core.y, core.r, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp}/12 [K.O. TARGET]`);
       } else if (core.unlocked) {
         drawGuide(core.x, core.y, core.r, "#e6ff00", core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
       }
     }
 
-    // 7. 左足付け根の丸い装甲パーツ（剛体CYBER BUMP：お尻連動オフセット）
+    // 7. 【破壊不能バウンスバンパー】左足付け根の丸い装甲パーツ（剛体CYBER BUMP：照準なし・シアン波紋クッション）
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
       const jDx = (bL ? bL.dx : 0) * 0.35;
       const jDy = (bL ? bL.dy : 0) * 0.35;
-      drawGuide(hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, animTick * 0.025, "HIP JOINT", "CYBER BUMP");
+      Particles.drawBounceBumperGuide(ctx, animTick, hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, "HIP JOINT", "CYBER BUMP");
     }
 
-    // 8. カチューシャ猫耳三角バウンス板（原画の猫耳3点に精密フィットした鋭角エッジバンパー）
+    // 8. 【破壊不能バウンスバンパー】カチューシャ猫耳三角バウンス板（シアン反発フレーム・照準なし）
     const drawCatEar = (ear, label) => {
       if (!ear) return;
       ctx.save();
       const f = ear.flash || 0;
-      ctx.strokeStyle = f > 0 ? "#ffffff" : "#ff007f";
+      ctx.strokeStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.lineWidth = f > 0 ? 3.0 : 2.0;
-      ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.45)" : "rgba(255, 0, 127, 0.20)";
+      ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.45)" : "rgba(0, 245, 212, 0.20)";
 
       // 三角形フレーム
       ctx.beginPath();
@@ -1740,7 +1940,7 @@ window.Stage2 = {
         ctx.beginPath();
         ctx.arc(v.x, v.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#ff007f";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.0;
         ctx.stroke();
       });
@@ -1758,90 +1958,95 @@ window.Stage2 = {
       ctx.font = "bold 8px monospace";
       ctx.fillStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.textAlign = "center";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2.0;
+      ctx.strokeText("BOUNCE", ear.cx, ear.v1.y - 6);
       ctx.fillText("BOUNCE", ear.cx, ear.v1.y - 6);
       ctx.restore();
     };
     drawCatEar(state.boss.catEarL, "L-EAR");
     drawCatEar(state.boss.catEarR, "R-EAR");
 
-    // 9. 背中ジェット噴射火炎（ノズル先端開口部から吹き出る指向性超音速プラズマ噴流）
+    // 9. 背中ジェット噴射火炎（左右2基のノズル先端開口部から吹き出る指向性超音速プラズマ噴流）
     const jet = state.boss.jet;
     if (jet && jet.active) {
-      ctx.save();
-      ctx.translate(jet.x, jet.y);
-      const jetAngle = jet.angle || (Math.PI * 0.46);
-      ctx.rotate(jetAngle);
-
       const pulse = 1.0 + Math.sin(performance.now() * 0.05) * 0.12;
-      const length = (78 + Math.random() * 20) * pulse;
-
-      // ノズル開口部の半幅（原画のノズル口径にぴったり一致: 約 6px）
       const nozzleR = 6.0;
-      // 噴出後の最大コーン幅（後方で適度に広がる）
-      const plumeMaxW = 16.0 * pulse;
 
-      // A. 外層プラズマ火炎プルーム（シアン〜マゼンタの超音速コーン）
-      const gradPlume = ctx.createLinearGradient(0, 0, length, 0);
-      gradPlume.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-      gradPlume.addColorStop(0.12, "rgba(0, 245, 212, 0.90)");
-      gradPlume.addColorStop(0.50, "rgba(255, 0, 127, 0.60)");
-      gradPlume.addColorStop(1.0, "rgba(255, 0, 127, 0)");
+      const nozzlesToFire = [];
+      if (state.boss.nozzleL && !state.boss.nozzleL.broken) nozzlesToFire.push(state.boss.nozzleL);
+      if (state.boss.nozzleR && !state.boss.nozzleR.broken) nozzlesToFire.push(state.boss.nozzleR);
 
-      ctx.fillStyle = gradPlume;
-      ctx.beginPath();
-      // ノズル開口部先端（幅 nozzleR*2）からスタート
-      ctx.moveTo(0, -nozzleR);
-      // 後方へ向かって広がり、末端へ収束
-      ctx.lineTo(length * 0.38, -plumeMaxW);
-      ctx.lineTo(length, 0);
-      ctx.lineTo(length * 0.38, plumeMaxW);
-      ctx.lineTo(0, nozzleR);
-      ctx.closePath();
-      ctx.fill();
+      nozzlesToFire.forEach(noz => {
+        ctx.save();
+        ctx.translate(noz.x, noz.y);
+        const jetAngle = noz.angle || (Math.PI * 0.46);
+        ctx.rotate(jetAngle);
 
-      // B. 内層コア火炎（超音速高密度白熱プラズマ芯）
-      const coreLen = length * 0.65;
-      const coreW = plumeMaxW * 0.48;
-      const gradCore = ctx.createLinearGradient(0, 0, coreLen, 0);
-      gradCore.addColorStop(0, "#ffffff");
-      gradCore.addColorStop(0.35, "rgba(0, 245, 212, 0.95)");
-      gradCore.addColorStop(1.0, "rgba(0, 245, 212, 0)");
+        const length = (78 + Math.random() * 20) * pulse;
+        const plumeMaxW = 16.0 * pulse;
 
-      ctx.fillStyle = gradCore;
-      ctx.beginPath();
-      ctx.moveTo(0, -nozzleR * 0.65);
-      ctx.lineTo(coreLen * 0.32, -coreW);
-      ctx.lineTo(coreLen, 0);
-      ctx.lineTo(coreLen * 0.32, coreW);
-      ctx.lineTo(0, nozzleR * 0.65);
-      ctx.closePath();
-      ctx.fill();
+        // A. 外層プラズマ火炎プルーム（シアン〜マゼンタの超音速コーン）
+        const gradPlume = ctx.createLinearGradient(0, 0, length, 0);
+        gradPlume.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+        gradPlume.addColorStop(0.12, "rgba(0, 245, 212, 0.90)");
+        gradPlume.addColorStop(0.50, "rgba(255, 0, 127, 0.60)");
+        gradPlume.addColorStop(1.0, "rgba(255, 0, 127, 0)");
 
-      // C. ショックダイヤモンド（マッハディスク：3連ひし形衝撃波）
-      for (let d = 1; d <= 3; d++) {
-        const dx = (length * 0.19) * d;
-        const dw = 4.2 * (1 - d * 0.22) * pulse;
-        const dh = 5.5 * (1 - d * 0.22) * pulse;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.fillStyle = gradPlume;
         ctx.beginPath();
-        ctx.moveTo(dx - dw, 0);
-        ctx.lineTo(dx, -dh);
-        ctx.lineTo(dx + dw, 0);
-        ctx.lineTo(dx, dh);
+        ctx.moveTo(0, -nozzleR);
+        ctx.lineTo(length * 0.38, -plumeMaxW);
+        ctx.lineTo(length, 0);
+        ctx.lineTo(length * 0.38, plumeMaxW);
+        ctx.lineTo(0, nozzleR);
         ctx.closePath();
         ctx.fill();
-      }
 
-      // D. ノズル先端開口部リング（金属リム＆白熱プラズマ縁）
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 2.5, nozzleR, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#00f5d4";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+        // B. 内層コア火炎（超音速高密度白熱プラズマ芯）
+        const coreLen = length * 0.65;
+        const coreW = plumeMaxW * 0.48;
+        const gradCore = ctx.createLinearGradient(0, 0, coreLen, 0);
+        gradCore.addColorStop(0, "#ffffff");
+        gradCore.addColorStop(0.35, "rgba(0, 245, 212, 0.95)");
+        gradCore.addColorStop(1.0, "rgba(0, 245, 212, 0)");
 
-      ctx.restore();
+        ctx.fillStyle = gradCore;
+        ctx.beginPath();
+        ctx.moveTo(0, -nozzleR * 0.65);
+        ctx.lineTo(coreLen * 0.32, -coreW);
+        ctx.lineTo(coreLen, 0);
+        ctx.lineTo(coreLen * 0.32, coreW);
+        ctx.lineTo(0, nozzleR * 0.65);
+        ctx.closePath();
+        ctx.fill();
+
+        // C. ショックダイヤモンド（マッハディスク：3連ひし形衝撃波）
+        for (let d = 1; d <= 3; d++) {
+          const dx = (length * 0.19) * d;
+          const dw = 4.2 * (1 - d * 0.22) * pulse;
+          const dh = 5.5 * (1 - d * 0.22) * pulse;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+          ctx.beginPath();
+          ctx.moveTo(dx - dw, 0);
+          ctx.lineTo(dx, -dh);
+          ctx.lineTo(dx + dw, 0);
+          ctx.lineTo(dx, dh);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // D. ノズル先端開口部リング
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2.5, nozzleR, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+      });
     }
   },
 
@@ -1911,7 +2116,7 @@ window.Stage2 = {
       if (holo && holo.laserState === "charge") {
         return holo.isLocked ? "⚠️レーザー照準ロックオン！緊急回避せよ！" : "⚠️ホログラム砲台がボールを追尾中！停止するな！";
       }
-      return "TARGET: ホログラム砲台(HOLO CANNON) ＆ 胸部先端センサーを破壊せよ！";
+      return "TARGET: ホログラム砲台(HOLO CANNON)、背中ノズル(NOZZLE-L/R) ＆ 胸部先端センサーを破壊せよ！";
     }
 
     // Phase 1
@@ -1919,21 +2124,27 @@ window.Stage2 = {
     if (ant && ant.isActive) {
       return "⚡アンテナ電撃放電中！ 停止タイミングでゲートを抜けろ！";
     }
-    return "TARGET: 左肩装甲(L-SHOULDER) ＆ カチューシャアンテナを破壊せよ！";
+    return "TARGET: 左肩装甲(L-SHOULDER)、両腕関節装甲(L/R-ARM) ＆ カチューシャアンテナを破壊せよ！";
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const dtArmR = document.getElementById("dtArmRStatus");
     if (dtArmR) {
-      dtArmR.textContent = "奥側 (判定なし)";
-      dtArmR.className = "text-gray-500 font-bold text-[10px]";
+      const elbR = state.boss.elbowR;
+      if (elbR) {
+        dtArmR.textContent = elbR.broken ? "💥DESTROYED!" : `R-ARM (${elbR.hp}/5)`;
+        dtArmR.className = elbR.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      }
     }
     const dtArmL = document.getElementById("dtArmLStatus");
     if (dtArmL) {
       const shL = state.boss.shoulderL;
-      dtArmL.textContent = shL.broken ? "💥PURGED!" : `L-SHOULDER (${shL.hp}/6)`;
-      dtArmL.className = shL.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      const elbL = state.boss.elbowL;
+      const isArmsBroken = (shL ? shL.broken : true) && (elbL ? elbL.broken : true);
+      const curHP = (shL ? (shL.broken ? 0 : shL.hp) : 0) + (elbL ? (elbL.broken ? 0 : elbL.hp) : 0);
+      dtArmL.textContent = isArmsBroken ? "💥PURGED!" : `L-ARM/SH (${curHP}/11)`;
+      dtArmL.className = isArmsBroken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
     }
     const dtChest = document.getElementById("dtChestStatus");
     if (dtChest) {

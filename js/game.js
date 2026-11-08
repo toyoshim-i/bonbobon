@@ -255,7 +255,7 @@ function prepareBallForLaunch() {
   if (state.perm.kickbackR > 0) state.perm.kickbackR_charges = 1;
   if (state.perm.centerPost > 0) state.perm.centerPostHP = 3;
 
-  showCutin("【ゲーム開始】<br>画面の左右タップでパドル操作！ 発射ボタン または 右下スワイプで発射！", 150);
+  showCutin("【ゲーム開始】<br>画面左右タップでパドル操作！<br>発射ボタン または 右下スワイプで射出！", 150);
 }
 
 function spawnBall(x = 198, y = 260, vx = 0, vy = -7.5) {
@@ -1382,7 +1382,7 @@ function stepPhysics() {
                 triggerArmorBreakEffect("chest", hit.cx, hit.cy);
                 state.boss.expression = "blush";
                 state.boss.expressionTimer = 85;
-                showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 秘密のグラビティコア起動！", 240);
+                showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！<br>秘密のグラビティコア起動！", 240);
                 addScore(15000, hit.cx, hit.cy, "FULL PURGE!!");
                 spawnFloatingCapsule(2, "buff");
                 spawnFloatingCapsule(5, "buff");
@@ -1535,7 +1535,7 @@ function stepPhysics() {
             if (state.skillShotEligible) {
               state.skillShotEligible = false;
               addScore(25000, hit.qx, hit.qy, "★SKILL SHOT!!");
-              showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！ +25,000pts ＆ レアカプセル！", 180);
+              showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！<br>+25,000pts ＆ レアカプセル！", 180);
               spawnFloatingCapsule(2, "buff");
             } else {
               addScore(2000, hit.qx, hit.qy, "🐰FUNYON DAMP!");
@@ -1578,7 +1578,7 @@ function stepPhysics() {
                   state.boss.expression = "shock";
                   state.boss.expressionTimer = 65;
                   addScore(5000, pod.x, pod.y, `💥${tag} BREAK!!`);
-                  showCutin(`💥【${which === "L" ? "左" : "右"}肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！`, 180);
+                  showCutin(`💥【${which === "L" ? "左" : "右"}肩アーマー破壊】<br>内部ジェネレータ露出！<br>⚡EX-BOUNCE活性化！`, 180);
                   spawnFloatingCapsule(which === "L" ? 3 : 4, "perm");
                   checkPhase1Clear();
                 } else {
@@ -1699,7 +1699,7 @@ function stepPhysics() {
                   sfx.exSpark();
                   addScore(30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
                   addPopup(crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
-                  showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！ 秘密のマルチボール＆全開フィーバー！", 220);
+                  showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
 
                   // Repulsion shockwave blasts ball outward!
                   ball.vy = -8.5;
@@ -1725,7 +1725,7 @@ function stepPhysics() {
             sfx.burstTrigger();
             state.boss.expression = "shock";
             state.boss.expressionTimer = 90;
-            showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>PHASE 2: 胸部装甲＆秘密のデルタコア露出！", 240);
+            showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>胸部装甲＆秘密のグラビティコア露出！", 240);
             spawnFloatingCapsule(2, "buff");
           }
         }

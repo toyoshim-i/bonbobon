@@ -200,8 +200,8 @@ function createInitialState() {
       // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
       hipL:   { x: 134, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
       hipR:   { x: 262, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
-      // Crotch Secret Delta Reactor (3 hits trigger Delta Overdrive & Secret Multiball)
-      crotch: { x: 198, y: 477, r: 18, flash: 0, rot: 0, charge: 0, maxCharge: 3 },
+      // Crotch Secret Delta Reactor (Located at actual crotch between thighs, y: 562)
+      crotch: { x: 198, y: 562, r: 13, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
       // Core Gem at chest center
       core:   { x: 198, y: 311, r: 16, flash: 0 }
     },

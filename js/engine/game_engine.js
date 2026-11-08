@@ -113,7 +113,7 @@ window.GameEngine = {
   },
 
   startPlungerPull() {
-    if (!this.state.plunger.waitingForLaunch) return;
+    // 常時再引き可能（軽く浮かせて落ちてきたボールにカウンターを合わせるテクニックに対応）
     this.state.plunger.pulling = true;
   },
 
@@ -123,23 +123,41 @@ window.GameEngine = {
 
     // Linear power based on charge duration / drag distance (respects slight taps)
     const currentPower = Math.max(3, this.state.plunger.power);
-    if (window.sfx) window.sfx.plungerLaunch(currentPower);
+    const p = currentPower / 100;
+    const launchSpeed = 1.4 + p * 16.2;
 
-    const ballInLane = this.state.balls.find(b => b.inShooterLane);
+    // Spring oscillation recoil impulse
+    this.state.plunger.springVy = -p * 22;
+
+    const ballInLane = this.state.balls.find(b => b.inShooterLane && b.x >= 380 && b.x <= 405);
     if (ballInLane) {
-      const p = currentPower / 100;
-      // Complete linear launch speed: ~1.2 at minimal tap up to 16.8 at full 100%
-      const launchSpeed = 1.2 + p * 15.6;
-      ballInLane.vy = -launchSpeed;
-      ballInLane.vx = -0.3;
-      this.state.plunger.waitingForLaunch = false;
-      if (this.state.boss) this.state.boss.winkTimer = 35;
+      const tipY = (this.state.plunger.springY || 575) - 6;
+      // ボールがスプリングの可動範囲内（y: 280〜625）にあれば撃ち出し・カウンター判定
+      if (ballInLane.y >= 280 && ballInLane.y <= 625) {
+        if (window.sfx) window.sfx.plungerLaunch(currentPower);
 
-      // Spring oscillation recoil impulse
-      this.state.plunger.springVy = -p * 18;
+        // カウンター激突判定（落下中のボールにバネをぶつけて急加速！）
+        if (ballInLane.vy > 0.4) {
+          const counterBoost = ballInLane.vy * 1.35;
+          ballInLane.vy = -(launchSpeed + counterBoost);
+          ballInLane.vx = -0.3;
+          if (window.sfx) window.sfx.metalBumper();
+          Particles.add(this.state, ballInLane.x, ballInLane.y, "#00f5d4", 16, 4.5);
+          Particles.add(this.state, ballInLane.x, ballInLane.y, "#e6ff00", 12, 3.5);
+          Particles.addPopup(this.state, ballInLane.x - 15, ballInLane.y - 15, "🚀SUPER COUNTER LAUNCH!", "#e6ff00", 1.2);
+          Systems.addScore(this.state, 3000, ballInLane.x, ballInLane.y, "COUNTER SHOT!");
+        } else {
+          // 通常の静止・上昇中打ち出し
+          ballInLane.vy = -launchSpeed;
+          ballInLane.vx = -0.3;
+        }
 
-      if (p >= 0.70 && p <= 0.86) {
-        this.state.skillShotEligible = true;
+        this.state.plunger.waitingForLaunch = false;
+        if (this.state.boss) this.state.boss.winkTimer = 35;
+
+        if (p >= 0.70 && p <= 0.86) {
+          this.state.skillShotEligible = true;
+        }
       }
     }
     this.state.plunger.power = 0;

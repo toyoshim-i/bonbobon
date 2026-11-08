@@ -219,10 +219,17 @@ window.Physics = {
     ball.y += ball.vy / SUBSTEPS;
 
     // Shooter lane plunger spring catch & re-arm
-    if (ball.inShooterLane && !state.plunger.waitingForLaunch && ball.x >= 380 && ball.x <= 405) {
+    if (ball.inShooterLane && ball.x >= 380 && ball.x <= 405) {
       const tipY = (state.plunger.springY || 575) - 6;
       const contactDist = (ball.y + ball.r) - tipY;
-      if (contactDist >= 0 && ball.vy > 0) {
+
+      // 1. スプリング引き込み中にボールが落ちてきた場合：バネのヘッドに乗って一緒に引き下がる
+      if (state.plunger.pulling && contactDist >= 0) {
+        ball.y = tipY - ball.r;
+        ball.vy = 0;
+        ball.vx = 0;
+      } else if (!state.plunger.waitingForLaunch && contactDist >= 0 && ball.vy > 0) {
+        // 2. 落下中ボールのバネ接触
         ball.y = tipY - ball.r;
         state.plunger.springVy = (state.plunger.springVy || 0) + Math.min(12, ball.vy * 0.7);
         ball.vy = -ball.vy * 0.28;
@@ -232,7 +239,7 @@ window.Physics = {
           window.sfx.metalBumper();
         }
 
-        // When ball velocity settles on the spring head, catch and re-arm launcher
+        // 速度が収束したら通常待機状態にセット
         if (Math.abs(ball.vy) < 0.5 && ball.y >= 555) {
           state.plunger.waitingForLaunch = true;
           ball.vx = 0;

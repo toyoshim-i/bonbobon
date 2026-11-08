@@ -76,8 +76,10 @@ window.Stage2 = {
         laserState: "idle",  // "idle" | "charge" | "fire"
         laserTimer: 0,
         cooldown: 200,       // 次の発射までの間隔
-        beamAngle: Math.PI * 0.35, // 斜め下方向へ貫通発射
-        beamLength: 300,
+        beamAngle: Math.PI * 0.35, // 照準角度
+        beamEndX: 420,
+        beamEndY: 450,
+        isLocked: false,     // 発射直前ロックオン状態
         flash: 0
       },
 
@@ -176,12 +178,23 @@ window.Stage2 = {
     if (!state.boss) return;
 
     // 1. 自然な瞬きと表情制御
-    if (state.boss.blinkTimer > 0) {
+    if (state.boss.blinkDuration > 0) {
+      state.boss.blinkDuration--;
+    } else if (state.boss.blinkTimer > 0) {
       state.boss.blinkTimer--;
     } else {
-      state.boss.blinkTimer = 140 + Math.floor(Math.random() * 110);
+      // 瞬き開始（約10フレーム = 0.16秒）
+      state.boss.blinkDuration = 10;
+      state.boss.blinkTimer = 90 + Math.floor(Math.random() * 90);
     }
-    if (state.boss.winkTimer > 0) state.boss.winkTimer--;
+
+    // ランダムなウインク（約5秒に1回）
+    if (state.boss.winkTimer > 0) {
+      state.boss.winkTimer--;
+    } else if (Math.random() < 0.003 && state.boss.expression === "normal") {
+      state.boss.winkTimer = 28;
+    }
+
     if (state.boss.talkTimer > 0) state.boss.talkTimer--;
     if (state.boss.expressionTimer > 0) {
       state.boss.expressionTimer--;
@@ -262,7 +275,8 @@ window.Stage2 = {
           holo.cooldown--;
         } else {
           holo.laserState = "charge";
-          holo.laserTimer = 50; // チャージ予兆
+          holo.laserTimer = 55; // チャージ＆エイム時間
+          holo.isLocked = false;
           if (window.sfx && window.sfx.capsuleCatch) {
             window.sfx.capsuleCatch();
           }
@@ -270,16 +284,33 @@ window.Stage2 = {
       } else if (holo.laserState === "charge") {
         holo.laserTimer--;
 
-        // 照準角度を一番近いボールに向けて微調整
-        if (state.balls.length > 0) {
-          const targetBall = state.balls[0];
-          const aimAngle = Math.atan2(targetBall.y - holo.y, targetBall.x - holo.x);
-          const clamped = Math.max(Math.PI * 0.20, Math.min(Math.PI * 0.58, aimAngle));
-          holo.beamAngle = holo.beamAngle * 0.90 + clamped * 0.10;
+        // 1. 発射16フレーム前まではメインボールを追尾エイム！
+        if (holo.laserTimer > 16) {
+          holo.isLocked = false;
+          if (state.balls.length > 0) {
+            const targetBall = state.balls[0];
+            const aimAngle = Math.atan2(targetBall.y - holo.y, targetBall.x - holo.x);
+            // プレイフィールド全域（右上〜右下）をカバーする角度制限
+            const clamped = Math.max(-Math.PI * 0.28, Math.min(Math.PI * 0.52, aimAngle));
+            holo.beamAngle = holo.beamAngle * 0.82 + clamped * 0.18;
+          }
+        } else {
+          // 2. 発射直前（残り16フレーム）：照準をロックオン固定！
+          // 高速ボールなら回避でき、低速ボールは直撃して吹き飛ばされる！
+          if (!holo.isLocked) {
+            holo.isLocked = true;
+            if (window.sfx && window.sfx.metalBumper) {
+              window.sfx.metalBumper();
+            }
+          }
         }
 
+        const endPt = this.getLaserEndPoint(holo, (engine && engine.W) || 420, (engine && engine.H) || 660);
+        holo.beamEndX = endPt.x;
+        holo.beamEndY = endPt.y;
+
         // チャージスパーク粒子
-        if (Math.random() < 0.5) {
+        if (Math.random() < 0.6) {
           const ca = Math.random() * Math.PI * 2;
           const cr = 24 + Math.random() * 16;
           state.particles.push({
@@ -287,46 +318,66 @@ window.Stage2 = {
             y: holo.y + Math.sin(ca) * cr,
             vx: -Math.cos(ca) * 3.0,
             vy: -Math.sin(ca) * 3.0,
-            color: "#ff007f",
+            color: holo.isLocked ? "#ff0055" : "#ff007f",
             life: 12,
-            scale: 1.0
+            scale: holo.isLocked ? 1.4 : 1.0
           });
         }
 
         if (holo.laserTimer <= 0) {
           holo.laserState = "fire";
-          holo.laserTimer = 35; // 35フレーム照射
-          holo.flash = 25;
+          holo.laserTimer = 36; // 36フレーム照射
+          holo.flash = 35;
           if (window.sfx && window.sfx.metalBumper) {
             window.sfx.metalBumper();
           }
-          UI.showCutin("⚡【ホログラムレーザー発砲！】⚡<br>防衛ビームを回避せよ！", 140);
+          UI.showCutin("⚡【ホログラムレーザー発砲！】⚡<br>高速移動で射線を回避せよ！", 140);
         }
       } else if (holo.laserState === "fire") {
         holo.laserTimer--;
 
-        // レーザービーム線分衝突判定（ボールを強烈に弾き飛ばす）
+        const endPt = this.getLaserEndPoint(holo, (engine && engine.W) || 420, (engine && engine.H) || 660);
+        holo.beamEndX = endPt.x;
+        holo.beamEndY = endPt.y;
+
+        // レーザービーム線分衝突判定（画面端までしっかり伸ばして判定）
         const beamStartX = holo.x;
         const beamStartY = holo.y;
-        const beamEndX = holo.x + Math.cos(holo.beamAngle) * holo.beamLength;
-        const beamEndY = holo.y + Math.sin(holo.beamAngle) * holo.beamLength;
+        const beamEndX = holo.beamEndX;
+        const beamEndY = holo.beamEndY;
 
         state.balls.forEach(ball => {
-          const hit = Physics.checkCapsuleHit(ball, beamStartX, beamStartY, beamEndX, beamEndY, 8.0);
+          const hit = Physics.checkCapsuleHit(ball, beamStartX, beamStartY, beamEndX, beamEndY, 9.5);
           if (hit) {
-            ball.x = hit.qx + hit.nx * (hit.minDist + 1.5);
-            ball.y = hit.qy + hit.ny * (hit.minDist + 1.5);
-            ball.vx = hit.nx * 15.0;
-            ball.vy = hit.ny * 15.0;
+            // ボールが低速で逃げ切れなかった場合：強烈にノックバック＆吹き飛ばし！
+            ball.x = hit.qx + hit.nx * (hit.minDist + 2.0);
+            ball.y = hit.qy + hit.ny * (hit.minDist + 2.0);
+            ball.vx = hit.nx * 16.5;
+            ball.vy = hit.ny * 16.5;
             if (window.sfx) window.sfx.metalBumper();
-            Particles.add(state, ball.x, ball.y, "#00f5d4", 16, 5.0);
-            Particles.add(state, ball.x, ball.y, "#ffffff", 10, 4.0);
-            Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER DEFLECT!⚡");
+            Particles.add(state, ball.x, ball.y, "#00f5d4", 18, 5.5);
+            Particles.add(state, ball.x, ball.y, "#ffffff", 12, 4.5);
+            Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER HIT! +5,000⚡");
+          } else if (holo.laserTimer === 30) {
+            // ニアミス回避ボーナス判定（発射直後、至近距離を高速で通り抜けて回避）
+            const abx = beamEndX - beamStartX;
+            const aby = beamEndY - beamStartY;
+            const lenSq = abx * abx + aby * aby;
+            let t = lenSq > 0 ? ((ball.x - beamStartX) * abx + (ball.y - beamStartY) * aby) / lenSq : 0;
+            t = Math.max(0, Math.min(1, t));
+            const qx = beamStartX + t * abx;
+            const qy = beamStartY + t * aby;
+            const dist = Math.hypot(ball.x - qx, ball.y - qy);
+            const ballSpeed = Math.hypot(ball.vx, ball.vy);
+            if (dist < 42 && ballSpeed > 6.5) {
+              Systems.addScore(state, 3000, ball.x, ball.y, "✨DODGE BONUS! +3,000✨");
+              Particles.add(state, ball.x, ball.y, "#e6ff00", 12, 3.5);
+            }
           }
         });
 
         // ビーム沿いに激しいレーザー粒子
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 3; i++) {
           const ratio = Math.random();
           const px = beamStartX + (beamEndX - beamStartX) * ratio;
           const py = beamStartY + (beamEndY - beamStartY) * ratio;
@@ -341,8 +392,22 @@ window.Stage2 = {
           });
         }
 
+        // 画面端着弾点での激しい激突スパーク噴出
+        if (Math.random() < 0.8) {
+          state.particles.push({
+            x: beamEndX + (Math.random() - 0.5) * 6,
+            y: beamEndY + (Math.random() - 0.5) * 6,
+            vx: -Math.cos(holo.beamAngle) * (2.0 + Math.random() * 5.0) + (Math.random() - 0.5) * 4,
+            vy: -Math.sin(holo.beamAngle) * (2.0 + Math.random() * 5.0) + (Math.random() - 0.5) * 4,
+            color: Math.random() < 0.5 ? "#00f5d4" : "#ffffff",
+            life: 14,
+            scale: 1.5
+          });
+        }
+
         if (holo.laserTimer <= 0) {
           holo.laserState = "idle";
+          holo.isLocked = false;
           holo.cooldown = 220 + Math.floor(Math.random() * 80);
         }
       }
@@ -519,6 +584,36 @@ window.Stage2 = {
     }
   },
 
+  getLaserEndPoint(holo, maxW = 420, maxH = 660) {
+    const cos = Math.cos(holo.beamAngle);
+    const sin = Math.sin(holo.beamAngle);
+    let minT = 1200;
+
+    // x 境界との交点 (右端 maxW または 左端 0)
+    if (cos > 1e-4) {
+      const t = (maxW - holo.x) / cos;
+      if (t > 0 && t < minT) minT = t;
+    } else if (cos < -1e-4) {
+      const t = (0 - holo.x) / cos;
+      if (t > 0 && t < minT) minT = t;
+    }
+
+    // y 境界との交点 (下端 maxH または 上端 0)
+    if (sin > 1e-4) {
+      const t = (maxH - holo.y) / sin;
+      if (t > 0 && t < minT) minT = t;
+    } else if (sin < -1e-4) {
+      const t = (0 - holo.y) / sin;
+      if (t > 0 && t < minT) minT = t;
+    }
+
+    return {
+      x: holo.x + cos * minT,
+      y: holo.y + sin * minT,
+      len: minT
+    };
+  },
+
   triggerJetBlast(state) {
     const jet = state.boss.jet;
     if (!jet) return;
@@ -650,7 +745,7 @@ window.Stage2 = {
       state.boss.expression === "shock" ? "shock" :
       state.boss.expression === "wince" ? "wince" :
       (state.boss.winkTimer > 0 ? "wink" :
-      (state.boss.blinkTimer > 0 && state.boss.blinkTimer < 8 ? "blink" :
+      (state.boss.blinkDuration > 0 ? "blink" :
       (state.boss.talkTimer > 0 ? ((state.boss.talkTimer % 12 < 6) ? "talk" : "talk_sm") : null)))
     );
 
@@ -787,35 +882,97 @@ window.Stage2 = {
     if (holo) {
       drawGuide(holo.x, holo.y, holo.r, "#ff007f", holo.flash, animTick * 0.02, "HOLOGRAM", holo.laserState === "fire" ? "⚡LASER FIRE⚡" : (holo.laserState === "charge" ? "⚠️CHARGING" : "STANDBY"));
 
+      const endPt = this.getLaserEndPoint(holo, 420, 660);
+      const ex = holo.beamEndX || endPt.x;
+      const ey = holo.beamEndY || endPt.y;
+
       if (holo.laserState === "charge") {
-        // 照準予測線（細い点線）
         ctx.save();
-        ctx.strokeStyle = "rgba(255, 0, 127, 0.65)";
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(holo.x, holo.y);
-        ctx.lineTo(holo.x + Math.cos(holo.beamAngle) * holo.beamLength, holo.y + Math.sin(holo.beamAngle) * holo.beamLength);
-        ctx.stroke();
+        if (holo.isLocked) {
+          // ロックオン確定（発射直前）：警告パルスライン ＆ レティクル固定
+          const isPulse = Math.floor(animTick * 0.4) % 2 === 0;
+          ctx.strokeStyle = isPulse ? "#ff0055" : "#ffffff";
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(holo.x, holo.y);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+
+          // 画面端のロックオンマーカー
+          ctx.strokeStyle = "#ff0055";
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(ex, ey, 9, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.font = "bold 9px monospace";
+          ctx.fillStyle = "#ff0055";
+          ctx.textAlign = "center";
+          ctx.fillText("⚠️LOCKED", holo.x, holo.y - holo.r - 8);
+        } else {
+          // 照準追跡中：ピンク破線エイムラインがボールをトラッキング！
+          ctx.strokeStyle = "rgba(255, 0, 127, 0.75)";
+          ctx.lineWidth = 1.4;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(holo.x, holo.y);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+
+          // 画面端の照準レティクル
+          ctx.setLineDash([]);
+          ctx.strokeStyle = "#ff007f";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(ex, ey, 5 + Math.sin(animTick * 0.1) * 2, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.font = "bold 8px monospace";
+          ctx.fillStyle = "#ff007f";
+          ctx.textAlign = "center";
+          ctx.fillText("AIMING...", holo.x, holo.y - holo.r - 8);
+        }
         ctx.restore();
       } else if (holo.laserState === "fire") {
-        // 強力なネオンレーザービーム本体！
+        // 強力なネオンレーザービーム本体が画面端まで貫通！
         ctx.save();
-        const ex = holo.x + Math.cos(holo.beamAngle) * holo.beamLength;
-        const ey = holo.y + Math.sin(holo.beamAngle) * holo.beamLength;
 
-        // ビーム外殻グロー
-        ctx.strokeStyle = "rgba(0, 245, 212, 0.55)";
-        ctx.lineWidth = 12.0;
+        // 1. 最外殻巨大グロー
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.25)";
+        ctx.lineWidth = 22.0;
         ctx.beginPath();
         ctx.moveTo(holo.x, holo.y);
         ctx.lineTo(ex, ey);
         ctx.stroke();
 
-        // ビーム芯線
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3.5;
+        // 2. 中間エナジー層
+        ctx.strokeStyle = "rgba(0, 245, 212, 0.80)";
+        ctx.lineWidth = 10.0;
+        ctx.beginPath();
+        ctx.moveTo(holo.x, holo.y);
+        ctx.lineTo(ex, ey);
         ctx.stroke();
+
+        // 3. ビーム芯線（超高熱ホワイト）
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4.0;
+        ctx.beginPath();
+        ctx.moveTo(holo.x, holo.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        // 4. 画面端での着弾衝撃波（巨大な光球・フレア）
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(ex, ey, 8 + Math.random() * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 16 + Math.random() * 6, 0, Math.PI * 2);
+        ctx.stroke();
+
         ctx.restore();
       }
     }
@@ -864,7 +1021,7 @@ window.Stage2 = {
     }
     const holo = state.boss.hologram;
     if (holo && holo.laserState === "charge") {
-      return "⚠️ホログラム砲台チャージ中！ 斜めレーザーに注意！";
+      return holo.isLocked ? "⚠️レーザー照準ロックオン！高速移動で緊急回避せよ！" : "⚠️ホログラム砲台がボールを照準中！停止するな！";
     }
     return "TARGET: 両肩装甲破壊 ＆ 胸・足付け根ヒットでギミック発動！";
   },

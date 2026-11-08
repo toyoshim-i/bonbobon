@@ -197,7 +197,7 @@ window.Physics = {
       const len = Math.sqrt(abLenSq);
       const nx = dist > 0.0001 ? (dx / dist) : (-aby / len);
       const ny = dist > 0.0001 ? (dy / dist) : (abx / len);
-      return { qx, qy, nx, ny, minDist, t, abx, aby, abLenSq };
+      return { qx, qy, nx, ny, dist, minDist, t, abx, aby, abLenSq };
     }
     return null;
   },

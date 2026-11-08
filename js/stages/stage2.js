@@ -414,24 +414,68 @@ window.Stage2 = {
         holo.beamEndX = endPt.x;
         holo.beamEndY = endPt.y;
 
-        // レーザービーム線分衝突判定（画面端までしっかり伸ばして判定）
+        // レーザービーム線分衝突判定（テーブルの壁セグメントで遮断された範囲で判定）
         const beamStartX = holo.x;
         const beamStartY = holo.y;
         const beamEndX = holo.beamEndX;
         const beamEndY = holo.beamEndY;
 
+        const newSplitBalls = [];
         state.balls.forEach(ball => {
+          // 発射待ち（シューターレーン内）のボールは壁で遮られるため絶対に被弾させない安全保護
+          if (ball.inShooterLane || (state.plunger && state.plunger.waitingForLaunch)) return;
+
           const hit = Physics.checkCapsuleHit(ball, beamStartX, beamStartY, beamEndX, beamEndY, 9.5);
           if (hit) {
-            // ボールが低速で逃げ切れなかった場合：強烈にノックバック＆吹き飛ばし！
-            ball.x = hit.qx + hit.nx * (hit.minDist + 2.0);
-            ball.y = hit.qy + hit.ny * (hit.minDist + 2.0);
-            ball.vx = hit.nx * 16.5;
-            ball.vy = hit.ny * 16.5;
-            if (window.sfx) window.sfx.metalBumper();
-            Particles.add(state, ball.x, ball.y, "#00f5d4", 18, 5.5);
-            Particles.add(state, ball.x, ball.y, "#ffffff", 12, 4.5);
-            Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER HIT! +5,000⚡");
+            // 直撃判定：レーザービームの芯線に直撃（中心線からの距離 dist <= 9.0）かつ通常サイズ（r >= 7.0）のボールの場合、2つのミニボールに核分裂！
+            const centerDist = (hit.dist !== undefined) ? hit.dist : Math.hypot(ball.x - hit.qx, ball.y - hit.qy);
+            const isDirectHit = centerDist <= 9.0;
+            const canSplit = (ball.r >= 7.0) && (state.balls.length + newSplitBalls.length < 12);
+
+            if (isDirectHit && canSplit && !ball._hasSplitThisBeam) {
+              ball._hasSplitThisBeam = true;
+
+              // 元のボールを小型化（ミニボールA）
+              ball.r = 6.0;
+              ball.x = hit.qx + hit.nx * 9.0;
+              ball.y = hit.qy + hit.ny * 9.0;
+              ball.vx = (hit.nx * 15.0) + (Math.random() - 0.5) * 4.0;
+              ball.vy = (hit.ny * 15.0) - 4.0;
+
+              // 新しいミニボールBの生成
+              const newBall = {
+                x: hit.qx - hit.nx * 9.0,
+                y: hit.qy - hit.ny * 9.0,
+                vx: (-hit.nx * 15.0) + (Math.random() - 0.5) * 4.0,
+                vy: (-hit.ny * 15.0) - 4.0,
+                r: 6.0,
+                trail: [],
+                inShooterLane: false,
+                _hasSplitThisBeam: true
+              };
+              newSplitBalls.push(newBall);
+
+              if (window.sfx) {
+                if (window.sfx.metalBumper) window.sfx.metalBumper();
+                if (window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+              }
+              Particles.add(state, hit.qx, hit.qy, "#00f5d4", 26, 7.0);
+              Particles.add(state, hit.qx, hit.qy, "#ffffff", 20, 6.0);
+              Particles.add(state, hit.qx, hit.qy, "#ff007f", 16, 5.0);
+              Particles.addPopup(state, hit.qx, hit.qy - 14, "⚡LASER FISSION!! MINI-BALLS SPLIT!⚡", "#00f5d4", 1.4);
+              Systems.addScore(state, 12000, hit.qx, hit.qy, "★FISSION MULTI-BALL!★");
+              UI.showCutin("⚡【高エネルギー直撃：超電導分裂！】⚡<br>レーザー直撃によりボールが2つのミニボールに核分裂！", 160);
+            } else {
+              // かすり当たり、または既に分裂済みのミニボール：強烈にノックバック＆吹き飛ばし！
+              ball.x = hit.qx + hit.nx * (hit.minDist + 2.0);
+              ball.y = hit.qy + hit.ny * (hit.minDist + 2.0);
+              ball.vx = hit.nx * 16.5;
+              ball.vy = hit.ny * 16.5;
+              if (window.sfx) window.sfx.metalBumper();
+              Particles.add(state, ball.x, ball.y, "#00f5d4", 18, 5.5);
+              Particles.add(state, ball.x, ball.y, "#ffffff", 12, 4.5);
+              Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER HIT! +5,000⚡");
+            }
           } else if (holo.laserTimer === 30) {
             // ニアミス回避ボーナス判定（発射直後、至近距離を高速で通り抜けて回避）
             const abx = beamEndX - beamStartX;
@@ -449,6 +493,10 @@ window.Stage2 = {
             }
           }
         });
+
+        if (newSplitBalls.length > 0) {
+          state.balls.push(...newSplitBalls);
+        }
 
         // ビーム沿いに激しいレーザー粒子
         for (let i = 0; i < 3; i++) {
@@ -483,6 +531,7 @@ window.Stage2 = {
           holo.laserState = "idle";
           holo.isLocked = false;
           holo.cooldown = 220 + Math.floor(Math.random() * 80);
+          state.balls.forEach(b => { b._hasSplitThisBeam = false; });
         }
       }
     }
@@ -734,7 +783,32 @@ window.Stage2 = {
     const sin = Math.sin(holo.beamAngle);
     let minT = 1200;
 
-    // x 境界との交点 (右端 maxW または 左端 0)
+    // テーブルの境界壁セグメント（外周壁・シューターレーン仕切り壁・下部ガイド壁）
+    const walls = (window.Physics && window.Physics.TABLE_WALLS) || [];
+    const allWalls = [
+      ...walls,
+      // テーブル底辺境界（ドレイン付近）
+      { x1: 0, y1: maxH - 12, x2: maxW, y2: maxH - 12 }
+    ];
+
+    allWalls.forEach(w => {
+      const vx = w.x2 - w.x1;
+      const vy = w.y2 - w.y1;
+      const denom = cos * vy - sin * vx;
+      if (Math.abs(denom) < 1e-7) return;
+
+      const ax = w.x1 - holo.x;
+      const ay = w.y1 - holo.y;
+      const t = (ax * vy - ay * vx) / denom;
+      const u = (ax * sin - ay * cos) / denom;
+
+      // 前方方向の壁かつ線分区間内（u: 0..1）
+      if (t > 4.0 && u >= -0.01 && u <= 1.01) {
+        if (t < minT) minT = t;
+      }
+    });
+
+    // 画面外枠矩形とのフォールバック交点
     if (cos > 1e-4) {
       const t = (maxW - holo.x) / cos;
       if (t > 0 && t < minT) minT = t;
@@ -743,7 +817,6 @@ window.Stage2 = {
       if (t > 0 && t < minT) minT = t;
     }
 
-    // y 境界との交点 (下端 maxH または 上端 0)
     if (sin > 1e-4) {
       const t = (maxH - holo.y) / sin;
       if (t > 0 && t < minT) minT = t;

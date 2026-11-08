@@ -111,11 +111,6 @@ window.UI = {
       });
     }
 
-    // Stage Specific Status Monitor
-    if (window.currentStage && window.currentStage.updateStatusMonitor) {
-      window.currentStage.updateStatusMonitor(state);
-    }
-
     // Plunger Button Status
     const pBtn = document.getElementById("btnPlunger");
     const pHint = document.getElementById("plungerBtnHint");
@@ -145,7 +140,10 @@ window.UI = {
     const dtFever = document.getElementById("dtFeverGauge");
     if (dtFever) dtFever.textContent = state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`;
 
-    if (state.boss) {
+    // Stage Specific Status Monitor or Default Stage 1 fallback
+    if (window.currentStage && window.currentStage.updateStatusMonitor) {
+      window.currentStage.updateStatusMonitor(state);
+    } else if (state.boss) {
       const dtArmR = document.getElementById("dtArmRStatus");
       if (dtArmR) {
         dtArmR.textContent = state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`;

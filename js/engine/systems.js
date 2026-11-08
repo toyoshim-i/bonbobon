@@ -46,6 +46,21 @@ window.Systems = {
     { x: 198, y: 440 }  // Mid Abdomen
   ],
 
+  // 各ステージ共通の顔パッチ読み込み。
+  // 素材は assets/<stage>/faces/<表情>.png に置き、js/<stage>_assets.js に同じ内容を Base64 で埋め込む。
+  // 埋め込みがあればそれを使い（file:// でも動く）、無い表情だけ faces/ の PNG を読む。
+  loadFacePatches(stageDir, embedded, keys) {
+    const data = embedded || {};
+    const names = Array.from(new Set([...(keys || []), ...Object.keys(data)]));
+    const imgs = {};
+    names.forEach(k => {
+      const im = new Image();
+      im.src = data[k] || `./assets/${stageDir}/faces/${k}.png`;
+      imgs[k] = im;
+    });
+    return imgs;
+  },
+
   addScore(state, basePts, x, y, label = "") {
     const totalMult = state.baseMultiplier * state.burstMultiplier * state.fever.mult;
     const pts = Math.round(basePts * totalMult);
@@ -149,6 +164,36 @@ window.Systems = {
     Particles.add(state, 210, 340, "#e6ff00", 28, 5.5);
     if (window.UI) window.UI.showCutin(`🔥【BURST解放】🔥<br>スコア倍率 ×${state.burstMultiplier.toFixed(1)} (10秒間発動)！`, 180);
     if (window.UI) window.UI.updateHUD(state);
+  },
+
+  // 全ステージ共通のドロップ規則。ステージ側はカプセルの種類を直接指定せず、
+  // イベントの重さ（tier）と出現位置だけを渡す。種類の配分はここで一元管理する。
+  //   minor : 小イベント（スキルショット・ジャックポット等）→ 一時バフ
+  //   major : パーツ破壊 → 永続強化 MAJOR_PERM_RATE / 一時バフ 残り
+  //   rare  : フェーズ突破・スキルショット等の山場 → 永続強化 確定
+  // at: スロット番号、または {x, y}（最寄りの空きスロットに出す）
+  DROP_TIERS: { minor: 0, major: 0.5, rare: 1 },
+  dropReward(state, tier, at = null) {
+    const rate = this.DROP_TIERS[tier] !== undefined ? this.DROP_TIERS[tier] : 0;
+    let category = Math.random() < rate ? "perm" : "buff";
+    // 永続強化が全て最大レベルなら、空振りの永続カプセルではなく一時バフを出す
+    if (category === "perm" && !Object.keys(this.PERM_DEFS).some(k => (state.perm[k] || 0) < this.PERM_DEFS[k].maxLv)) {
+      category = "buff";
+    }
+    let slot = null;
+    if (typeof at === "number") {
+      slot = at;
+    } else if (at && typeof at.x === "number") {
+      const occupied = state.capsules.map(c => c.slotIndex);
+      let best = -1, bestD = Infinity;
+      this.CAPSULE_SLOTS.forEach((sp, idx) => {
+        if (occupied.includes(idx)) return;
+        const d = (sp.x - at.x) ** 2 + (sp.y - at.y) ** 2;
+        if (d < bestD) { bestD = d; best = idx; }
+      });
+      slot = best >= 0 ? best : null;
+    }
+    this.spawnFloatingCapsule(state, slot, category);
   },
 
   spawnFloatingCapsule(state, slotIdx = null, category = null) {

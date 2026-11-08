@@ -184,16 +184,24 @@ window.Particles = {
     }
   },
 
+  // 全ガイド共通の拡大縮小パルス。破壊可能ターゲット／バウンスなど種類を問わず、
+  // ガイドの脈動は必ずこの関数で計算する（種類ごとに式を書くと周期や振幅がばらけて統一感が崩れる）。
+  // lag: 残像リング用の位相遅れ、ampMul: 残像リング用の振幅倍率
+  GUIDE_PULSE_AMP: 0.16,
+  GUIDE_PULSE_FREQ: 0.08,
+  guidePulse(animTick, lag = 0, ampMul = 1) {
+    return 1.0 + this.GUIDE_PULSE_AMP * ampMul * Math.sin(animTick * this.GUIDE_PULSE_FREQ - lag);
+  },
+
   drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, subInfo) {
     ctx.save();
     ctx.translate(x, y);
 
     const isHit = flash > 0;
-    const pulseFactor = 0.16;
-    const baseScale = 1.0 + pulseFactor * Math.sin(animTick * 0.08);
+    const baseScale = this.guidePulse(animTick);
 
     // 1. Afterimage Outer Ring (Trail 2)
-    const scale2 = 1.0 + pulseFactor * 1.35 * Math.sin(animTick * 0.08 - 0.7);
+    const scale2 = this.guidePulse(animTick, 0.7, 1.35);
     const r2 = r * scale2;
     ctx.save();
     ctx.rotate((rot || 0) * 0.55);
@@ -206,7 +214,7 @@ window.Particles = {
     ctx.restore();
 
     // 2. Afterimage Mid Ring (Trail 1)
-    const scale1 = 1.0 + pulseFactor * 1.15 * Math.sin(animTick * 0.08 - 0.35);
+    const scale1 = this.guidePulse(animTick, 0.35, 1.15);
     const r1 = r * scale1;
     ctx.save();
     ctx.rotate((rot || 0) * 0.85);
@@ -337,13 +345,23 @@ window.Particles = {
     ctx.translate(x, y);
 
     const isHit = flash > 0;
-    const pulse = 1.0 + Math.sin(animTick * 0.06) * 0.08;
+    const pulse = this.guidePulse(animTick);
+    const trail = this.guidePulse(animTick, 0.35, 1.15);
     const bColor = color || "#00f5d4";
 
-    // 1. クッション同心円リング（外周波紋）
+    // 1. クッション同心円リング（共通パルスでリング・ピン全体が拡大縮小）
     const rOuter = r * pulse;
     ctx.save();
     ctx.strokeStyle = bColor;
+
+    // 残像リング（破壊可能ターゲットと同じ位相遅れの追従リング）
+    ctx.lineWidth = 1.0;
+    ctx.globalAlpha = isHit ? 0.5 : 0.20;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * trail, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 外周リング
     ctx.lineWidth = 1.2;
     ctx.globalAlpha = isHit ? 0.8 : 0.35;
     ctx.beginPath();
@@ -354,14 +372,14 @@ window.Particles = {
     ctx.lineWidth = isHit ? 2.5 : 1.6;
     ctx.globalAlpha = isHit ? 1.0 : 0.70;
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.arc(0, 0, rOuter * 0.72, 0, Math.PI * 2);
     ctx.stroke();
 
     // 放射状クッションピン（4方向の小丸ピン）
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI / 2) + (animTick * 0.015);
-      const px = Math.cos(a) * (r * 0.86);
-      const py = Math.sin(a) * (r * 0.86);
+      const px = Math.cos(a) * (rOuter * 0.86);
+      const py = Math.sin(a) * (rOuter * 0.86);
       ctx.fillStyle = isHit ? "#ffffff" : bColor;
       ctx.beginPath();
       ctx.arc(px, py, 1.8, 0, Math.PI * 2);

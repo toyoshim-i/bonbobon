@@ -24,12 +24,9 @@ window.Stage1 = {
     this.assets.earTipLImg.src = "./assets/stage1/ear_tip_L.png";
     this.assets.earTipRImg.src = "./assets/stage1/ear_tip_R.png";
 
-    const faceData = window.STAGE1_FACE_PATCHES || {};
-    Object.entries(faceData).forEach(([k, uri]) => {
-      const im = new Image();
-      im.src = uri;
-      this.assets.facePatchImgs[k] = im;
-    });
+    // 表情差分パッチ初期化（assets/stage1/faces/ ＋ STAGE1_FACE_PATCHES）
+    this.assets.facePatchImgs = Systems.loadFacePatches("stage1", window.STAGE1_FACE_PATCHES,
+      ["blink", "wink", "wince", "shout", "talk", "talk_sm", "open_blush"]);
 
     let count = 0;
     const check = () => {
@@ -154,6 +151,56 @@ window.Stage1 = {
   },
 
   updateStatusMonitor(state) {
+    const nameEl = document.getElementById("targetBossName");
+    if (nameEl) nameEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>TYPE-LILITH (リリス)';
+    const briefEl = document.getElementById("targetBriefingText");
+    if (briefEl) briefEl.textContent = "「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」";
+    const lblArmR = document.getElementById("dtArmRLabel");
+    if (lblArmR) lblArmR.textContent = "右手装甲(R-ARM):";
+    const lblArmL = document.getElementById("dtArmLLabel");
+    if (lblArmL) lblArmL.textContent = "左手装甲(L-ARM):";
+    const lblChest = document.getElementById("dtChestLabel");
+    if (lblChest) lblChest.textContent = "胴体装甲(TORSO):";
+    const lblCrotch = document.getElementById("dtCrotchLabel");
+    if (lblCrotch) lblCrotch.textContent = "クロッチ吸引場:";
+
+    const dtArmR = document.getElementById("dtArmRStatus");
+    if (dtArmR) {
+      dtArmR.textContent = state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`;
+      dtArmR.className = state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
+    }
+    const dtArmL = document.getElementById("dtArmLStatus");
+    if (dtArmL) {
+      dtArmL.textContent = state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`;
+      dtArmL.className = state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
+    }
+    const dtChest = document.getElementById("dtChestStatus");
+    if (dtChest) {
+      dtChest.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`;
+      dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]";
+    }
+    const dtCrotch = document.getElementById("dtCrotchStatus");
+    if (dtCrotch) {
+      if (state.boss.chestArmorBroken && state.boss.crotch) {
+        const ch = state.boss.crotch.charge || 0;
+        const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
+        const isExcited = excitementRatio > 0.30;
+        if (state.boss.crotch.cooldown > 0) {
+          dtCrotch.textContent = "COOLING";
+          dtCrotch.className = "font-bold text-purple-400";
+        } else if (isExcited) {
+          dtCrotch.textContent = `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`;
+          dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
+        } else {
+          dtCrotch.textContent = `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`;
+          dtCrotch.className = "font-bold text-gray-400";
+        }
+      } else {
+        dtCrotch.textContent = "INACTIVE";
+        dtCrotch.className = "font-bold text-gray-400";
+      }
+    }
+
     const blushText = document.getElementById("blushGaugeText");
     if (blushText) blushText.textContent = `${state.boss.blushGauge}%`;
     const blushBar = document.getElementById("blushGaugeBar");
@@ -220,7 +267,7 @@ window.Stage1 = {
       if (window.sfx) window.sfx.armorBreak();
       UI.showCutin("⚡「ちょ、どこ触ってんのよっ！！」<br>カウンターEMP発動＆カプセル放出！", 180);
       Particles.add(state, 210, 390, "#ff1493", 32, 6.5);
-      Systems.spawnFloatingCapsule(state, 5, "buff");
+      Systems.dropReward(state, "minor", 5);
       state.balls.forEach(ball => {
         ball.vy = -12 - Math.random() * 4;
         ball.vx = (Math.random() - 0.5) * 12;
@@ -424,8 +471,8 @@ window.Stage1 = {
               ]);
               UI.showCutin("💥【胸部装甲パージ！】💥<br>左右排気口破壊により装甲強制パージ！<br>秘密のグラビティコア起動！", 220);
               Systems.addScore(state, 20000, 198, 353, "TORSO PURGED!!");
-              Systems.spawnFloatingCapsule(state, 2, "buff");
-              Systems.spawnFloatingCapsule(state, 5, "buff");
+              Systems.dropReward(state, "major", 2);
+              Systems.dropReward(state, "minor", 5);
 
               if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
                 state.boss.allArmorsPurged = true;
@@ -469,8 +516,8 @@ window.Stage1 = {
             state.boss.expressionTimer = 85;
             UI.showCutin("💥【胴体装甲パージ！】💥<br>胸部装甲完全パージ！<br>秘密のグラビティコア起動！", 220);
             Systems.addScore(state, 18000, hit.cx, hit.cy, "TORSO PURGED!!");
-            Systems.spawnFloatingCapsule(state, 2, "buff");
-            Systems.spawnFloatingCapsule(state, 5, "buff");
+            Systems.dropReward(state, "major", 2);
+            Systems.dropReward(state, "minor", 5);
 
             if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
               state.boss.allArmorsPurged = true;
@@ -563,7 +610,7 @@ window.Stage1 = {
             Particles.add(state, d.x, d.y, "#ff1493", 22, 6.0);
             Systems.addScore(state, 6000, d.x, d.y - 15, `💥${tag} DESTROYED!`);
             UI.showCutin(`💥【${tag} 撃破】<br>肩アーマーの電磁シールドが解除！`, 160);
-            Systems.spawnFloatingCapsule(state, which === "L" ? 0 : 1, "buff");
+            Systems.dropReward(state, "major", which === "L" ? 0 : 1);
             state.baseMultiplier += 0.25;
             this.checkPhase1Clear(state);
           }
@@ -605,7 +652,7 @@ window.Stage1 = {
           state.skillShotEligible = false;
           Systems.addScore(state, 25000, hit.qx, hit.qy, "★SKILL SHOT!!");
           UI.showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！<br>+25,000pts ＆ レアカプセル！", 180);
-          Systems.spawnFloatingCapsule(state, 2, "buff");
+          Systems.dropReward(state, "rare", 2);
         } else {
           Systems.addScore(state, 2000, hit.qx, hit.qy, "🐰FUNYON DAMP!");
           Particles.addPopup(state, hit.qx, hit.qy - 18, "🐰ふにょん (SPEED DAMP)", "#e6ff00", 1.0);
@@ -653,7 +700,7 @@ window.Stage1 = {
               state.boss.expressionTimer = 65;
               Systems.addScore(state, 12000, pod.x, pod.y, `💥${tag} PURGED!!`);
               UI.showCutin(`💥【${label}パージ！】💥<br>${tag} ARMOR SHATTERED!<br>⚡素肌露出＆EX-BOUNCE活性化！`, 200);
-              Systems.spawnFloatingCapsule(state, which === "L" ? 3 : 4, "perm");
+              Systems.dropReward(state, "rare", which === "L" ? 3 : 4);
               this.checkPhase1Clear(state);
 
               // Check full armor strip bonus
@@ -827,7 +874,7 @@ window.Stage1 = {
         if (window.sfx) window.sfx.burstTrigger();
         Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
         Systems.addScore(state, 500, core.x, core.y - 18, "★JACKPOT!!");
-        Systems.spawnFloatingCapsule(state, 5, "buff");
+        Systems.dropReward(state, "minor", 5);
       } else {
         if (window.sfx) window.sfx.metalBumper();
         Systems.addScore(state, 1500, core.x, core.y - 16, "CORE SHIELDED");
@@ -843,7 +890,7 @@ window.Stage1 = {
       state.boss.expression = "shock";
       state.boss.expressionTimer = 90;
       UI.showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>胸部装甲＆秘密のグラビティコア露出！", 240);
-      Systems.spawnFloatingCapsule(state, 2, "buff");
+      Systems.dropReward(state, "rare", 2);
     }
   },
 
@@ -1116,9 +1163,9 @@ window.Stage1 = {
       }
     }
 
-    // Face Patch Compositing (安全ガード: ステージ1用パッチが原画と一致するまで非表示にして矩形ノイズ混入を防止)
+    // Face Patch Compositing (瞬き・ウインク・感情遷移シーケンス・口パク)
     let activePatchKey = null;
-    if (false && !isDefeat) {
+    if (!isDefeat) {
       const fa = state.boss.faceAnim || {};
       const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
       const talkCycle = Math.floor(performance.now() * 0.009) % 3;

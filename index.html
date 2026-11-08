@@ -293,7 +293,7 @@
     <!-- TARGET UNIT SPECS -->
     <div class="border-b border-[#ff1493]/30 pb-2">
       <div class="text-[10px] text-[#ff1493] font-bold tracking-widest uppercase">Target Telemetry</div>
-      <div class="text-sm font-black text-[#ff66b2] tracking-wider flex items-center gap-1.5">
+      <div id="targetBossName" class="text-sm font-black text-[#ff66b2] tracking-wider flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>
         TYPE-LILITH (リリス)
       </div>
@@ -306,19 +306,19 @@
       </div>
       <div class="space-y-1.5 text-[10px] pt-1">
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">右手装甲(R-ARM):</span>
+          <span id="dtArmRLabel" class="text-gray-300">右手装甲(R-ARM):</span>
           <span id="dtArmRStatus" class="font-bold text-[#e6ff00]">ARMORED (6/6)</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">左手装甲(L-ARM):</span>
+          <span id="dtArmLLabel" class="text-gray-300">左手装甲(L-ARM):</span>
           <span id="dtArmLStatus" class="font-bold text-[#e6ff00]">ARMORED (6/6)</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">胴体装甲(TORSO):</span>
+          <span id="dtChestLabel" class="text-gray-300">胴体装甲(TORSO):</span>
           <span id="dtChestStatus" class="font-bold text-[#ff1493]">ARMORED (8/8)</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">クロッチ吸引場:</span>
+          <span id="dtCrotchLabel" class="text-gray-300">クロッチ吸引場:</span>
           <span id="dtCrotchStatus" class="font-bold text-gray-400">STANDBY</span>
         </div>
       </div>
@@ -350,7 +350,7 @@
       <div class="text-[11px] font-extrabold text-[#b84dff] border-b border-purple-500/20 pb-1">
         <span>📜 BRIEFING</span>
       </div>
-      <p class="text-[9px] text-gray-300 leading-relaxed pt-1">
+      <p id="targetBriefingText" class="text-[9px] text-gray-300 leading-relaxed pt-1">
         「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」
       </p>
     </div>
@@ -454,16 +454,16 @@
     </div>
   </div>
 
-  <script src="./js/stage1_assets.js?v=102"></script>
-  <script src="./js/stage2_assets.js?v=108"></script>
-  <script src="./js/audio.js?v=102"></script>
-  <script src="./js/engine/particles.js?v=108"></script>
-  <script src="./js/engine/physics.js?v=102"></script>
-  <script src="./js/engine/systems.js?v=102"></script>
-  <script src="./js/engine/ui.js?v=102"></script>
-  <script src="./js/stages/stage1.js?v=102"></script>
-  <script src="./js/stages/stage2.js?v=108"></script>
-  <script src="./js/engine/game_engine.js?v=102"></script>
-  <script src="./js/main.js?v=102"></script>
+  <script src="./js/stage1_assets.js?v=122"></script>
+  <script src="./js/stage2_assets.js?v=122"></script>
+  <script src="./js/audio.js?v=122"></script>
+  <script src="./js/engine/particles.js?v=122"></script>
+  <script src="./js/engine/physics.js?v=122"></script>
+  <script src="./js/engine/systems.js?v=122"></script>
+  <script src="./js/engine/ui.js?v=122"></script>
+  <script src="./js/stages/stage1.js?v=122"></script>
+  <script src="./js/stages/stage2.js?v=122"></script>
+  <script src="./js/engine/game_engine.js?v=122"></script>
+  <script src="./js/main.js?v=122"></script>
 </body>
 </html>

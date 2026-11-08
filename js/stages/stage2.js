@@ -2,6 +2,10 @@
 // STAGE 2: CELTY (疾風紫電セルティ)
 // =========================================================================
 
+// 左足付け根装甲のお尻揺れ追従率。装甲は太もも（揺れない部位）に付いているので 0 で固定。
+// 0 以外にすると、スプライトの移動で下地の原画に残る装甲輪郭がはみ出し、黒い隙間として見える。
+const HIP_FOLLOW = 0;
+
 window.Stage2 = {
   id: "stage2",
   name: "疾風紫電セルティ",
@@ -16,6 +20,10 @@ window.Stage2 = {
     gauntletLBrokenImg: new Image(),
     gauntletRBrokenImg: new Image(),
     nozzlesBrokenImg: new Image(),
+    shoulderLBrokenImg: new Image(),
+    antennaBrokenImg: new Image(),
+    bustBrokenImg: new Image(),
+    bodyDamageImg: new Image(),
     facePatchImgs: {},
     loaded: false
   },
@@ -23,10 +31,15 @@ window.Stage2 = {
   initAssets() {
     this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg";
     this.assets.armoredImg.src = "./assets/stage2/centerpiece.jpg";
-    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png?v=108";
-    this.assets.gauntletLBrokenImg.src = "./assets/stage2/gauntlet_l_broken.png?v=108";
-    this.assets.gauntletRBrokenImg.src = "./assets/stage2/gauntlet_r_broken.png?v=108";
-    this.assets.nozzlesBrokenImg.src = "./assets/stage2/nozzles_broken.png?v=108";
+    this.assets.defeatCgImg.src = "./assets/stage2/defeat_cg.jpg?v=122";
+    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png?v=109";
+    this.assets.gauntletLBrokenImg.src = "./assets/stage2/gauntlet_l_broken.png?v=109";
+    this.assets.gauntletRBrokenImg.src = "./assets/stage2/gauntlet_r_broken.png?v=109";
+    this.assets.nozzlesBrokenImg.src = "./assets/stage2/nozzles_broken.png?v=109";
+    this.assets.shoulderLBrokenImg.src = "./assets/stage2/shoulder_l_broken.png?v=122";
+    this.assets.antennaBrokenImg.src = "./assets/stage2/antenna_broken.png?v=122";
+    this.assets.bustBrokenImg.src = "./assets/stage2/bust_broken.png?v=122";
+    this.assets.bodyDamageImg.src = "./assets/stage2/body_damage.png?v=122";
 
     if (window.STAGE2_HOLOGRAM_DATA) {
       this.assets.hologramImg.src = window.STAGE2_HOLOGRAM_DATA;
@@ -34,18 +47,9 @@ window.Stage2 = {
       this.assets.hologramImg.src = "./assets/stage2/hologram.png";
     }
 
-    // 表情差分パッチ初期化
-    const faceKeys = ["blink", "wink", "shout", "shock", "wince", "open_blush", "talk", "talk_sm"];
-    const faceData = window.STAGE2_FACE_PATCHES || {};
-    faceKeys.forEach(k => {
-      const im = new Image();
-      if (faceData[k]) {
-        im.src = faceData[k];
-      } else {
-        im.src = `./assets/stage2/face_${k}.png`;
-      }
-      this.assets.facePatchImgs[k] = im;
-    });
+    // 表情差分パッチ初期化（assets/stage2/faces/ ＋ STAGE2_FACE_PATCHES）
+    this.assets.facePatchImgs = Systems.loadFacePatches("stage2", window.STAGE2_FACE_PATCHES,
+      ["blink_half", "blink", "wink", "shout", "shock", "wince", "open_blush", "talk", "talk_sm"]);
 
     let count = 0;
     const check = () => {
@@ -228,11 +232,12 @@ window.Stage2 = {
       },
 
       // 7. 左足付け根の丸い装甲パーツ（剛体レイヤー分離バウンスポイント）
-      // 原画 (298, 1091) -> キャンバス (158, 526, r: 26)
+      // 原画の円盤中心 (298, 1099) -> キャンバス (157, 531)。円盤（横22/縦27）を囲む r: 29
+      // （下ラベルが円盤下端の輪郭線に重ならない位置まで下がる）
       hipJointL: {
-        x: 158,
-        y: 526,
-        r: 26,
+        x: 157,
+        y: 531,
+        r: 29,
         flash: 0,
         rot: 0
       },
@@ -736,7 +741,7 @@ window.Stage2 = {
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
                   UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
                   Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
-                  Systems.spawnFloatingCapsule(state, 2, "buff");
+                  Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
                 }
               }
@@ -760,7 +765,7 @@ window.Stage2 = {
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
                   UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
                   Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
-                  Systems.spawnFloatingCapsule(state, 2, "buff");
+                  Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
                 }
               } else {
@@ -798,7 +803,7 @@ window.Stage2 = {
             ]);
             UI.showCutin(`💥【${sideLabel}肩装甲大破！】💥<br>肩部装甲パージ！ +30,000pts ボーナス！`, 200);
             Systems.addScore(state, 30000, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
-            Systems.spawnFloatingCapsule(state, 2, "buff");
+            Systems.dropReward(state, "major", { x: sh.x, y: sh.y });
             this.checkPhase1Clear(state);
           }
         } else {
@@ -835,7 +840,7 @@ window.Stage2 = {
             ]);
             UI.showCutin(`💥【${sideLabel}腕部装甲 大破！】💥<br>関節サーボ破損・装甲欠損！ +30,000pts!`, 200);
             Systems.addScore(state, 30000, elb.x, elb.y, `★${sideLabel} ARM DESTROYED!★`);
-            Systems.spawnFloatingCapsule(state, 2, "buff");
+            Systems.dropReward(state, "major", { x: elb.x, y: elb.y });
             this.checkPhase1Clear(state);
           }
         } else {
@@ -874,7 +879,7 @@ window.Stage2 = {
             ]);
             UI.showCutin(`💥【${nozLabel}ノズル 噴射口大破！】💥<br>スラスター破損・推進力低下！ +25,000pts!`, 200);
             Systems.addScore(state, 25000, noz.x, noz.y, `★NOZZLE-${nozLabel} DESTROYED!★`);
-            Systems.spawnFloatingCapsule(state, 2, "buff");
+            Systems.dropReward(state, "major", { x: noz.x, y: noz.y });
 
             // 両ノズル大破チェック
             const bothBroken = state.boss.nozzleL.broken && state.boss.nozzleR.broken;
@@ -938,7 +943,7 @@ window.Stage2 = {
               ]);
               UI.showCutin("💥【ホログラム砲台 大破！】💥<br>レーザー主砲沈黙！ +40,000pts ボーナス！", 220);
               Systems.addScore(state, 40000, holo.x, holo.y, "★HOLO CANNON DESTROYED!★");
-              Systems.spawnFloatingCapsule(state, 2, "buff");
+              Systems.dropReward(state, "major", { x: holo.x, y: holo.y });
               this.checkPhase2Clear(state);
             }
           }
@@ -973,7 +978,7 @@ window.Stage2 = {
             Particles.triggerArmorBreakEffect(state, "bust_armor", bust.x, bust.y);
             UI.showCutin("♥【胸部装甲パージ！】♥<br>胸部センサー限界突破！ +30,000pts！", 200);
             Systems.addScore(state, 30000, bust.x, bust.y, "★BUST ARMOR PURGED!★");
-            Systems.spawnFloatingCapsule(state, 2, "buff");
+            Systems.dropReward(state, "major", { x: bust.x, y: bust.y });
             this.checkPhase2Clear(state);
           }
         } else {
@@ -1021,8 +1026,8 @@ window.Stage2 = {
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
-      const jDx = (bL ? bL.dx : 0) * 0.35;
-      const jDy = (bL ? bL.dy : 0) * 0.35;
+      const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
+      const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
       const dynamicHip = {
         x: hip.x + jDx,
         y: hip.y + jDy,
@@ -1072,8 +1077,22 @@ window.Stage2 = {
         if (hit) {
           ball.x = hit.qx + hit.nx * (hit.minDist + 1.8);
           ball.y = hit.qy + hit.ny * (hit.minDist + 1.8);
-          ball.vx = hit.nx * 14.0;
-          ball.vy = hit.ny * 14.0;
+          // 入射角を残す反射＋法線方向への弾き出し。
+          // （旧実装は入射を無視して法線方向へ速さ14で固定キックしていたため、
+          //  発射直後の球が毎回同じコースで右壁→パドル間ドレインへ直行していた）
+          const EP = this.CAT_EAR_BOUNCE;
+          const vn = ball.vx * hit.nx + ball.vy * hit.ny;
+          if (vn < 0) {
+            ball.vx -= (1 + EP.restitution) * vn * hit.nx;
+            ball.vy -= (1 + EP.restitution) * vn * hit.ny;
+          }
+          ball.vx += hit.nx * EP.kick;
+          ball.vy += hit.ny * EP.kick;
+          const sp = Math.hypot(ball.vx, ball.vy);
+          if (sp > EP.maxSpeed) {
+            ball.vx *= EP.maxSpeed / sp;
+            ball.vy *= EP.maxSpeed / sp;
+          }
 
           ear.flash = 24;
           if (window.sfx) window.sfx.metalBumper();
@@ -1099,13 +1118,20 @@ window.Stage2 = {
       state.phase = 2;
       b.hologram.isShielded = false;
       if (window.sfx) window.sfx.burstTrigger();
+      // 大ブレイク破片演出
+      Particles.triggerArmorBreakEffect(state, "left_shoulder", b.shoulderL.x, b.shoulderL.y);
+      Particles.triggerArmorBreakEffect(state, "antenna", b.antenna.x, b.antenna.y);
+      Particles.triggerArmorBreakEffect(state, "l_arm", b.elbowL.x, b.elbowL.y);
+      Particles.triggerArmorBreakEffect(state, "r_arm", b.elbowR.x, b.elbowR.y);
+      Particles.add(state, 198, 250, "#00f5d4", 40, 7.0);
+      Particles.add(state, 198, 250, "#ffffff", 40, 8.0);
       this.setExpressionSequence(state, [
-        { expr: "shock", frames: 30 },
-        { expr: "shout", frames: 35 },
-        { expr: "wince", frames: 50 }
+        { expr: "shock", frames: 35 },
+        { expr: "shout", frames: 40 },
+        { expr: "wince", frames: 55 }
       ]);
-      UI.showCutin("🎉【PHASE 1 突破！】🎉<br>外郭防衛網＆両腕関節装甲壊滅！ ホログラム砲台のシールド解除！", 220);
-      Systems.spawnFloatingCapsule(state, 2, "buff");
+      UI.showCutin("💥【PHASE 1 突破！ 外装防衛網壊滅！】💥<br>肩部・両腕装甲強制パージ！ ホログラム砲台起動！", 240);
+      Systems.dropReward(state, "rare", 2);
       UI.updateHUD(state);
     }
   },
@@ -1118,18 +1144,23 @@ window.Stage2 = {
       b.core.unlocked = true;
       b.allArmorsPurged = true;
       if (window.sfx) window.sfx.burstTrigger();
-      Particles.add(state, b.core.x, b.core.y, "#00f5d4", 50, 8.5);
-      Particles.add(state, b.core.x, b.core.y, "#ffffff", 40, 7.5);
-      Particles.add(state, b.core.x, b.core.y, "#ff007f", 35, 7.0);
+      // 大ブレイク躯体損壊演出
+      if (b.nozzleL) Particles.triggerArmorBreakEffect(state, "nozzle_l", b.nozzleL.x, b.nozzleL.y);
+      if (b.nozzleR) Particles.triggerArmorBreakEffect(state, "nozzle_r", b.nozzleR.x, b.nozzleR.y);
+      if (b.hologram) Particles.triggerArmorBreakEffect(state, "hologram", b.hologram.x, b.hologram.y);
+      Particles.add(state, b.core.x, b.core.y, "#00f5d4", 60, 9.5);
+      Particles.add(state, b.core.x, b.core.y, "#ffffff", 50, 8.5);
+      Particles.add(state, b.core.x, b.core.y, "#ff007f", 45, 8.0);
 
       this.setExpressionSequence(state, [
         { expr: "shock", frames: 35 },
+        { expr: "wince", frames: 50 },
         { expr: "open_blush", frames: 999 }
       ]);
       Systems.addScore(state, 50000, b.core.x, b.core.y, "★ALL ARMORS PURGED! +50,000★");
-      UI.showCutin("✨【PHASE 2 突破！ 全装甲パージ！】✨<br>プラズマ・リアクターコア露出！ コアを直撃してK.O.せよ！", 240);
+      UI.showCutin("💥【大ブレイク！ 躯体大破＆装甲パージ！】💥<br>推進力喪失！ プラズマ・リアクターコア露出！ コアを直撃せよ！", 260);
       Systems.addFever(state, 100);
-      Systems.spawnFloatingCapsule(state, 3, "buff");
+      Systems.dropReward(state, "rare", 3);
       UI.updateHUD(state);
     }
   },
@@ -1142,10 +1173,10 @@ window.Stage2 = {
     state.clearSequence.phase = "shatter";
 
     if (window.sfx) window.sfx.burstTrigger();
-    UI.showCutin("💥【CRITICAL K.O.】💥<br>セルティのプラズマコア臨界停止！ ステージクリア！", 240);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 60, 9.5);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 60, 8.5);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 60, 9.0);
+    UI.showCutin("💥【CRITICAL K.O.】💥<br>セルティのプラズマ炉臨界オーバーヒート！ 機体制御崩壊！", 240);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 70, 10.5);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 70, 9.5);
+    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 70, 10.0);
 
     state.clearSequence.shatterPieces = Particles.shatterTableFrame(Physics.TABLE_WALLS);
 
@@ -1353,6 +1384,118 @@ window.Stage2 = {
     });
   },
 
+  // 猫耳三角バウンスの反発パラメータ（restitution: 反発係数, kick: 法線方向の弾き出し, maxSpeed: 上限）
+  CAT_EAR_BOUNCE: { restitution: 0.6, kick: 2.0, maxSpeed: 14.0 },
+
+  // 原画をキャンバス表示サイズ（IMG_BOX）に縮小した画素配列を1度だけ作ってキャッシュ。
+  // メイン描画と同じ drawImage 縮小を使うので、変位0の画素はベース描画と完全一致する。
+  _getSrcPixels(IMG_BOX) {
+    const img = this.assets.bareImg;
+    if (!img || !img.complete || !img.naturalWidth) return null;
+    const key = img.src + "|" + IMG_BOX.w + "x" + IMG_BOX.h;
+    if (this._srcPix && this._srcPix.key === key) return this._srcPix;
+    try {
+      const c = document.createElement("canvas");
+      c.width = IMG_BOX.w;
+      c.height = IMG_BOX.h;
+      const cc = c.getContext("2d", { willReadFrequently: true });
+      cc.drawImage(img, 0, 0, IMG_BOX.w, IMG_BOX.h);
+      const d = cc.getImageData(0, 0, c.width, c.height);
+      this._srcPix = { key, w: c.width, h: c.height, data: d.data };
+    } catch (e) {
+      // file:// 等でキャンバスが汚染される環境では変形を諦める（原画のまま表示）
+      this._srcPix = { key, w: 0, h: 0, data: null };
+    }
+    return this._srcPix;
+  },
+
+  // ゴム膜ワープ：各ボディ b（キャンバス座標 x, y, rx, ry と変位 dx, dy）が
+  // 重み w = (1 - r^2)^2 の変位場を持ち（中心で1、縁で0かつ傾きも0）、全ボディの変位を合算。
+  // 出力画素 p は縮小済み原画の p - offset(p) をバイリニアで逆写像サンプリングする。
+  renderSoftWarp(ctx, IMG_BOX, bodies) {
+    const active = bodies.filter(b => b && Math.hypot(b.dx, b.dy) >= 0.25);
+    if (active.length === 0) return;
+    const src = this._getSrcPixels(IMG_BOX);
+    if (!src || !src.data) return;
+
+    const REACH = 1.2; // 元の楕円より少し広く影響させ、水着ライン等を滑らかにたわませる
+    const fields = active.map(b => {
+      const rx = b.rx * REACH, ry = b.ry * REACH;
+      return {
+        cx: b.x - IMG_BOX.x, cy: b.y - IMG_BOX.y,
+        rx, ry, irx: 1 / rx, iry: 1 / ry,
+        dx: b.dx, dy: b.dy,
+        // 揺れ方向への軽い伸縮（旧方式のスケール係数を踏襲）
+        kx: b.dx * 0.010 - b.dy * 0.006,
+        ky: b.dy * 0.010 - b.dx * 0.006
+      };
+    });
+
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    fields.forEach(f => {
+      x0 = Math.min(x0, f.cx - f.rx); x1 = Math.max(x1, f.cx + f.rx);
+      y0 = Math.min(y0, f.cy - f.ry); y1 = Math.max(y1, f.cy + f.ry);
+    });
+    const SW = src.w, SH = src.h;
+    x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+    x1 = Math.min(SW, Math.ceil(x1)); y1 = Math.min(SH, Math.ceil(y1));
+    const w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) return;
+
+    if (!this._warpCanvas || this._warpCanvas.width < w || this._warpCanvas.height < h) {
+      this._warpCanvas = document.createElement("canvas");
+      this._warpCanvas.width = Math.max(w, 64);
+      this._warpCanvas.height = Math.max(h, 64);
+      this._warpCtx = this._warpCanvas.getContext("2d");
+    }
+    // ImageData は毎フレーム確保せず再利用（GC負荷回避）。透明で初期化してから書く
+    if (!this._warpImg || this._warpImg.width !== w || this._warpImg.height !== h) {
+      this._warpImg = this._warpCtx.createImageData(w, h);
+    }
+    const out = this._warpImg;
+    const od = out.data;
+    od.fill(0);
+    const sd = src.data;
+    const nF = fields.length;
+
+    for (let v = 0; v < h; v++) {
+      const Y = y0 + v; // 画素中心基準（整数座標＝画素そのもの）
+      for (let u = 0; u < w; u++) {
+        const X = x0 + u;
+        let ox = 0, oy = 0, inside = false;
+        for (let i = 0; i < nF; i++) {
+          const f = fields[i];
+          const rxv = X - f.cx, ryv = Y - f.cy;
+          const nx = rxv * f.irx, ny = ryv * f.iry;
+          const r2 = nx * nx + ny * ny;
+          if (r2 >= 1) continue;
+          const t = 1 - r2;
+          const wgt = t * t;
+          ox += wgt * (f.dx + f.kx * rxv);
+          oy += wgt * (f.dy + f.ky * ryv);
+          inside = true;
+        }
+        if (!inside) continue; // 透明のまま＝下のベース描画がそのまま見える
+
+        let sx = X - ox, sy = Y - oy;
+        if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
+        if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
+        const ix = sx | 0, iy = sy | 0;
+        const fx = sx - ix, fy = sy - iy;
+        const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
+        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        const oi = (v * w + u) * 4;
+        od[oi] = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
+        od[oi + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+        od[oi + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+        od[oi + 3] = 255;
+      }
+    }
+
+    this._warpCtx.putImageData(out, 0, 0);
+    // 1:1 の整数位置コピー（再サンプリング無し）
+    ctx.drawImage(this._warpCanvas, 0, 0, w, h, IMG_BOX.x + x0, IMG_BOX.y + y0, w, h);
+  },
   renderBackground(ctx, state, engine) {
     const IMG_BOX = (engine && engine.IMG_BOX) ? engine.IMG_BOX : { x: 16, y: 16, w: 364, h: 644 };
 
@@ -1362,248 +1505,260 @@ window.Stage2 = {
       return;
     }
 
+    const isDefeat = state.clearSequence && state.clearSequence.active && state.clearSequence.cgRevealAlpha > 0 && this.assets.defeatCgImg.complete;
+    const baseImg = isDefeat ? this.assets.defeatCgImg : this.assets.bareImg;
+
     ctx.save();
-    // 1. ベース原画描画
-    ctx.drawImage(this.assets.bareImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+    // 1. ベース原画描画（クリア時は大破敗北ご褒美CGを描画）
+    ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
     const srcScaleX = this.assets.bareImg.width / IMG_BOX.w;
     const srcScaleY = this.assets.bareImg.height / IMG_BOX.h;
 
-    // 2. 胸のぷるぷる揺れ処理（tipBustの振動変形）
-    const bust = state.boss.tipBust;
-    if (bust && Math.hypot(bust.dx, bust.dy) > 0.3) {
-      ctx.save();
-      const cx = bust.x + bust.dx;
-      const cy = bust.y + bust.dy;
-      const scaleX = 1 + (bust.dx * 0.015) - (bust.dy * 0.010);
-      const scaleY = 1 + (bust.dy * 0.015) - (bust.dx * 0.010);
-
-      ctx.translate(cx, cy);
-      ctx.scale(scaleX, scaleY);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 24, 28, -0.2, 0, Math.PI * 2);
-      ctx.clip();
-
-      const sx = (bust.x - 24 - IMG_BOX.x) * srcScaleX;
-      const sy = (bust.y - 28 - IMG_BOX.y) * srcScaleY;
-      const sw = 48 * srcScaleX;
-      const sh = 56 * srcScaleY;
-
-      ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, -24, -28, 48, 56);
-      ctx.restore();
-    }
-
-    // 3. お尻のぷるんぷるん揺れ処理（左右2つの円近似 ＆ 中心強く周辺馴染ませ）
-    const renderCheekJiggle = (b) => {
-      if (!b) return;
-      const disp = Math.hypot(b.dx, b.dy);
-      if (disp < 0.25) return;
-
-      // 4層同心変形（外周は滑らかなアルファブレンドで水着ラインの千切れを根絶し、中心ほど豊かに揺れる）
-      const layers = [
-        { ratio: 1.05, weight: 0.12, alpha: 0.35 },
-        { ratio: 0.85, weight: 0.45, alpha: 0.65 },
-        { ratio: 0.60, weight: 0.80, alpha: 0.85 },
-        { ratio: 0.35, weight: 1.00, alpha: 1.00 }
-      ];
-
-      layers.forEach(layer => {
+    // クリアシーケンス中（大破CG表示時）は余計な通常パーツやスプライトを乗せず、大破CGの美しい一枚絵を見せる
+    if (!isDefeat) {
+      // 2. 胸のぷるぷる揺れ処理（tipBustの振動変形）
+      const bust = state.boss.tipBust;
+      if (bust && Math.hypot(bust.dx, bust.dy) > 0.3) {
         ctx.save();
-        const curDx = b.dx * layer.weight;
-        const curDy = b.dy * layer.weight;
-        const cx = b.x + curDx;
-        const cy = b.y + curDy;
-        const scaleX = 1 + (curDx * 0.010) - (curDy * 0.006);
-        const scaleY = 1 + (curDy * 0.010) - (curDx * 0.006);
+        const cx = bust.x + bust.dx;
+        const cy = bust.y + bust.dy;
+        const scaleX = 1 + (bust.dx * 0.015) - (bust.dy * 0.010);
+        const scaleY = 1 + (bust.dy * 0.015) - (bust.dx * 0.010);
 
         ctx.translate(cx, cy);
         ctx.scale(scaleX, scaleY);
         ctx.beginPath();
-        ctx.ellipse(0, 0, b.rx * layer.ratio, b.ry * layer.ratio, 0.05, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 24, 28, -0.2, 0, Math.PI * 2);
         ctx.clip();
 
-        const sx = (b.x - b.rx - IMG_BOX.x) * srcScaleX;
-        const sy = (b.y - b.ry - IMG_BOX.y) * srcScaleY;
-        const sw = b.rx * 2 * srcScaleX;
-        const sh = b.ry * 2 * srcScaleY;
+        const sx = (bust.x - 24 - IMG_BOX.x) * srcScaleX;
+        const sy = (bust.y - 28 - IMG_BOX.y) * srcScaleY;
+        const sw = 48 * srcScaleX;
+        const sh = 56 * srcScaleY;
 
-        ctx.globalAlpha = layer.alpha;
-        ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, -b.rx, -b.ry, b.rx * 2, b.ry * 2);
+        ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, -24, -28, 48, 56);
         ctx.restore();
-      });
-    };
-    renderCheekJiggle(state.boss.buttL);
-    renderCheekJiggle(state.boss.buttR);
+      }
 
-    // 3.5. 左足付け根の丸い装甲パーツ：剛体レイヤー分離描画
-    // お尻の変形によって装甲が撓むのを完全に防ぎ、形を保ったままお尻の揺れに引かれて少しだけ連動（35%）
-    if (this.assets.hipJointImg && this.assets.hipJointImg.complete) {
-      ctx.save();
-      const bL = state.boss.buttL;
-      const jDx = (bL ? bL.dx : 0) * 0.35;
-      const jDy = (bL ? bL.dy : 0) * 0.35;
-      const jw = (140 / 768) * IMG_BOX.w;
-      const jh = (140 / 1376) * IMG_BOX.h;
-      const jx = IMG_BOX.x + (298 / 768) * IMG_BOX.w + jDx;
-      const jy = IMG_BOX.y + (1091 / 1376) * IMG_BOX.h + jDy;
-      ctx.drawImage(this.assets.hipJointImg, jx - jw / 2, jy - jh / 2, jw, jh);
-      ctx.restore();
-    }
+      // 3. お尻のぷるんぷるん揺れ処理（ゴム膜ワープ）
+      this.renderSoftWarp(ctx, IMG_BOX, [state.boss.buttL, state.boss.buttR]);
 
-    // 4. 左手奥ホログラム：対象物（シアンのホログラム投影）のみに限定したラスターグリッジノイズ
-    // 重なっている指や背景には一切影響を与えない
-    const holo = state.boss.hologram;
-    if (holo && this.assets.hologramImg && this.assets.hologramImg.complete) {
-      const hx = IMG_BOX.x + (3 / 768) * IMG_BOX.w;
-      const hy = IMG_BOX.y + (341 / 1376) * IMG_BOX.h;
-      const hw = (129 / 768) * IMG_BOX.w;
-      const hh = (123 / 1376) * IMG_BOX.h;
+      // 3.5. 左足付け根の丸い装甲パーツ：剛体レイヤー分離描画
+      if (this.assets.hipJointImg && this.assets.hipJointImg.complete) {
+        ctx.save();
+        const bL = state.boss.buttL;
+        const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
+        const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
+        const jw = (140 / 768) * IMG_BOX.w;
+        const jh = (140 / 1376) * IMG_BOX.h;
+        const jx = IMG_BOX.x + (298 / 768) * IMG_BOX.w + jDx;
+        const jy = IMG_BOX.y + (1091 / 1376) * IMG_BOX.h + jDy;
+        ctx.drawImage(this.assets.hipJointImg, jx - jw / 2, jy - jh / 2, jw, jh);
+        ctx.restore();
+      }
 
-      const slices = 8;
-      const sliceH = hh / slices;
-      const srcSliceH = this.assets.hologramImg.height / slices;
+      // 4. 左手奥ホログラム：対象物（シアンのホログラム投影）のみに限定したラスターグリッジノイズ
+      const holo = state.boss.hologram;
+      if (holo && !holo.broken && this.assets.hologramImg && this.assets.hologramImg.complete) {
+        const hx = IMG_BOX.x + (3 / 768) * IMG_BOX.w;
+        const hy = IMG_BOX.y + (341 / 1376) * IMG_BOX.h;
+        const hw = (129 / 768) * IMG_BOX.w;
+        const hh = (123 / 1376) * IMG_BOX.h;
 
-      for (let i = 0; i < slices; i++) {
-        const isGlitching = Math.random() < 0.35 || holo.laserState === "charge";
-        const shift = isGlitching ? (Math.random() - 0.5) * 6.5 + (holo.glitchShift || 0) : 0;
+        const slices = 8;
+        const sliceH = hh / slices;
+        const srcSliceH = this.assets.hologramImg.height / slices;
 
-        if (Math.abs(shift) > 0.5) {
-          ctx.save();
-          // シアン/マゼンタの色ズレゴースト
-          if (Math.random() < 0.5) {
-            ctx.globalAlpha = 0.55;
+        for (let i = 0; i < slices; i++) {
+          const isGlitching = Math.random() < 0.35 || holo.laserState === "charge";
+          const shift = isGlitching ? (Math.random() - 0.5) * 6.5 + (holo.glitchShift || 0) : 0;
+
+          if (Math.abs(shift) > 0.5) {
+            ctx.save();
+            if (Math.random() < 0.5) {
+              ctx.globalAlpha = 0.55;
+              ctx.drawImage(
+                this.assets.hologramImg,
+                0, i * srcSliceH, this.assets.hologramImg.width, srcSliceH,
+                hx + shift * 1.4, hy + i * sliceH, hw, sliceH
+              );
+            }
+            ctx.globalAlpha = 0.85;
             ctx.drawImage(
               this.assets.hologramImg,
               0, i * srcSliceH, this.assets.hologramImg.width, srcSliceH,
-              hx + shift * 1.4, hy + i * sliceH, hw, sliceH
+              hx + shift, hy + i * sliceH, hw, sliceH
             );
+            ctx.restore();
           }
-          ctx.globalAlpha = 0.85;
-          ctx.drawImage(
-            this.assets.hologramImg,
-            0, i * srcSliceH, this.assets.hologramImg.width, srcSliceH,
-            hx + shift, hy + i * sliceH, hw, sliceH
-          );
-          ctx.restore();
+        }
+      } else if (holo && holo.broken) {
+        // ホログラム砲台破壊時：手首デバイスから火花と黒煙
+        if (Math.random() < 0.20) {
+          Particles.add(state, holo.x + (Math.random() - 0.5) * 16, holo.y + (Math.random() - 0.5) * 16, "#00f5d4", 2, 2.5);
+        }
+        if (Math.random() < 0.15) {
+          state.particles.push({
+            x: holo.x + (Math.random() - 0.5) * 10,
+            y: holo.y + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 1.2,
+            vy: -1.2 - Math.random() * 1.5,
+            color: "#333333",
+            life: 20,
+            scale: 1.5
+          });
         }
       }
-    }
 
-    // 4.5. パーツブレイク破損差分描画（左腕・右腕・背中ノズル）
-    // A. 左腕関節装甲（大破時：装甲欠損・火花・内部フレーム露出差分をオーバーレイ描画）
-    if (state.boss.elbowL && state.boss.elbowL.broken && this.assets.gauntletLBrokenImg && this.assets.gauntletLBrokenImg.complete) {
-      ctx.save();
-      const gx = IMG_BOX.x + (40 / 768) * IMG_BOX.w;
-      const gy = IMG_BOX.y + (360 / 1376) * IMG_BOX.h;
-      const gw = (180 / 768) * IMG_BOX.w;
-      const gh = (160 / 1376) * IMG_BOX.h;
-      ctx.drawImage(this.assets.gauntletLBrokenImg, gx, gy, gw, gh);
-      if (Math.random() < 0.15) {
-        Particles.add(state, state.boss.elbowL.x + (Math.random() - 0.5) * 16, state.boss.elbowL.y + (Math.random() - 0.5) * 16, "#e6ff00", 2, 2.0);
+      // 4.5. パーツブレイク破損差分描画（アンテナ・左肩・肘・胸部・ノズル・Phase 3 大破）
+      // A. アンテナ破損差分（折損・電撃ショート火花）
+      if (state.boss.antenna && state.boss.antenna.broken && this.assets.antennaBrokenImg && this.assets.antennaBrokenImg.complete) {
+        ctx.save();
+        const ax = IMG_BOX.x + (550 / 768) * IMG_BOX.w;
+        const ay = IMG_BOX.y + (20 / 1376) * IMG_BOX.h;
+        const aw = (200 / 768) * IMG_BOX.w;
+        const ah = (220 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.antennaBrokenImg, ax, ay, aw, ah);
+        if (Math.random() < 0.25) {
+          Particles.add(state, state.boss.antenna.x + (Math.random() - 0.5) * 12, state.boss.antenna.y + (Math.random() - 0.5) * 12, "#e6ff00", 2, 2.5);
+        }
+        ctx.restore();
       }
-      ctx.restore();
-    }
 
-    // B. 右腕関節装甲（大破時：装甲欠損・火花差分をオーバーレイ描画）
-    if (state.boss.elbowR && state.boss.elbowR.broken && this.assets.gauntletRBrokenImg && this.assets.gauntletRBrokenImg.complete) {
-      ctx.save();
-      const gx = IMG_BOX.x + (580 / 768) * IMG_BOX.w;
-      const gy = IMG_BOX.y + (650 / 1376) * IMG_BOX.h;
-      const gw = (188 / 768) * IMG_BOX.w;
-      const gh = (200 / 1376) * IMG_BOX.h;
-      ctx.drawImage(this.assets.gauntletRBrokenImg, gx, gy, gw, gh);
-      if (Math.random() < 0.15) {
-        Particles.add(state, state.boss.elbowR.x + (Math.random() - 0.5) * 18, state.boss.elbowR.y + (Math.random() - 0.5) * 18, "#e6ff00", 2, 2.0);
+      // B. 左肩装甲大破パージ（ピンク装甲吹き飛び・素肌露出）
+      if (state.boss.shoulderL && state.boss.shoulderL.broken && this.assets.shoulderLBrokenImg && this.assets.shoulderLBrokenImg.complete) {
+        ctx.save();
+        const sx = IMG_BOX.x + (260 / 768) * IMG_BOX.w;
+        const sy = IMG_BOX.y + (490 / 1376) * IMG_BOX.h;
+        const sw = (160 / 768) * IMG_BOX.w;
+        const sh = (180 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.shoulderLBrokenImg, sx, sy, sw, sh);
+        if (Math.random() < 0.15) {
+          Particles.add(state, state.boss.shoulderL.x + (Math.random() - 0.5) * 16, state.boss.shoulderL.y + (Math.random() - 0.5) * 16, "#ff1493", 2, 2.0);
+        }
+        ctx.restore();
       }
-      ctx.restore();
-    }
 
-    // C. 背中ブースターノズル（大破時：破損ノズル・黒煙差分をオーバーレイ描画）
-    const isThrustersBroken = (state.boss.nozzleL && state.boss.nozzleL.broken) || (state.boss.nozzleR && state.boss.nozzleR.broken);
-    if (isThrustersBroken && this.assets.nozzlesBrokenImg && this.assets.nozzlesBrokenImg.complete) {
-      ctx.save();
-      const nx = IMG_BOX.x + (440 / 768) * IMG_BOX.w;
-      const ny = IMG_BOX.y + (720 / 1376) * IMG_BOX.h;
-      const nw = (140 / 768) * IMG_BOX.w;
-      const nh = (110 / 1376) * IMG_BOX.h;
-      ctx.drawImage(this.assets.nozzlesBrokenImg, nx, ny, nw, nh);
-      if (Math.random() < 0.25) {
-        const nozPos = (state.boss.nozzleL && state.boss.nozzleL.broken) ? state.boss.nozzleL : state.boss.nozzleR;
-        state.particles.push({
-          x: nozPos.x + (Math.random() - 0.5) * 14,
-          y: nozPos.y + (Math.random() - 0.5) * 10,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: -1.5 - Math.random() * 2.0,
-          color: Math.random() < 0.5 ? "#333333" : "#552244",
-          life: 20,
-          scale: 1.8
-        });
+      // C. 左腕関節装甲（大破時：装甲欠損・火花・内部フレーム露出差分）
+      if (state.boss.elbowL && state.boss.elbowL.broken && this.assets.gauntletLBrokenImg && this.assets.gauntletLBrokenImg.complete) {
+        ctx.save();
+        const gx = IMG_BOX.x + (40 / 768) * IMG_BOX.w;
+        const gy = IMG_BOX.y + (360 / 1376) * IMG_BOX.h;
+        const gw = (180 / 768) * IMG_BOX.w;
+        const gh = (160 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.gauntletLBrokenImg, gx, gy, gw, gh);
+        if (Math.random() < 0.15) {
+          Particles.add(state, state.boss.elbowL.x + (Math.random() - 0.5) * 16, state.boss.elbowL.y + (Math.random() - 0.5) * 16, "#e6ff00", 2, 2.0);
+        }
+        ctx.restore();
       }
-      ctx.restore();
-    }
 
-    // 5. Dynamic Face Expression Patch (透過アルファスプライトによる自然な瞬き・ウインク・感情遷移)
-    const isDefeat = state.clearSequence && state.clearSequence.active;
-    const fa = state.boss.faceAnim || {};
-    const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
-    // 自然なリズム（約200ms単位）での口パク
-    const talkCycle = Math.floor(performance.now() * 0.005) % 3;
+      // D. 右腕関節装甲（大破時：装甲欠損・火花差分）
+      if (state.boss.elbowR && state.boss.elbowR.broken && this.assets.gauntletRBrokenImg && this.assets.gauntletRBrokenImg.complete) {
+        ctx.save();
+        const gx = IMG_BOX.x + (580 / 768) * IMG_BOX.w;
+        const gy = IMG_BOX.y + (650 / 1376) * IMG_BOX.h;
+        const gw = (188 / 768) * IMG_BOX.w;
+        const gh = (200 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.gauntletRBrokenImg, gx, gy, gw, gh);
+        if (Math.random() < 0.15) {
+          Particles.add(state, state.boss.elbowR.x + (Math.random() - 0.5) * 18, state.boss.elbowR.y + (Math.random() - 0.5) * 18, "#e6ff00", 2, 2.0);
+        }
+        ctx.restore();
+      }
 
-    let activePatchKey = null;
-    let patchAlpha = 1.0;
+      // E. 胸部センサー破損差分
+      if (state.boss.tipBust && state.boss.tipBust.broken && this.assets.bustBrokenImg && this.assets.bustBrokenImg.complete) {
+        ctx.save();
+        const bx = IMG_BOX.x + (140 / 768) * IMG_BOX.w;
+        const by = IMG_BOX.y + (580 / 1376) * IMG_BOX.h;
+        const bw = (120 / 768) * IMG_BOX.w;
+        const bh = (140 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.bustBrokenImg, bx, by, bw, bh);
+        if (Math.random() < 0.15) {
+          Particles.add(state, state.boss.tipBust.x + (Math.random() - 0.5) * 10, state.boss.tipBust.y + (Math.random() - 0.5) * 10, "#e6ff00", 2, 2.0);
+        }
+        ctx.restore();
+      }
 
-    if (isDefeat) {
-      activePatchKey = "open_blush";
-      patchAlpha = 1.0;
-    } else if (state.boss.expression && state.boss.expression !== "normal") {
-      activePatchKey = state.boss.expression;
-      patchAlpha = 1.0;
-    } else if (isTalking) {
-      activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
-      patchAlpha = 0.95;
-    } else if (fa.winkFrame > 0) {
-      activePatchKey = "wink";
-      if (fa.winkFrame > 41) {
-        patchAlpha = (45 - fa.winkFrame) / 4.0;
-      } else if (fa.winkFrame <= 4) {
-        patchAlpha = fa.winkFrame / 4.0;
-      } else {
+      // F. 背中ブースターノズル（大破時：破損ノズル・黒煙差分）
+      const isThrustersBroken = (state.boss.nozzleL && state.boss.nozzleL.broken) || (state.boss.nozzleR && state.boss.nozzleR.broken);
+      if (isThrustersBroken && this.assets.nozzlesBrokenImg && this.assets.nozzlesBrokenImg.complete) {
+        ctx.save();
+        const nx = IMG_BOX.x + (440 / 768) * IMG_BOX.w;
+        const ny = IMG_BOX.y + (720 / 1376) * IMG_BOX.h;
+        const nw = (140 / 768) * IMG_BOX.w;
+        const nh = (110 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.nozzlesBrokenImg, nx, ny, nw, nh);
+        if (Math.random() < 0.25) {
+          const nozPos = (state.boss.nozzleL && state.boss.nozzleL.broken) ? state.boss.nozzleL : state.boss.nozzleR;
+          state.particles.push({
+            x: nozPos.x + (Math.random() - 0.5) * 14,
+            y: nozPos.y + (Math.random() - 0.5) * 10,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: -1.5 - Math.random() * 2.0,
+            color: Math.random() < 0.5 ? "#333333" : "#552244",
+            life: 20,
+            scale: 1.8
+          });
+        }
+        ctx.restore();
+      }
+
+      // G. 大ブレイク！ Phase 2 突破 / Phase 3 全装甲パージ躯体損壊差分（背中・ヒップ・太ももの大破露出）
+      if ((state.phase >= 3 || (state.boss && state.boss.allArmorsPurged)) && this.assets.bodyDamageImg && this.assets.bodyDamageImg.complete) {
+        ctx.save();
+        const bx = IMG_BOX.x + (200 / 768) * IMG_BOX.w;
+        const by = IMG_BOX.y + (680 / 1376) * IMG_BOX.h;
+        const bw = (400 / 768) * IMG_BOX.w;
+        const bh = (670 / 1376) * IMG_BOX.h;
+        ctx.drawImage(this.assets.bodyDamageImg, bx, by, bw, bh);
+        if (Math.random() < 0.25) {
+          const core = state.boss.core;
+          Particles.add(state, core.x + (Math.random() - 0.5) * 20, core.y + (Math.random() - 0.5) * 20, "#00f5d4", 2, 2.5);
+        }
+        ctx.restore();
+      }
+
+      // 5. Dynamic Face Expression Patch (透過アルファスプライトによる自然な瞬き・ウインク・感情遷移)
+      const fa = state.boss.faceAnim || {};
+      const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
+      const talkCycle = Math.floor(performance.now() * 0.005) % 3;
+
+      let activePatchKey = null;
+      let patchAlpha = 1.0;
+
+      if (state.boss.expression && state.boss.expression !== "normal") {
+        activePatchKey = state.boss.expression;
         patchAlpha = 1.0;
-      }
-    } else if (fa.blinkFrame > 0) {
-      activePatchKey = "blink";
-      // 16フレームの自然な瞬きイージング（閉じ始め3f -> 完全閉じ10f -> 開き3f）
-      if (fa.blinkFrame > 13) {
-        patchAlpha = 0.4 + (16 - fa.blinkFrame) * 0.2; // 0.4 -> 0.8
-      } else if (fa.blinkFrame <= 3) {
-        patchAlpha = fa.blinkFrame * 0.25; // 0.75 -> 0.25
-      } else {
-        patchAlpha = 1.0; // しっかり目を閉じている
-      }
-    } else if (fa.talkFrame > 0) {
-      activePatchKey = "talk_sm";
-      if (fa.talkFrame > 20) {
-        patchAlpha = (24 - fa.talkFrame) / 4.0;
-      } else if (fa.talkFrame <= 4) {
-        patchAlpha = fa.talkFrame / 4.0;
-      } else {
+      } else if (isTalking) {
+        activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
         patchAlpha = 0.95;
+      } else if (fa.winkFrame > 0) {
+        activePatchKey = "wink";
+      } else if (fa.blinkFrame > 0) {
+        const bf = fa.blinkFrame;
+        activePatchKey = (bf >= 15) ? "blink_half" : (bf >= 7) ? "blink" : (bf >= 3) ? "blink_half" : null;
+      } else if (fa.talkFrame > 0) {
+        activePatchKey = "talk_sm";
       }
-    }
+      patchAlpha = 1.0;
 
-    if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
-      const fx = IMG_BOX.x + (270 / 768) * IMG_BOX.w;
-      const fy = IMG_BOX.y + (310 / 1376) * IMG_BOX.h;
-      const fw = (190 / 768) * IMG_BOX.w;
-      const fh = (170 / 1376) * IMG_BOX.h;
+      if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
+        const fx = IMG_BOX.x + (270 / 768) * IMG_BOX.w;
+        const fy = IMG_BOX.y + (310 / 1376) * IMG_BOX.h;
+        const fw = (190 / 768) * IMG_BOX.w;
+        const fh = (170 / 1376) * IMG_BOX.h;
 
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1.0, patchAlpha));
-      ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
-      ctx.restore();
-    }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1.0, patchAlpha));
+        ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
+        ctx.restore();
+      }
+    } // end if (!isDefeat)
 
-    // 6. クリア演出時のモクモクスモーククラウド描画
+    // 6. クリア演出時のモクモクスモーククラウド描画（大破CGの上に重なってドラマチックに演出）
     if (state.clearSequence && state.clearSequence.smokeClouds && state.clearSequence.smokeClouds.length > 0) {
       ctx.save();
       state.clearSequence.smokeClouds.forEach(smk => {
@@ -1911,8 +2066,8 @@ window.Stage2 = {
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
-      const jDx = (bL ? bL.dx : 0) * 0.35;
-      const jDy = (bL ? bL.dy : 0) * 0.35;
+      const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
+      const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
       Particles.drawBounceBumperGuide(ctx, animTick, hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, "HIP JOINT", "CYBER BUMP");
     }
 
@@ -1921,21 +2076,27 @@ window.Stage2 = {
       if (!ear) return;
       ctx.save();
       const f = ear.flash || 0;
+      // 他のガイドと同じ共通パルスで、三角形を重心中心に拡大縮小（線幅は変えない）
+      const pulse = Particles.guidePulse(animTick);
+      const gx = (ear.v1.x + ear.v2.x + ear.v3.x) / 3;
+      const gy = (ear.v1.y + ear.v2.y + ear.v3.y) / 3;
+      const P = (v) => ({ x: gx + (v.x - gx) * pulse, y: gy + (v.y - gy) * pulse });
+      const v1 = P(ear.v1), v2 = P(ear.v2), v3 = P(ear.v3);
       ctx.strokeStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.lineWidth = f > 0 ? 3.0 : 2.0;
       ctx.fillStyle = f > 0 ? "rgba(255, 255, 255, 0.45)" : "rgba(0, 245, 212, 0.20)";
 
       // 三角形フレーム
       ctx.beginPath();
-      ctx.moveTo(ear.v1.x, ear.v1.y);
-      ctx.lineTo(ear.v2.x, ear.v2.y);
-      ctx.lineTo(ear.v3.x, ear.v3.y);
+      ctx.moveTo(v1.x, v1.y);
+      ctx.lineTo(v2.x, v2.y);
+      ctx.lineTo(v3.x, v3.y);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
       // 3頂点のサイバーノード（コーナー接点）
-      [ear.v1, ear.v2, ear.v3].forEach(v => {
+      [v1, v2, v3].forEach(v => {
         ctx.fillStyle = f > 0 ? "#ffffff" : "#00f5d4";
         ctx.beginPath();
         ctx.arc(v.x, v.y, 2.5, 0, Math.PI * 2);
@@ -1949,9 +2110,9 @@ window.Stage2 = {
       ctx.strokeStyle = f > 0 ? "#ffffff" : "#00f5d4";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      const midBaseX = (ear.v2.x + ear.v3.x) / 2;
-      const midBaseY = (ear.v2.y + ear.v3.y) / 2;
-      ctx.moveTo(ear.v1.x, ear.v1.y);
+      const midBaseX = (v2.x + v3.x) / 2;
+      const midBaseY = (v2.y + v3.y) / 2;
+      ctx.moveTo(v1.x, v1.y);
       ctx.lineTo(midBaseX, midBaseY);
       ctx.stroke();
 
@@ -1960,8 +2121,8 @@ window.Stage2 = {
       ctx.textAlign = "center";
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 2.0;
-      ctx.strokeText("BOUNCE", ear.cx, ear.v1.y - 6);
-      ctx.fillText("BOUNCE", ear.cx, ear.v1.y - 6);
+      ctx.strokeText("BOUNCE", ear.cx, v1.y - 6);
+      ctx.fillText("BOUNCE", ear.cx, v1.y - 6);
       ctx.restore();
     };
     drawCatEar(state.boss.catEarL, "L-EAR");
@@ -2129,12 +2290,27 @@ window.Stage2 = {
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
+
+    const nameEl = document.getElementById("targetBossName");
+    if (nameEl) nameEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-pulse"></span>TYPE-CERTI (セルティ)';
+    const briefEl = document.getElementById("targetBriefingText");
+    if (briefEl) briefEl.textContent = "「あたしのサイバー防衛網を突破できると思ってるの？……って、なによ今のイレギュラーバウンドは……っ！」";
+
+    const lblArmR = document.getElementById("dtArmRLabel");
+    if (lblArmR) lblArmR.textContent = "右腕関節(R-ELBOW):";
+    const lblArmL = document.getElementById("dtArmLLabel");
+    if (lblArmL) lblArmL.textContent = "左肩＆肘(L-ARM/SH):";
+    const lblChest = document.getElementById("dtChestLabel");
+    if (lblChest) lblChest.textContent = "胸部＆コア(BUST/CORE):";
+    const lblCrotch = document.getElementById("dtCrotchLabel");
+    if (lblCrotch) lblCrotch.textContent = "ホロ砲台(HOLO CANNON):";
+
     const dtArmR = document.getElementById("dtArmRStatus");
     if (dtArmR) {
       const elbR = state.boss.elbowR;
       if (elbR) {
-        dtArmR.textContent = elbR.broken ? "💥DESTROYED!" : `R-ARM (${elbR.hp}/5)`;
-        dtArmR.className = elbR.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+        dtArmR.textContent = elbR.broken ? "💥DESTROYED!" : `ARMORED (${elbR.hp}/5)`;
+        dtArmR.className = elbR.broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
       }
     }
     const dtArmL = document.getElementById("dtArmLStatus");
@@ -2143,8 +2319,8 @@ window.Stage2 = {
       const elbL = state.boss.elbowL;
       const isArmsBroken = (shL ? shL.broken : true) && (elbL ? elbL.broken : true);
       const curHP = (shL ? (shL.broken ? 0 : shL.hp) : 0) + (elbL ? (elbL.broken ? 0 : elbL.hp) : 0);
-      dtArmL.textContent = isArmsBroken ? "💥PURGED!" : `L-ARM/SH (${curHP}/11)`;
-      dtArmL.className = isArmsBroken ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      dtArmL.textContent = isArmsBroken ? "💥PURGED!" : `ARMORED (${curHP}/11)`;
+      dtArmL.className = isArmsBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
     }
     const dtChest = document.getElementById("dtChestStatus");
     if (dtChest) {
@@ -2155,7 +2331,7 @@ window.Stage2 = {
         dtChest.className = "font-bold text-[#00f5d4] animate-pulse";
       } else {
         dtChest.textContent = bTip.broken ? "💥BUST PURGED!" : `BUST TIP (${bTip.hp}/6)`;
-        dtChest.className = bTip.broken ? "font-bold text-[#ff1493]" : "font-bold text-[#ff007f]";
+        dtChest.className = bTip.broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#ff007f]";
       }
     }
     const dtCrotch = document.getElementById("dtCrotchStatus");

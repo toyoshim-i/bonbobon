@@ -168,17 +168,31 @@ function createInitialState() {
       bustL: { x: 160, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
       bustR: { x: 236, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
 
-      // Mecha Colliders (Accurately mapped to centerpiece illustration contours)
-      droneL: { x: 58,  y: 172, r: 24, flash: 0 },
-      droneR: { x: 338, y: 172, r: 24, flash: 0 },
-      // Hanging Rabbit Ear Tips (Vertical oval contour, soft damper)
-      earL:   { x: 73,  y: 92,  rx: 18, ry: 26, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
-      earR:   { x: 323, y: 92,  rx: 18, ry: 26, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
-      // Shoulder Armor Clusters (Broad mechanical shoulder pods)
-      podL:   { x: 88,  y: 275, rx: 28, ry: 32, flash: 0 },
-      podR:   { x: 308, y: 275, rx: 28, ry: 32, flash: 0 },
+      // Mecha Colliders (Calibrated 1:1 with centerpiece pixel art landmarks)
+      droneL: { x: 68,  y: 178, r: 18, flash: 0 },
+      droneR: { x: 328, y: 178, r: 18, flash: 0 },
+      // Hanging Rabbit Ear Tips (Capsule collider from hinge joint to dangling tip with swing physics)
+      earL:   {
+        ax: 137, ay: 49,   // Hinge joint pivot
+        bx: 68,  by: 105,  // Tip
+        r: 17,
+        angle: 0, angleVel: 0,
+        dx: 0, dy: 0, vx: 0, vy: 0,
+        flash: 0
+      },
+      earR:   {
+        ax: 258, ay: 49,   // Hinge joint pivot
+        bx: 329, by: 105,  // Tip
+        r: 17,
+        angle: 0, angleVel: 0,
+        dx: 0, dy: 0, vx: 0, vy: 0,
+        flash: 0
+      },
+      // Shoulder Armor Clusters (Booster + shoulder pad composite)
+      podL:   { x: 104, y: 264, rx: 26, ry: 40, flash: 0 },
+      podR:   { x: 292, y: 264, rx: 26, ry: 40, flash: 0 },
       // Core Gem at chest center
-      core:   { x: 198, y: 310, r: 18, flash: 0 }
+      core:   { x: 198, y: 311, r: 16, flash: 0 }
     },
 
     balls: [],
@@ -807,11 +821,12 @@ function impulseBust(which, vxImpact, vyImpact) {
   updateHUD();
 }
 
-function impulseEar(which, vxImpact, vyImpact) {
+function impulseEar(which, torque, vxImpact, vyImpact) {
   const ear = which === "L" ? state.boss.earL : state.boss.earR;
   sfx.earBoing();
-  ear.vx += vxImpact * 1.25;
-  ear.vy += vyImpact * 1.25;
+  ear.angleVel += torque * 0.15;
+  ear.vx += (vxImpact || 0) * 0.8;
+  ear.vy += (vyImpact || 0) * 0.8;
   ear.flash = 18;
 }
 
@@ -830,18 +845,26 @@ function updateBossSprings() {
     if (b.flash > 0) b.flash--;
   });
 
-  // Hanging Rabbit Ear Tips Soft Elastic Spring Physics ("ふにょん" damping)
-  const earStiffness = 0.16;
-  const earDamping = 0.84;
+  // Hanging Rabbit Ear Tips Soft Elastic Spring Physics (Angular pivot + linear bounce)
+  const earAngStiffness = 0.09;
+  const earAngDamping = 0.93;
   [state.boss.earL, state.boss.earR].forEach(ear => {
-    const ax = -earStiffness * ear.dx;
-    const ay = -earStiffness * ear.dy;
-    ear.vx = (ear.vx + ax) * earDamping;
-    ear.vy = (ear.vy + ay) * earDamping;
+    // Angular pendulum spring around hinge pivot
+    const angAcc = -earAngStiffness * ear.angle;
+    ear.angleVel = (ear.angleVel + angAcc) * earAngDamping;
+    ear.angle += ear.angleVel;
+    ear.angle = Math.max(-0.35, Math.min(0.35, ear.angle));
+
+    // Linear translation damping
+    const ax = -0.12 * ear.dx;
+    const ay = -0.12 * ear.dy;
+    ear.vx = (ear.vx + ax) * earAngDamping;
+    ear.vy = (ear.vy + ay) * earAngDamping;
     ear.dx += ear.vx;
     ear.dy += ear.vy;
-    ear.dx = Math.max(-16, Math.min(16, ear.dx));
-    ear.dy = Math.max(-16, Math.min(16, ear.dy));
+    ear.dx = Math.max(-14, Math.min(14, ear.dx));
+    ear.dy = Math.max(-14, Math.min(14, ear.dy));
+
     if (ear.flash > 0) ear.flash--;
   });
 
@@ -1213,9 +1236,38 @@ function stepPhysics() {
           return null;
         };
 
+        // Helper: Capsule collision detection for diagonal/hanging parts
+        const checkCapsuleHit = (ax, ay, bx, by, cr) => {
+          const abx = bx - ax;
+          const aby = by - ay;
+          const apx = ball.x - ax;
+          const apy = ball.y - ay;
+          const abLenSq = abx * abx + aby * aby;
+          if (abLenSq < 0.001) return null;
+          let t = (apx * abx + apy * aby) / abLenSq;
+          t = Math.max(0, Math.min(1, t));
+          const qx = ax + t * abx;
+          const qy = ay + t * aby;
+          const dx = ball.x - qx;
+          const dy = ball.y - qy;
+          const dist = Math.hypot(dx, dy);
+          const minDist = ball.r + cr;
+          if (dist < minDist && dist > 0.0001) {
+            return {
+              qx, qy,
+              nx: dx / dist,
+              ny: dy / dist,
+              minDist,
+              t,
+              abx, aby, abLenSq
+            };
+          }
+          return null;
+        };
+
         if (!state.boss.chestArmorBroken) {
-          // CHEST COMPOSITE ARMOR PLATE (Contour matching illustration: cx: 198, cy: 355, rx: 42, ry: 26)
-          const hit = checkEllipseHit(198, 355, 42, 26);
+          // CHEST COMPOSITE ARMOR PLATE (Contour matching illustration: cx: 198, cy: 353, rx: 54, ry: 26)
+          const hit = checkEllipseHit(198, 353, 54, 26);
           if (hit) {
             ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
             ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
@@ -1342,43 +1394,57 @@ function stepPhysics() {
           });
         });
 
-        // Hanging Rabbit Ear Tips (Soft "ふにょん" Damper matching vertical purple ear tip contours)
+        // Hanging Rabbit Ear Tips (Soft "ふにょん" Capsule Damper matching diagonal dangling purple ear tip contours)
         [
           { which: "L", ear: state.boss.earL, litKey: "leftEarLit", tag: "L-EAR" },
           { which: "R", ear: state.boss.earR, litKey: "rightEarLit", tag: "R-EAR" }
         ].forEach(({ which, ear, litKey, tag }) => {
-          const cx = ear.x + ear.dx;
-          const cy = ear.y + ear.dy;
-          const hit = checkEllipseHit(cx, cy, ear.rx, ear.ry);
+          // Dynamic tip position taking into account swing angle and spring offset
+          const localBx = ear.bx - ear.ax;
+          const localBy = ear.by - ear.ay;
+          const cosA = Math.cos(ear.angle);
+          const sinA = Math.sin(ear.angle);
+          const curBx = ear.ax + (localBx * cosA - localBy * sinA) + ear.dx;
+          const curBy = ear.ay + (localBx * sinA + localBy * cosA) + ear.dy;
+          const curAx = ear.ax + ear.dx * 0.25;
+          const curAy = ear.ay + ear.dy * 0.25;
+
+          const hit = checkCapsuleHit(curAx, curAy, curBx, curBy, ear.r);
           if (hit) {
-            ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
-            ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
+            ball.x = hit.qx + hit.nx * (hit.minDist + 1.5);
+            ball.y = hit.qy + hit.ny * (hit.minDist + 1.5);
 
-            // "ふにょん" speed damper: Absorbs & cushions ball velocity
+            // "ふにょん" speed damper: Absorbs & cushions ball velocity (kills speed to ~45%)
             const speed = Math.hypot(ball.vx, ball.vy);
-            const dampSpeed = Math.max(2.8, Math.min(5.2, speed * 0.44));
+            const dampSpeed = Math.max(2.6, Math.min(5.0, speed * 0.45));
             ball.vx = hit.nx * dampSpeed;
-            ball.vy = hit.ny * dampSpeed + 0.8;
+            ball.vy = hit.ny * dampSpeed + 0.6;
 
-            // Impulse on the ear tip spring!
-            impulseEar(which, -hit.nx * Math.min(10, speed * 1.2), -hit.ny * Math.min(10, speed * 1.2));
+            // Angular torque impulse on the ear hinge (tip swings more!)
+            const lever = 0.5 + hit.t * 0.9;
+            const earLen = Math.sqrt(hit.abLenSq);
+            const earDirX = hit.abx / earLen;
+            const earDirY = hit.aby / earLen;
+            const cross = earDirX * hit.ny - earDirY * hit.nx;
+            const torque = cross * (speed * 0.08 + 0.6) * lever;
+            impulseEar(which, torque, -hit.nx * 2, -hit.ny * 2);
 
             // Soft elastic sound & cute violet/cyan particles
             sfx.earBoing();
-            addParticles(cx, cy, "#b84dff", 10, 3.5);
-            addParticles(cx, cy, "#00f5d4", 6, 2.5);
+            addParticles(hit.qx, hit.qy, "#b84dff", 10, 3.5);
+            addParticles(hit.qx, hit.qy, "#00f5d4", 6, 2.5);
 
             state.boss[litKey] = true;
             addFever(12);
 
             if (state.skillShotEligible) {
               state.skillShotEligible = false;
-              addScore(25000, ear.x, ear.y, "★SKILL SHOT!!");
+              addScore(25000, hit.qx, hit.qy, "★SKILL SHOT!!");
               showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！ +25,000pts ＆ レアカプセル！", 180);
               spawnFloatingCapsule(2, "buff");
             } else {
-              addScore(2000, ear.x, ear.y, "🐰FUNYON DAMP!");
-              addPopup(cx, cy - 18, "🐰ふにょん (SPEED DAMP)", "#e6ff00", 1.0);
+              addScore(2000, hit.qx, hit.qy, "🐰FUNYON DAMP!");
+              addPopup(hit.qx, hit.qy - 18, "🐰ふにょん (SPEED DAMP)", "#e6ff00", 1.0);
             }
 
             // Boss tickled reaction
@@ -1726,6 +1792,72 @@ function renderTable() {
       const fh = (75 / 688) * IMG_BOX.h;
       ctx.drawImage(facePatchImgs[activePatchKey], fx, fy, fw, fh);
     }
+
+    // Dynamic Rabbit Ear Tips Swing Animation ("ふにょん" elastic pendulum swing)
+    if (!isDefeat) {
+      const drawDynamicEarPatch = (which, ear) => {
+        const isSwinging = Math.abs(ear.angle) > 0.002 || Math.abs(ear.dx) > 0.1 || ear.flash > 0;
+        if (!isSwinging) return;
+
+        ctx.save();
+        // Pivot at hinge joint
+        ctx.translate(ear.ax, ear.ay);
+
+        // Vector to tip in local coords
+        const localBx = ear.bx - ear.ax;
+        const localBy = ear.by - ear.ay;
+        const baseAngle = Math.atan2(localBy, localBx);
+        const earLen = Math.hypot(localBx, localBy);
+
+        // First, underlay mask to prevent ghosting behind the swinging ear
+        if (Math.abs(ear.angle) > 0.015) {
+          ctx.save();
+          ctx.rotate(baseAngle);
+          ctx.fillStyle = "#09031c"; // playfield background behind ear
+          ctx.beginPath();
+          ctx.arc(0, 0, ear.r + 2, Math.PI / 2, -Math.PI / 2);
+          ctx.lineTo(earLen, -ear.r * 0.9);
+          ctx.arc(earLen, 0, ear.r * 0.9, -Math.PI / 2, Math.PI / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Apply swing angle around hinge
+        ctx.rotate(ear.angle);
+
+        // Subtle elastic squash/stretch
+        const squash = Math.sin(ear.angle * 6) * 0.08;
+        ctx.scale(1 - squash, 1 + squash);
+
+        ctx.save();
+        ctx.rotate(baseAngle);
+        ctx.beginPath();
+        // Capsule contour matching dangling purple tip
+        ctx.arc(0, 0, ear.r, Math.PI / 2, -Math.PI / 2);
+        ctx.lineTo(earLen, -ear.r * 0.85);
+        ctx.arc(earLen, 0, ear.r * 0.85, -Math.PI / 2, Math.PI / 2);
+        ctx.closePath();
+        ctx.clip();
+
+        // Draw original art aligned
+        ctx.rotate(-baseAngle);
+        ctx.drawImage(baseImg, IMG_BOX.x - ear.ax, IMG_BOX.y - ear.ay, IMG_BOX.w, IMG_BOX.h);
+
+        // Soft elastic ripple / glow outline when hit
+        if (ear.flash > 0) {
+          ctx.strokeStyle = `rgba(230, 255, 0, ${Math.min(1, ear.flash / 8)})`;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.restore();
+      };
+
+      drawDynamicEarPatch("L", state.boss.earL);
+      drawDynamicEarPatch("R", state.boss.earR);
+    }
   }
 
   // Stage Clear Cinematic Status Flags
@@ -1751,28 +1883,60 @@ function renderTable() {
     ctx.restore();
   }
 
-  // Dynamic Hit Flashes & Overheat Sparks (Zero artificial circles; background art stays 100% visible!)
+  // Dynamic Hit Flashes & Overheat Sparks (Strictly contoured to artwork; zero misaligned artificial circles!)
   if (!isPostWhiteout) {
-    // Subtle hit flash when any mecha part is struck
-    const drawHitFlash = (x, y, r, color = "#ffffff") => {
+    // 1. Drone Hit Flash (Circular sphere contour)
+    const drawDroneFlash = (d) => {
+      if (d.flash <= 0) return;
       ctx.save();
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = "#00f5d4";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.fillStyle = "rgba(0, 245, 212, 0.25)";
       ctx.fill();
       ctx.restore();
     };
+    drawDroneFlash(state.boss.droneL);
+    drawDroneFlash(state.boss.droneR);
 
-    if (state.boss.droneL.flash > 0) drawHitFlash(state.boss.droneL.x, state.boss.droneL.y, state.boss.droneL.r, "#00f5d4");
-    if (state.boss.droneR.flash > 0) drawHitFlash(state.boss.droneR.x, state.boss.droneR.y, state.boss.droneR.r, "#00f5d4");
-    if (state.boss.podL.flash > 0) drawHitFlash(state.boss.podL.x, state.boss.podL.y, state.boss.podL.rx, "#ff1493");
-    if (state.boss.podR.flash > 0) drawHitFlash(state.boss.podR.x, state.boss.podR.y, state.boss.podR.rx, "#ff1493");
-    if (state.boss.core.flash > 0) drawHitFlash(state.boss.core.x, state.boss.core.y, state.boss.core.r, "#e6ff00");
-    if (state.boss.earL.flash > 0) drawHitFlash(state.boss.earL.x, state.boss.earL.y, state.boss.earL.rx, "#b84dff");
-    if (state.boss.earR.flash > 0) drawHitFlash(state.boss.earR.x, state.boss.earR.y, state.boss.earR.rx, "#b84dff");
+    // 2. Shoulder Armor Hit Flash (Elliptical shoulder pod contour)
+    const drawShoulderFlash = (pod) => {
+      if (pod.flash <= 0) return;
+      ctx.save();
+      ctx.strokeStyle = "#ff1493";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(pod.x, pod.y, pod.rx, pod.ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255, 20, 147, 0.25)";
+      ctx.fill();
+      ctx.restore();
+    };
+    drawShoulderFlash(state.boss.podL);
+    drawShoulderFlash(state.boss.podR);
+
+    // 3. Core Gem Hit Flash (Hexagonal gem contour)
+    if (state.boss.core.flash > 0) {
+      ctx.save();
+      const core = state.boss.core;
+      ctx.strokeStyle = "#e6ff00";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const ang = (Math.PI / 3) * i - Math.PI / 6;
+        const px = core.x + Math.cos(ang) * core.r;
+        const py = core.y + Math.sin(ang) * core.r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(230, 255, 0, 0.3)";
+      ctx.fill();
+      ctx.restore();
+    }
 
     // Overheat Generator Sparks (Only intermittent sparks from broken shoulder frames, no fake circle rings!)
     [

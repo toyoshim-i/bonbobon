@@ -22,6 +22,9 @@ centerpieceImg.src = window.STAGE1_CENTERPIECE_URI || './assets/stage1/centerpie
 const centerpieceArmoredImg = new Image();
 centerpieceArmoredImg.src = './assets/stage1/centerpiece_armored.jpg';
 
+const defeatCgImg = new Image();
+defeatCgImg.src = './assets/stage1/defeat_cg.jpg';
+
 const sfx = window.sfx;
 
 // =========================================================================
@@ -183,7 +186,19 @@ function createInitialState() {
 
     leftFlipperDown: false,
     rightFlipperDown: false,
-    nudgeOffset: { x: 0, y: 0 }
+    nudgeOffset: { x: 0, y: 0 },
+
+    // Stage Clear Cinematic Transition Sequence
+    clearSequence: {
+      active: false,
+      frame: 0,
+      phase: "none", // "shatter" | "smoke" | "whiteout" | "reveal" | "done"
+      whiteoutAlpha: 0,
+      cgRevealAlpha: 0,
+      shatterPieces: [],
+      smokeClouds: [],
+      uiShown: false
+    }
   };
 }
 
@@ -481,24 +496,161 @@ function addScore(basePts, x, y, label = "") {
   updateHUD();
 }
 
-// Stage Clear (KO!) Trigger
+// =========================================================================
+// 3.5. STAGE CLEAR CINEMATIC TRANSITION (SHATTER, SMOKE & WHITEOUT)
+// =========================================================================
+function shatterTableFrame() {
+  const shards = [];
+  TABLE_WALLS.forEach(w => {
+    const len = Math.hypot(w.x2 - w.x1, w.y2 - w.y1);
+    const count = Math.max(3, Math.floor(len / 18));
+    const baseAngle = Math.atan2(w.y2 - w.y1, w.x2 - w.x1);
+
+    for (let i = 0; i < count; i++) {
+      const t = (i + 0.5) / count;
+      const px = w.x1 + (w.x2 - w.x1) * t;
+      const py = w.y1 + (w.y2 - w.y1) * t;
+
+      // Blast direction away from Core (x: 198, y: 307)
+      const blastAngle = Math.atan2(py - 307, px - 198) + (Math.random() - 0.5) * 0.7;
+      const spd = 3.5 + Math.random() * 6.5;
+
+      shards.push({
+        x: px,
+        y: py,
+        vx: Math.cos(blastAngle) * spd,
+        vy: Math.sin(blastAngle) * spd - (Math.random() * 3.0),
+        len: 10 + Math.random() * 8,
+        angle: baseAngle + (Math.random() - 0.5) * 0.4,
+        vAngle: (Math.random() - 0.5) * 0.28,
+        color: Math.random() > 0.4 ? "#ff1493" : "#00f5d4",
+        life: 160,
+        maxLife: 160
+      });
+    }
+  });
+  return shards;
+}
+
+function spawnSmokeCloud(x, y, color = "#ff66b2") {
+  return {
+    x: x + (Math.random() - 0.5) * 50,
+    y: y + (Math.random() - 0.5) * 40,
+    vx: (Math.random() - 0.5) * 3.2,
+    vy: -1.6 - Math.random() * 2.8, // Rising smoke
+    r: 22 + Math.random() * 20,
+    maxR: 70 + Math.random() * 40,
+    growth: 0.8 + Math.random() * 0.7,
+    color,
+    alpha: 0.1,
+    maxAlpha: 0.55 + Math.random() * 0.25,
+    life: 100 + Math.floor(Math.random() * 40),
+    maxLife: 120
+  };
+}
+
+// Stage Clear (KO!) Cinematic Trigger
 function triggerStageClear() {
   if (state.stageCleared) return;
   state.stageCleared = true;
-  sfx.burstTrigger();
-  showCutin("🏆【STAGE 1 CLEAR】🏆<br>桃色重装ラビ・メック 完全撃破！", 240);
-  addParticles(198, 300, "#e6ff00", 60, 8.0);
-  addParticles(198, 300, "#ff1493", 60, 8.0);
+  state.clearSequence.active = true;
+  state.clearSequence.frame = 0;
+  state.clearSequence.phase = "shatter";
 
-  setTimeout(() => {
+  // Massive explosion audio & visual shockwave
+  sfx.burstTrigger();
+  showCutin("💥【CRITICAL K.O.】💥<br>機体制御崩壊！ 装甲強制パージ！", 180);
+  addParticles(198, 307, "#ffffff", 60, 9.5);
+  addParticles(198, 307, "#ff1493", 60, 8.0);
+  addParticles(198, 307, "#e6ff00", 60, 8.0);
+
+  // Generate shattering table frame pieces
+  state.clearSequence.shatterPieces = shatterTableFrame();
+}
+
+function updateClearSequence() {
+  const seq = state.clearSequence;
+  if (!seq.active) return;
+  seq.frame++;
+
+  // Step 1: 0..45 Frame -> Table Frame Shatter & Violent Screen Shake
+  if (seq.frame < 45) {
+    state.nudgeOffset.x = (Math.random() - 0.5) * 16;
+    state.nudgeOffset.y = (Math.random() - 0.5) * 12;
+    if (seq.frame % 10 === 0) {
+      sfx.armorBreak();
+      addParticles(198 + (Math.random() - 0.5) * 120, 307 + (Math.random() - 0.5) * 80, "#ff1493", 16, 5.0);
+    }
+  }
+
+  // Update flying wall shards
+  seq.shatterPieces.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.16; // Gravity pulling shards down
+    p.vx *= 0.98;
+    p.angle += p.vAngle;
+    p.life--;
+  });
+
+  // Step 2: 25..120 Frame -> Billowing Smoke & Blinding Whiteout Flash
+  if (seq.frame >= 25 && seq.frame <= 120) {
+    // Continuously spawn smoke clouds from core & bottom
+    for (let i = 0; i < 3; i++) {
+      const col = Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#b84dff" : "#e6e0f8");
+      seq.smokeClouds.push(spawnSmokeCloud(198, 320, col));
+    }
+    if (seq.frame % 2 === 0) {
+      seq.smokeClouds.push(spawnSmokeCloud(100 + Math.random() * 220, 580, "#ffffff"));
+    }
+  }
+
+  // Whiteout buildup (Frame 65..105): 0 -> 1.0
+  if (seq.frame >= 65 && seq.frame <= 105) {
+    seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 65) / 38);
+    if (seq.frame === 104) {
+      sfx.burstTrigger();
+    }
+  }
+
+  // Step 3: Frame 105+ -> Background switches to Defeat CG! Whiteout fades out
+  if (seq.frame >= 105) {
+    seq.cgRevealAlpha = 1.0;
+    // Whiteout fading out (1.0 -> 0)
+    seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
+  }
+
+  // Update rising & expanding smoke clouds
+  seq.smokeClouds.forEach(s => {
+    s.x += s.vx;
+    s.y += s.vy;
+    s.vx *= 0.98;
+    if (s.r < s.maxR) s.r += s.growth;
+    s.life--;
+    if (s.life < 30) {
+      s.alpha = Math.max(0, s.alpha - 0.025);
+    } else if (s.alpha < s.maxAlpha) {
+      s.alpha = Math.min(s.maxAlpha, s.alpha + 0.05);
+    }
+  });
+  seq.smokeClouds = seq.smokeClouds.filter(s => s.life > 0 && s.alpha > 0.01);
+
+  // Step 4: Frame 155+ -> Seamlessly Fade in Clear Modal Overlay!
+  if (seq.frame >= 155 && !seq.uiShown) {
+    seq.uiShown = true;
     const modal = document.getElementById("clearModal");
     if (modal) {
       document.getElementById("clearFinalScore").textContent = state.score.toLocaleString();
       document.getElementById("clearRemainingBalls").textContent = "●".repeat(state.ballsRemaining) + ` (${state.ballsRemaining})`;
       modal.classList.remove("hidden");
       modal.classList.add("flex");
+      // Smooth fade-in
+      setTimeout(() => {
+        modal.classList.remove("opacity-0");
+        modal.classList.add("opacity-100");
+      }, 30);
     }
-  }, 1200);
+  }
 }
 
 // =========================================================================
@@ -691,7 +843,23 @@ function releasePlunger() {
 // 6. MAIN PHYSICS STEP
 // =========================================================================
 function stepPhysics() {
-  if (state.stageCleared) return;
+  if (state.clearSequence && state.clearSequence.active) {
+    updateClearSequence();
+    updateBossSprings();
+    // Continue running particle and popup physics even after clear!
+    state.particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+    });
+    state.particles = state.particles.filter(p => p.life > 0);
+    state.popups.forEach(pop => {
+      pop.y -= 0.6;
+      pop.life--;
+    });
+    state.popups = state.popups.filter(pop => pop.life > 0);
+    return;
+  }
 
   // Plunger power charge
   if (state.plunger.pulling) {
@@ -1269,14 +1437,15 @@ function renderTable() {
     ctx.stroke();
   }
 
-  // Draw Centerpiece Illustration (Armored Breastplate vs Exposed Inner-Suit)
+  // Draw Centerpiece Illustration (Armored Breastplate vs Exposed Inner-Suit vs Defeat CG)
   if (imgLoaded) {
+    const isDefeat = state.clearSequence && state.clearSequence.active && state.clearSequence.cgRevealAlpha > 0 && defeatCgImg.complete;
     const isArmored = !state.boss.chestArmorBroken && centerpieceArmoredImg.complete;
-    const baseImg = isArmored ? centerpieceArmoredImg : centerpieceImg;
+    const baseImg = isDefeat ? defeatCgImg : (isArmored ? centerpieceArmoredImg : centerpieceImg);
     ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
-    // If Chest Armor is Broken -> Draw Dynamic "Puru-Puru" Bust Sprites!
-    if (state.boss.chestArmorBroken) {
+    // If Chest Armor is Broken AND not in Defeat CG mode -> Draw Dynamic "Puru-Puru" Bust Sprites!
+    if (state.boss.chestArmorBroken && !isDefeat) {
       const drawSpringBustPatch = (b) => {
         const disp = Math.hypot(b.dx, b.dy);
         ctx.save();
@@ -1339,23 +1508,25 @@ function renderTable() {
       }
     }
 
-    // Face Patch Compositing
+    // Face Patch Compositing (Skip if in Defeat CG)
     let activePatchKey = null;
-    const isTalking = state.boss.talkTimer > 0;
-    const talkPhase = Math.floor(state.boss.animTick / 5) % 3;
-    const isBriefFlinch = state.boss.expressionTimer > 38;
+    if (!isDefeat) {
+      const isTalking = state.boss.talkTimer > 0;
+      const talkPhase = Math.floor(state.boss.animTick / 5) % 3;
+      const isBriefFlinch = state.boss.expressionTimer > 38;
 
-    if (state.boss.expression === "angry_emp" || state.boss.expression === "shock") {
-      activePatchKey = isBriefFlinch ? "shout" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
-    } else if (state.boss.expression === "blush") {
-      activePatchKey = isBriefFlinch ? "wince" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
-    } else if (state.boss.winkTimer > 0) {
-      activePatchKey = "wink";
-    } else if (state.boss.blinkTimer <= 0 && state.boss.blinkTimer >= -5) {
-      activePatchKey = "blink";
-    } else if (isTalking) {
-      if (talkPhase === 0) activePatchKey = "talk";
-      else if (talkPhase === 1) activePatchKey = "talk_sm";
+      if (state.boss.expression === "angry_emp" || state.boss.expression === "shock") {
+        activePatchKey = isBriefFlinch ? "shout" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
+      } else if (state.boss.expression === "blush") {
+        activePatchKey = isBriefFlinch ? "wince" : ((isTalking && talkPhase === 0) ? "talk" : "open_blush");
+      } else if (state.boss.winkTimer > 0) {
+        activePatchKey = "wink";
+      } else if (state.boss.blinkTimer <= 0 && state.boss.blinkTimer >= -5) {
+        activePatchKey = "blink";
+      } else if (isTalking) {
+        if (talkPhase === 0) activePatchKey = "talk";
+        else if (talkPhase === 1) activePatchKey = "talk_sm";
+      }
     }
 
     if (activePatchKey && facePatchImgs[activePatchKey] && facePatchImgs[activePatchKey].complete) {
@@ -1367,263 +1538,311 @@ function renderTable() {
     }
   }
 
-  // Draw Gimmick Overlays
-  const drawRingGimmick = (g, color, label, active = true) => {
+  // Stage Clear Cinematic Status Flags
+  const isPostWhiteout = state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 105;
+  const isShattered = state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 25;
+
+  // Billowing Smoke Clouds (Drawn over centerpiece/defeat CG)
+  if (state.clearSequence && state.clearSequence.smokeClouds.length > 0) {
     ctx.save();
-    ctx.strokeStyle = g.flash > 0 ? "#ffffff" : color;
-    ctx.lineWidth = g.flash > 0 ? 3.5 : 2;
-    ctx.setLineDash(active ? [] : [4, 4]);
-    ctx.beginPath();
-    ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
-    ctx.stroke();
-    if (g.flash > 0) {
-      ctx.fillStyle = "rgba(230, 255, 0, 0.35)";
-      ctx.fill();
-    }
-    if (label) {
-      ctx.fillStyle = "#e6ff00";
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(label, g.x, g.y - g.r - 4);
-    }
-    ctx.restore();
-  };
-
-  drawRingGimmick(state.boss.droneL, "#00f5d4", "DRONE");
-  drawRingGimmick(state.boss.droneR, "#00f5d4", "DRONE");
-  drawRingGimmick(state.boss.earL, state.boss.leftEarLit ? "#e6ff00" : "#ff1493", state.boss.leftEarLit ? "EAR:OK" : "EAR-L");
-  drawRingGimmick(state.boss.earR, state.boss.rightEarLit ? "#e6ff00" : "#ff1493", state.boss.rightEarLit ? "EAR:OK" : "EAR-R");
-
-  // Shoulder Armor HP
-  [
-    { pod: state.boss.podL, hp: state.boss.leftShoulderHP, tag: "ARMOR-L" },
-    { pod: state.boss.podR, hp: state.boss.rightShoulderHP, tag: "ARMOR-R" }
-  ].forEach(({ pod, hp, tag }) => {
-    const col = hp > 0 ? "#ff1493" : "#00f5d4";
-    drawRingGimmick(pod, col, hp > 0 ? `${tag}[${"■".repeat(hp)}]` : "BREAK!", hp > 0);
-  });
-
-  // Chest Core Gem
-  ctx.save();
-  const core = state.boss.core;
-  ctx.strokeStyle = core.flash > 0 ? "#ffffff" : (state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4"));
-  ctx.lineWidth = (state.phase === 3 || state.boss.coreUnlocked) ? 3 : 2;
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const ang = (Math.PI / 3) * i - Math.PI / 6;
-    const px = core.x + Math.cos(ang) * core.r;
-    const py = core.y + Math.sin(ang) * core.r;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.stroke();
-  ctx.fillStyle = state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4");
-  ctx.font = "bold 10px monospace";
-  ctx.textAlign = "center";
-  ctx.fillText(state.phase === 3 ? `KO HIT[${state.boss.coreHP}]` : (state.boss.coreUnlocked ? "★JACKPOT★" : "CORE"), core.x, core.y - core.r - 5);
-  ctx.restore();
-
-  // Draw Permanent Upgrades
-  // Sub-Bumpers
-  if (state.perm.subBumpers > 0) {
-    [
-      { x: 146, y: 465, r: 15 },
-      { x: 250, y: 465, r: 15 }
-    ].forEach(sb => {
+    state.clearSequence.smokeClouds.forEach(smk => {
       ctx.save();
-      ctx.fillStyle = "rgba(0, 245, 212, 0.22)";
-      ctx.strokeStyle = "#00f5d4";
+      ctx.globalAlpha = smk.alpha;
+      const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
+      grad.addColorStop(0, smk.color);
+      grad.addColorStop(0.65, smk.color);
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  // Draw Gimmick Overlays (Hidden after whiteout purge)
+  if (!isPostWhiteout) {
+    const drawRingGimmick = (g, color, label, active = true) => {
+      ctx.save();
+      ctx.strokeStyle = g.flash > 0 ? "#ffffff" : color;
+      ctx.lineWidth = g.flash > 0 ? 3.5 : 2;
+      ctx.setLineDash(active ? [] : [4, 4]);
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+      ctx.stroke();
+      if (g.flash > 0) {
+        ctx.fillStyle = "rgba(230, 255, 0, 0.35)";
+        ctx.fill();
+      }
+      if (label) {
+        ctx.fillStyle = "#e6ff00";
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(label, g.x, g.y - g.r - 4);
+      }
+      ctx.restore();
+    };
+
+    drawRingGimmick(state.boss.droneL, "#00f5d4", "DRONE");
+    drawRingGimmick(state.boss.droneR, "#00f5d4", "DRONE");
+    drawRingGimmick(state.boss.earL, state.boss.leftEarLit ? "#e6ff00" : "#ff1493", state.boss.leftEarLit ? "EAR:OK" : "EAR-L");
+    drawRingGimmick(state.boss.earR, state.boss.rightEarLit ? "#e6ff00" : "#ff1493", state.boss.rightEarLit ? "EAR:OK" : "EAR-R");
+
+    // Shoulder Armor HP
+    [
+      { pod: state.boss.podL, hp: state.boss.leftShoulderHP, tag: "ARMOR-L" },
+      { pod: state.boss.podR, hp: state.boss.rightShoulderHP, tag: "ARMOR-R" }
+    ].forEach(({ pod, hp, tag }) => {
+      const col = hp > 0 ? "#ff1493" : "#00f5d4";
+      drawRingGimmick(pod, col, hp > 0 ? `${tag}[${"■".repeat(hp)}]` : "BREAK!", hp > 0);
+    });
+
+    // Chest Core Gem
+    ctx.save();
+    const core = state.boss.core;
+    ctx.strokeStyle = core.flash > 0 ? "#ffffff" : (state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4"));
+    ctx.lineWidth = (state.phase === 3 || state.boss.coreUnlocked) ? 3 : 2;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 3) * i - Math.PI / 6;
+      const px = core.x + Math.cos(ang) * core.r;
+      const py = core.y + Math.sin(ang) * core.r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillStyle = state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4");
+    ctx.font = "bold 10px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(state.phase === 3 ? `KO HIT[${state.boss.coreHP}]` : (state.boss.coreUnlocked ? "★JACKPOT★" : "CORE"), core.x, core.y - core.r - 5);
+    ctx.restore();
+
+    // Draw Permanent Upgrades
+    // Sub-Bumpers
+    if (state.perm.subBumpers > 0) {
+      [
+        { x: 146, y: 465, r: 15 },
+        { x: 250, y: 465, r: 15 }
+      ].forEach(sb => {
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 245, 212, 0.22)";
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(sb.x, sb.y, sb.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#e6ff00";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`⚡Lv${state.perm.subBumpers}`, sb.x, sb.y + 3);
+        ctx.restore();
+      });
+    }
+
+    // Laser Kickbacks
+    if (state.perm.kickbackL > 0) {
+      ctx.save();
+      ctx.strokeStyle = state.perm.kickbackL_charges > 0 ? "#00f5d4" : "#442255";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(18, 558);
+      ctx.lineTo(44, 558);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (state.perm.kickbackR > 0) {
+      ctx.save();
+      ctx.strokeStyle = state.perm.kickbackR_charges > 0 ? "#00f5d4" : "#442255";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(352, 558);
+      ctx.lineTo(378, 558);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Center Post (with Durability Bar!)
+    if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0) {
+      const postR = 7 + state.perm.centerPost * 3.5;
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 245, 212, 0.35)";
+      ctx.strokeStyle = "#e6ff00";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(sb.x, sb.y, sb.r, 0, Math.PI * 2);
+      ctx.arc(198, 614, postR, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#e6ff00";
+      ctx.fillStyle = "#ffffff";
       ctx.font = "bold 9px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(`⚡Lv${state.perm.subBumpers}`, sb.x, sb.y + 3);
+      ctx.fillText(`HP:${state.perm.centerPostHP}`, 198, 638);
+      ctx.restore();
+    }
+  }
+
+  // Walls & Neon Rails (Or Shattered Pieces during Stage Clear)
+  if (!isShattered && !isPostWhiteout) {
+    ctx.save();
+    ctx.strokeStyle = "#ff1493";
+    ctx.lineWidth = 3;
+    TABLE_WALLS.forEach(w => {
+      ctx.beginPath();
+      ctx.moveTo(w.x1, w.y1);
+      ctx.lineTo(w.x2, w.y2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  } else if (isShattered && !isPostWhiteout) {
+    // Render flying shattered wall shards!
+    ctx.save();
+    state.clearSequence.shatterPieces.forEach(p => {
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 3;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.beginPath();
+      ctx.moveTo(-p.len / 2, 0);
+      ctx.lineTo(p.len / 2, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  // Flippers, Capsules, Plunger & Balls (Hidden after whiteout purge)
+  if (!isPostWhiteout) {
+    // Draw Flippers
+    const flippers = getFlippers();
+    flippers.forEach((f, idx) => {
+      const st = flipperState[idx];
+      const x2 = f.px + Math.cos(st.angle) * f.len;
+      const y2 = f.py + Math.sin(st.angle) * f.len;
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.strokeStyle = state.magnetActive ? "#e6ff00" : "#00f5d4";
+      ctx.lineWidth = 11;
+      ctx.beginPath();
+      ctx.moveTo(f.px, f.py);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(f.px, f.py);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#e6ff00";
+      ctx.beginPath();
+      ctx.arc(f.px, f.py, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Draw Floating Hologram Capsules (Plan A)
+    state.capsules.forEach(cap => {
+      ctx.save();
+      const w = 44;
+      const h = 20;
+      const alpha = (cap.life < 180 && Math.floor(cap.life / 8) % 2 === 0) ? 0.35 : 1.0;
+      ctx.globalAlpha = alpha;
+      ctx.translate(cap.x, cap.y);
+
+      ctx.fillStyle = "#160638";
+      ctx.strokeStyle = cap.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = cap.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 + 2, -h / 2 + 2, 8, h - 4, 4);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(cap.label, 3, 3);
+      ctx.restore();
+    });
+
+    // Plunger Visualizer in Shooter Lane (x: 393, y: 580..635)
+    if (state.plunger.waitingForLaunch || state.plunger.pulling) {
+      ctx.save();
+      const pullOffset = (state.plunger.power / 100) * 32;
+      const py = 592 + pullOffset;
+
+      // Spring coils behind plunger
+      ctx.strokeStyle = "#e6ff00";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(393, py + 12);
+      const coils = 6;
+      for (let i = 0; i <= coils; i++) {
+        const cy = py + 12 + (i / coils) * (635 - (py + 12));
+        const cx = 393 + (i % 2 === 0 ? -6 : 6);
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+
+      // Plunger head
+      ctx.fillStyle = state.plunger.pulling ? "#ff1493" : "#00f5d4";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.fillRect(386, py, 14, 12);
+      ctx.strokeRect(386, py, 14, 12);
+
+      // Guide text and pulse arrow when ready
+      if (state.plunger.waitingForLaunch && !state.plunger.pulling) {
+        const bounce = Math.sin(state.boss.animTick * 0.15) * 4;
+        ctx.fillStyle = "#e6ff00";
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("▼", 393, 545 + bounce);
+        ctx.fillText("PULL", 393, 532 + bounce);
+      } else if (state.plunger.pulling) {
+        // Power percentage
+        ctx.fillStyle = "#ff1493";
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.floor(state.plunger.power)}%`, 393, 545);
+      }
+      ctx.restore();
+    }
+
+    // Draw Balls
+    state.balls.forEach(ball => {
+      ball.trail.forEach((pt, idx) => {
+        const alpha = (idx + 1) / ball.trail.length;
+        ctx.fillStyle = state.fever.active
+          ? `rgba(255, 20, 147, ${alpha * 0.5})`
+          : `rgba(0, 245, 212, ${alpha * 0.38})`;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, ball.r * (0.4 + alpha * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.save();
+      ctx.fillStyle = state.overdriveActive ? "#e6ff00" : "#ffffff";
+      ctx.strokeStyle = state.fever.active ? "#e6ff00" : (state.burstTimer > 0 ? "#ff1493" : "#00f5d4");
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
       ctx.restore();
     });
   }
-
-  // Laser Kickbacks
-  if (state.perm.kickbackL > 0) {
-    ctx.save();
-    ctx.strokeStyle = state.perm.kickbackL_charges > 0 ? "#00f5d4" : "#442255";
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(18, 558);
-    ctx.lineTo(44, 558);
-    ctx.stroke();
-    ctx.restore();
-  }
-  if (state.perm.kickbackR > 0) {
-    ctx.save();
-    ctx.strokeStyle = state.perm.kickbackR_charges > 0 ? "#00f5d4" : "#442255";
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(352, 558);
-    ctx.lineTo(378, 558);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Center Post (with Durability Bar!)
-  if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0) {
-    const postR = 7 + state.perm.centerPost * 3.5;
-    ctx.save();
-    ctx.fillStyle = "rgba(0, 245, 212, 0.35)";
-    ctx.strokeStyle = "#e6ff00";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(198, 614, postR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 9px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(`HP:${state.perm.centerPostHP}`, 198, 638);
-    ctx.restore();
-  }
-
-  // Walls & Neon Rails
-  ctx.save();
-  ctx.strokeStyle = "#ff1493";
-  ctx.lineWidth = 3;
-  TABLE_WALLS.forEach(w => {
-    ctx.beginPath();
-    ctx.moveTo(w.x1, w.y1);
-    ctx.lineTo(w.x2, w.y2);
-    ctx.stroke();
-  });
-  ctx.restore();
-
-  // Draw Flippers
-  const flippers = getFlippers();
-  flippers.forEach((f, idx) => {
-    const st = flipperState[idx];
-    const x2 = f.px + Math.cos(st.angle) * f.len;
-    const y2 = f.py + Math.sin(st.angle) * f.len;
-
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.strokeStyle = state.magnetActive ? "#e6ff00" : "#00f5d4";
-    ctx.lineWidth = 11;
-    ctx.beginPath();
-    ctx.moveTo(f.px, f.py);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(f.px, f.py);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#e6ff00";
-    ctx.beginPath();
-    ctx.arc(f.px, f.py, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-
-  // Draw Floating Hologram Capsules (Plan A)
-  state.capsules.forEach(cap => {
-    ctx.save();
-    const w = 44;
-    const h = 20;
-    const alpha = (cap.life < 180 && Math.floor(cap.life / 8) % 2 === 0) ? 0.35 : 1.0;
-    ctx.globalAlpha = alpha;
-    ctx.translate(cap.x, cap.y);
-
-    ctx.fillStyle = "#160638";
-    ctx.strokeStyle = cap.color;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.roundRect(-w / 2, -h / 2, w, h, 8);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = cap.color;
-    ctx.beginPath();
-    ctx.roundRect(-w / 2 + 2, -h / 2 + 2, 8, h - 4, 4);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 9px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(cap.label, 3, 3);
-    ctx.restore();
-  });
-
-  // Plunger Visualizer in Shooter Lane (x: 393, y: 580..635)
-  if (state.plunger.waitingForLaunch || state.plunger.pulling) {
-    ctx.save();
-    const pullOffset = (state.plunger.power / 100) * 32;
-    const py = 592 + pullOffset;
-
-    // Spring coils behind plunger
-    ctx.strokeStyle = "#e6ff00";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(393, py + 12);
-    const coils = 6;
-    for (let i = 0; i <= coils; i++) {
-      const cy = py + 12 + (i / coils) * (635 - (py + 12));
-      const cx = 393 + (i % 2 === 0 ? -6 : 6);
-      ctx.lineTo(cx, cy);
-    }
-    ctx.stroke();
-
-    // Plunger head
-    ctx.fillStyle = state.plunger.pulling ? "#ff1493" : "#00f5d4";
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
-    ctx.fillRect(386, py, 14, 12);
-    ctx.strokeRect(386, py, 14, 12);
-
-    // Guide text and pulse arrow when ready
-    if (state.plunger.waitingForLaunch && !state.plunger.pulling) {
-      const bounce = Math.sin(state.boss.animTick * 0.15) * 4;
-      ctx.fillStyle = "#e6ff00";
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("▼", 393, 545 + bounce);
-      ctx.fillText("PULL", 393, 532 + bounce);
-    } else if (state.plunger.pulling) {
-      // Power percentage
-      ctx.fillStyle = "#ff1493";
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(`${Math.floor(state.plunger.power)}%`, 393, 545);
-    }
-    ctx.restore();
-  }
-
-  // Draw Balls
-  state.balls.forEach(ball => {
-    ball.trail.forEach((pt, idx) => {
-      const alpha = (idx + 1) / ball.trail.length;
-      ctx.fillStyle = state.fever.active
-        ? `rgba(255, 20, 147, ${alpha * 0.5})`
-        : `rgba(0, 245, 212, ${alpha * 0.38})`;
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, ball.r * (0.4 + alpha * 0.5), 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    ctx.save();
-    ctx.fillStyle = state.overdriveActive ? "#e6ff00" : "#ffffff";
-    ctx.strokeStyle = state.fever.active ? "#e6ff00" : (state.burstTimer > 0 ? "#ff1493" : "#00f5d4");
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  });
 
   // Particles & Popups
   state.particles.forEach(p => {
@@ -1640,6 +1859,14 @@ function renderTable() {
     ctx.fillText(pop.text, pop.x, pop.y);
     ctx.restore();
   });
+
+  // Blinding Whiteout Flash (Blinds table, then clears to reveal Defeat CG)
+  if (state.clearSequence && state.clearSequence.active && state.clearSequence.whiteoutAlpha > 0) {
+    ctx.save();
+    ctx.fillStyle = `rgba(255, 255, 255, ${state.clearSequence.whiteoutAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -2054,15 +2281,23 @@ document.getElementById("btnReset").addEventListener("click", () => {
 const modal = document.getElementById("clearModal");
 if (modal) {
   document.getElementById("btnClearReplay").addEventListener("click", () => {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    modal.classList.remove("opacity-100");
+    modal.classList.add("opacity-0");
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }, 200);
     state = createInitialState();
     prepareBallForLaunch();
     updateHUD();
   });
   document.getElementById("btnClearNext").addEventListener("click", () => {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    modal.classList.remove("opacity-100");
+    modal.classList.add("opacity-0");
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }, 200);
     state = createInitialState();
     prepareBallForLaunch();
     updateHUD();

@@ -309,18 +309,20 @@ window.Stage2 = {
         holo.beamEndX = endPt.x;
         holo.beamEndY = endPt.y;
 
-        // チャージスパーク粒子
-        if (Math.random() < 0.6) {
+        // チャージスパーク・エネルギー収束粒子
+        const pCount = holo.isLocked ? 3 : 2;
+        for (let i = 0; i < pCount; i++) {
           const ca = Math.random() * Math.PI * 2;
-          const cr = 24 + Math.random() * 16;
+          const cr = 18 + Math.random() * 26;
+          const speed = holo.isLocked ? 4.5 : 3.0;
           state.particles.push({
             x: holo.x + Math.cos(ca) * cr,
             y: holo.y + Math.sin(ca) * cr,
-            vx: -Math.cos(ca) * 3.0,
-            vy: -Math.sin(ca) * 3.0,
-            color: holo.isLocked ? "#ff0055" : "#ff007f",
-            life: 12,
-            scale: holo.isLocked ? 1.4 : 1.0
+            vx: -Math.cos(ca) * speed,
+            vy: -Math.sin(ca) * speed,
+            color: holo.isLocked ? (Math.random() < 0.5 ? "#ffffff" : "#ff0055") : (Math.random() < 0.5 ? "#00f5d4" : "#ff007f"),
+            life: 10,
+            scale: holo.isLocked ? 1.5 : 1.1
           });
         }
 
@@ -784,8 +786,9 @@ window.Stage2 = {
     ctx.restore();
   },
 
-  renderTargets(ctx, state, animTick) {
+  renderTargets(ctx, state, engine) {
     if (!state.boss) return;
+    const animTick = (typeof engine === "number") ? engine : (performance.now() * 0.06);
 
     const drawGuide = (x, y, r, color, flash, rot, label, sub) => {
       ctx.save();
@@ -877,38 +880,79 @@ window.Stage2 = {
       ctx.restore();
     }
 
-    // 2. 左手奥ホログラム（照準＆レーザービーム描画）
+    // 2. 左手奥ホログラム（ターゲット円は廃止し、ド派手なエネルギー充填＆レーザー放射エフェクト）
     const holo = state.boss.hologram;
     if (holo) {
-      drawGuide(holo.x, holo.y, holo.r, "#ff007f", holo.flash, animTick * 0.02, "HOLOGRAM", holo.laserState === "fire" ? "⚡LASER FIRE⚡" : (holo.laserState === "charge" ? "⚠️CHARGING" : "STANDBY"));
-
       const endPt = this.getLaserEndPoint(holo, 420, 660);
       const ex = holo.beamEndX || endPt.x;
       const ey = holo.beamEndY || endPt.y;
 
+      // --- エネルギー充填アニメーション ---
       if (holo.laserState === "charge") {
         ctx.save();
+        const chargeRatio = Math.max(0, Math.min(1, 1 - (holo.laserTimer / 55)));
+
+        // A. 収縮するエネルギーリング（外側から中心へ吸い込まれるインプロージョン）
+        for (let rIdx = 0; rIdx < 3; rIdx++) {
+          const phase = (animTick * 0.07 + rIdx * 0.33) % 1.0;
+          const ringRadius = (1.0 - phase) * 28 + 3;
+          ctx.strokeStyle = holo.isLocked ? `rgba(255, 0, 85, ${0.4 + phase * 0.6})` : `rgba(0, 245, 212, ${0.3 + phase * 0.5})`;
+          ctx.lineWidth = 1.5 + phase * 1.5;
+          ctx.beginPath();
+          ctx.arc(holo.x, holo.y, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // B. 中心プラズマコア（チャージ進行で巨大化＆激しく脈動）
+        const coreR = Math.max(2, 4 + chargeRatio * 9 + Math.sin(animTick * 0.4) * 2.5);
+
+        // コア外殻グロー
+        const outerR = Math.max(coreR + 2, coreR * 1.8);
+        const grad = ctx.createRadialGradient(holo.x, holo.y, 1, holo.x, holo.y, outerR);
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(0.4, holo.isLocked ? "#ff0055" : "#00f5d4");
+        grad.addColorStop(1, "rgba(255, 0, 127, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(holo.x, holo.y, outerR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // コア内核（高熱ホワイト）
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(holo.x, holo.y, coreR * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        // C. ロックオン臨界放電アーク（発射直前：中心から周囲へバチバチ放電）
         if (holo.isLocked) {
-          // ロックオン確定（発射直前）：警告パルスライン ＆ レティクル固定
+          ctx.strokeStyle = (Math.floor(animTick * 0.5) % 2 === 0) ? "#ffffff" : "#ff0055";
+          ctx.lineWidth = 1.8;
+          for (let a = 0; a < 4; a++) {
+            const baseAng = a * (Math.PI / 2) + animTick * 0.25;
+            const midR = 12 + Math.random() * 6;
+            const endR = 20 + Math.random() * 8;
+            ctx.beginPath();
+            ctx.moveTo(holo.x, holo.y);
+            ctx.lineTo(holo.x + Math.cos(baseAng + 0.3) * midR, holo.y + Math.sin(baseAng + 0.3) * midR);
+            ctx.lineTo(holo.x + Math.cos(baseAng - 0.2) * endR, holo.y + Math.sin(baseAng - 0.2) * endR);
+            ctx.stroke();
+          }
+
+          // 警告パルスエイムライン（赤白点滅）
           const isPulse = Math.floor(animTick * 0.4) % 2 === 0;
           ctx.strokeStyle = isPulse ? "#ff0055" : "#ffffff";
-          ctx.lineWidth = 2.0;
+          ctx.lineWidth = 2.2;
           ctx.beginPath();
           ctx.moveTo(holo.x, holo.y);
           ctx.lineTo(ex, ey);
           ctx.stroke();
 
-          // 画面端のロックオンマーカー
+          // 画面端のロックオンレティクル
           ctx.strokeStyle = "#ff0055";
           ctx.lineWidth = 2.0;
           ctx.beginPath();
           ctx.arc(ex, ey, 9, 0, Math.PI * 2);
           ctx.stroke();
-
-          ctx.font = "bold 9px monospace";
-          ctx.fillStyle = "#ff0055";
-          ctx.textAlign = "center";
-          ctx.fillText("⚠️LOCKED", holo.x, holo.y - holo.r - 8);
         } else {
           // 照準追跡中：ピンク破線エイムラインがボールをトラッキング！
           ctx.strokeStyle = "rgba(255, 0, 127, 0.75)";
@@ -926,11 +970,6 @@ window.Stage2 = {
           ctx.beginPath();
           ctx.arc(ex, ey, 5 + Math.sin(animTick * 0.1) * 2, 0, Math.PI * 2);
           ctx.stroke();
-
-          ctx.font = "bold 8px monospace";
-          ctx.fillStyle = "#ff007f";
-          ctx.textAlign = "center";
-          ctx.fillText("AIMING...", holo.x, holo.y - holo.r - 8);
         }
         ctx.restore();
       } else if (holo.laserState === "fire") {
@@ -961,7 +1000,21 @@ window.Stage2 = {
         ctx.lineTo(ex, ey);
         ctx.stroke();
 
-        // 4. 画面端での着弾衝撃波（巨大な光球・フレア）
+        // 4. 砲身マズルフレア（大閃光＆十字スターバースト）
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(holo.x, holo.y, 11 + Math.random() * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        // 十字光芒
+        ctx.moveTo(holo.x - 24, holo.y); ctx.lineTo(holo.x + 24, holo.y);
+        ctx.moveTo(holo.x, holo.y - 24); ctx.lineTo(holo.x, holo.y + 24);
+        ctx.stroke();
+
+        // 5. 画面端での着弾衝撃波（巨大な光球・フレア）
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
         ctx.arc(ex, ey, 8 + Math.random() * 4, 0, Math.PI * 2);

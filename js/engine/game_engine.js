@@ -133,6 +133,7 @@ window.GameEngine = {
       ballInLane.vy = -launchSpeed;
       ballInLane.vx = -0.3;
       this.state.plunger.waitingForLaunch = false;
+      if (this.state.boss) this.state.boss.winkTimer = 35;
 
       // Spring oscillation recoil impulse
       this.state.plunger.springVy = -p * 18;
@@ -255,6 +256,7 @@ window.GameEngine = {
     // Update Balls & Drain Check
     for (let bi = state.balls.length - 1; bi >= 0; bi--) {
       const ball = state.balls[bi];
+      if (!ball.trail) ball.trail = [];
       ball.trail.push({ x: ball.x, y: ball.y });
       if (ball.trail.length > 9) ball.trail.shift();
       if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
@@ -349,13 +351,21 @@ window.GameEngine = {
     }
 
     // Stage Background Artwork & Character Patches
-    if (this.currentStage) {
-      this.currentStage.renderBackground(ctx, state, this);
+    if (this.currentStage && this.currentStage.renderBackground) {
+      try {
+        this.currentStage.renderBackground(ctx, state, this);
+      } catch (err) {
+        console.error("renderBackground error:", err);
+      }
     }
 
     // Stage Interactive Cyber Target Guides
-    if (this.currentStage) {
-      this.currentStage.renderTargets(ctx, state, this);
+    if (this.currentStage && this.currentStage.renderTargets) {
+      try {
+        this.currentStage.renderTargets(ctx, state, this);
+      } catch (err) {
+        console.error("renderTargets error:", err);
+      }
     }
 
     // Walls & Neon Rails

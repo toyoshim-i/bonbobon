@@ -1106,9 +1106,9 @@ window.Stage1 = {
       }
     }
 
-    // Face Patch Compositing (瞬き・ダブル瞬き・ウインク・感情遷移シーケンス・口パク)
+    // Face Patch Compositing (安全ガード: ステージ1用パッチが原画と一致するまで非表示にして矩形ノイズ混入を防止)
     let activePatchKey = null;
-    if (!isDefeat) {
+    if (false && !isDefeat) {
       const fa = state.boss.faceAnim || {};
       const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
       const talkCycle = Math.floor(performance.now() * 0.009) % 3;
@@ -1121,7 +1121,6 @@ window.Stage1 = {
       } else if (fa.winkFrame > 0) {
         activePatchKey = "wink";
       } else if (fa.blinkFrame > 0) {
-        // ダブル瞬き対応 (20..13: 1回目瞬き, 12..8: 薄目開き, 7..0: 2回目瞬き)
         if (fa.blinkFrame > 12 || fa.blinkFrame <= 7) {
           activePatchKey = "blink";
         } else {

@@ -238,27 +238,23 @@ window.Stage2 = {
         }
       }
 
-      // アイドル時の自然な表情アニメーション（瞬き・ダブル瞬き・ウインク・吐息）
+      // アイドル時の自然な表情アニメーション（瞬き・ウインク・吐息）
       if (state.boss.expression === "normal") {
         fa.idleTimer = (fa.idleTimer || 0) - 1;
         if (fa.idleTimer <= 0) {
           const r = Math.random();
-          if (r < 0.45) {
-            // パチッ（単発瞬き 9フレーム）
-            fa.blinkFrame = 9;
-            fa.idleTimer = 85 + Math.floor(Math.random() * 80);
-          } else if (r < 0.72) {
-            // パチパチッ（ダブル瞬き 20フレーム）
-            fa.blinkFrame = 20;
-            fa.idleTimer = 110 + Math.floor(Math.random() * 90);
-          } else if (r < 0.88) {
-            // 自信満々の放電ウインク（28フレーム）
-            fa.winkFrame = 28;
-            fa.idleTimer = 140 + Math.floor(Math.random() * 110);
+          if (r < 0.55) {
+            // 自然な単発瞬き（16フレーム: 閉じ始め3f -> 完全閉じ10f -> 開き3f）
+            fa.blinkFrame = 16;
+            fa.idleTimer = 130 + Math.floor(Math.random() * 110);
+          } else if (r < 0.82) {
+            // 自信満々の放電ウインク（45フレーム）
+            fa.winkFrame = 45;
+            fa.idleTimer = 160 + Math.floor(Math.random() * 120);
           } else {
-            // ふと口が動く吐息（16フレーム）
-            fa.talkFrame = 16;
-            fa.idleTimer = 95 + Math.floor(Math.random() * 85);
+            // ふと口が動く吐息・呼吸（24フレーム）
+            fa.talkFrame = 24;
+            fa.idleTimer = 140 + Math.floor(Math.random() * 100);
           }
         }
       }
@@ -616,9 +612,9 @@ window.Stage2 = {
             Particles.add(state, ant.x, ant.y, "#00f5d4", 18, 5.0);
             Particles.add(state, ant.x, ant.y, "#e6ff00", 12, 4.0);
             this.setExpressionSequence(state, [
-              { expr: "shock", frames: 16 },
-              { expr: "shout", frames: 18 },
-              { expr: "wince", frames: 22 }
+              { expr: "shock", frames: 20 },
+              { expr: "shout", frames: 24 },
+              { expr: "wince", frames: 32 }
             ]);
             Systems.addScore(state, 4000, ant.x, ant.y, "⚡ELECTRIC SHOCK REPEL!⚡");
           });
@@ -646,17 +642,17 @@ window.Stage2 = {
         if (sh.hp > 0) {
           sh.hp--;
           this.setExpressionSequence(state, [
-            { expr: "wince", frames: 22 },
-            { expr: "talk_sm", frames: 16 }
+            { expr: "wince", frames: 28 },
+            { expr: "talk_sm", frames: 20 }
           ]);
           Systems.addScore(state, 3000, sh.x, sh.y, `${sideLabel} SHOULDER! HP:${sh.hp}`);
           if (sh.hp === 0) {
             sh.broken = true;
             Particles.triggerArmorBreakEffect(state, sideLabel.toLowerCase() + "_shoulder", sh.x, sh.y);
             this.setExpressionSequence(state, [
-              { expr: "shock", frames: 20 },
-              { expr: "shout", frames: 25 },
-              { expr: "wince", frames: 35 }
+              { expr: "shock", frames: 25 },
+              { expr: "shout", frames: 30 },
+              { expr: "wince", frames: 45 }
             ]);
             UI.showCutin(`💥【${sideLabel}肩装甲大破！】💥<br>肩部装甲パージ！ +30,000pts ボーナス！`, 200);
             Systems.addScore(state, 30000, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
@@ -677,8 +673,8 @@ window.Stage2 = {
         if (window.sfx) window.sfx.metalBumper();
         Particles.add(state, elb.x, elb.y, "#e6ff00", 16, 4.5);
         this.setExpressionSequence(state, [
-          { expr: "wince", frames: 20 },
-          { expr: "talk_sm", frames: 14 }
+          { expr: "wince", frames: 25 },
+          { expr: "talk_sm", frames: 18 }
         ]);
         Systems.addScore(state, 3500, elb.x, elb.y, `⚡${sideLabel} ELBOW DEFLECT!`);
       });
@@ -699,9 +695,9 @@ window.Stage2 = {
         Particles.spawnHeart(state, bust.x, bust.y, false);
 
         this.setExpressionSequence(state, [
-          { expr: "shock", frames: 14 },
-          { expr: "wince", frames: 18 },
-          { expr: "open_blush", frames: 55 }
+          { expr: "shock", frames: 18 },
+          { expr: "wince", frames: 24 },
+          { expr: "open_blush", frames: 70 }
         ]);
         state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 30);
 
@@ -736,9 +732,9 @@ window.Stage2 = {
         }
 
         this.setExpressionSequence(state, [
-          { expr: "shock", frames: 14 },
-          { expr: "wince", frames: 22 },
-          { expr: "open_blush", frames: 35 }
+          { expr: "shock", frames: 18 },
+          { expr: "wince", frames: 25 },
+          { expr: "open_blush", frames: 55 }
         ]);
         Systems.addScore(state, 4500, hip.x, hip.y, "⚡HIP CYBER BUMPER!⚡");
       });
@@ -767,7 +763,7 @@ window.Stage2 = {
           Particles.add(state, ball.x, ball.y, "#00f5d4", 10, 4.0);
 
           this.setExpressionSequence(state, [
-            { expr: "wink", frames: 35 }
+            { expr: "wink", frames: 45 }
           ]);
           Systems.addScore(state, 3500, ball.x, ball.y, `⚡${earName} CAT EAR BOUNCE!⚡`);
           return;
@@ -974,30 +970,53 @@ window.Stage2 = {
       }
     }
 
-    // 5. Dynamic Face Expression Patch (瞬き・ダブル瞬き・ウインク・感情遷移シーケンス・口パク)
+    // 5. Dynamic Face Expression Patch (透過アルファスプライトによる自然な瞬き・ウインク・感情遷移)
     const isDefeat = state.clearSequence && state.clearSequence.active;
     const fa = state.boss.faceAnim || {};
     const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
-    const talkCycle = Math.floor(performance.now() * 0.009) % 3;
+    // 自然なリズム（約200ms単位）での口パク
+    const talkCycle = Math.floor(performance.now() * 0.005) % 3;
 
     let activePatchKey = null;
+    let patchAlpha = 1.0;
+
     if (isDefeat) {
       activePatchKey = "open_blush";
+      patchAlpha = 1.0;
     } else if (state.boss.expression && state.boss.expression !== "normal") {
       activePatchKey = state.boss.expression;
+      patchAlpha = 1.0;
     } else if (isTalking) {
       activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
+      patchAlpha = 0.95;
     } else if (fa.winkFrame > 0) {
       activePatchKey = "wink";
-    } else if (fa.blinkFrame > 0) {
-      // ダブル瞬き対応 (20..13: 1回目瞬き, 12..8: 薄目開き, 7..0: 2回目瞬き)
-      if (fa.blinkFrame > 12 || fa.blinkFrame <= 7) {
-        activePatchKey = "blink";
+      if (fa.winkFrame > 41) {
+        patchAlpha = (45 - fa.winkFrame) / 4.0;
+      } else if (fa.winkFrame <= 4) {
+        patchAlpha = fa.winkFrame / 4.0;
       } else {
-        activePatchKey = null;
+        patchAlpha = 1.0;
+      }
+    } else if (fa.blinkFrame > 0) {
+      activePatchKey = "blink";
+      // 16フレームの自然な瞬きイージング（閉じ始め3f -> 完全閉じ10f -> 開き3f）
+      if (fa.blinkFrame > 13) {
+        patchAlpha = 0.4 + (16 - fa.blinkFrame) * 0.2; // 0.4 -> 0.8
+      } else if (fa.blinkFrame <= 3) {
+        patchAlpha = fa.blinkFrame * 0.25; // 0.75 -> 0.25
+      } else {
+        patchAlpha = 1.0; // しっかり目を閉じている
       }
     } else if (fa.talkFrame > 0) {
       activePatchKey = "talk_sm";
+      if (fa.talkFrame > 20) {
+        patchAlpha = (24 - fa.talkFrame) / 4.0;
+      } else if (fa.talkFrame <= 4) {
+        patchAlpha = fa.talkFrame / 4.0;
+      } else {
+        patchAlpha = 0.95;
+      }
     }
 
     if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
@@ -1005,7 +1024,11 @@ window.Stage2 = {
       const fy = IMG_BOX.y + (310 / 1376) * IMG_BOX.h;
       const fw = (190 / 768) * IMG_BOX.w;
       const fh = (170 / 1376) * IMG_BOX.h;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1.0, patchAlpha));
       ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
+      ctx.restore();
     }
 
     // 6. 背中ジェット噴射火炎は renderTargets にて最前面レイヤーで描画

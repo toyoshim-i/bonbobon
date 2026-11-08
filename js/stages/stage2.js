@@ -137,12 +137,12 @@ window.Stage2 = {
         rot: 0
       },
 
-      // 6. 背中ジェット噴射ノズル
-      // 原画 (478, 693) -> キャンバス (243, 340) に正確配置（斜め下方向へ噴射）
+      // 6. 背中ジェット噴射ノズル先端
+      // 原画 (475, 770) のノズル開口部先端に精密配置 -> キャンバス (241, 376)
       jet: {
-        x: 243,
-        y: 340,
-        angle: Math.PI * 0.38,
+        x: 241,
+        y: 376,
+        angle: Math.PI * 0.46,
         r: 26,
         active: false,
         timer: 0
@@ -532,21 +532,21 @@ window.Stage2 = {
       }
     }
 
-    // 6. 背中ジェット噴射機構（ノズル開口部から斜め下への指向性超音速噴流）
+    // 6. 背中ジェット噴射機構（ノズル先端開口部から斜め下への指向性超音速噴流）
     const jet = state.boss.jet;
     if (jet && jet.timer > 0) {
       jet.timer--;
       jet.active = true;
 
-      // ノズル軸方向（斜め右下）への高速火炎プラズマ粒子噴射
-      const jetAngle = jet.angle || (Math.PI * 0.38);
+      // ノズル軸方向（斜め下）への高速火炎プラズマ粒子噴射
+      const jetAngle = jet.angle || (Math.PI * 0.46);
       for (let i = 0; i < 4; i++) {
         const spread = (Math.random() - 0.5) * 0.35;
         const pAngle = jetAngle + spread;
         const speed = 7.0 + Math.random() * 8.5;
         state.particles.push({
-          x: jet.x + (Math.random() - 0.5) * 8,
-          y: jet.y + (Math.random() - 0.5) * 8,
+          x: jet.x + (Math.random() - 0.5) * 6,
+          y: jet.y + (Math.random() - 0.5) * 6,
           vx: Math.cos(pAngle) * speed,
           vy: Math.sin(pAngle) * speed,
           color: Math.random() < 0.5 ? "#ffffff" : (Math.random() < 0.6 ? "#00f5d4" : "#e6ff00"),
@@ -1359,55 +1359,65 @@ window.Stage2 = {
     drawCatEar(state.boss.catEarL, "L-EAR");
     drawCatEar(state.boss.catEarR, "R-EAR");
 
-    // 8. 背中ジェット噴射火炎（ノズル開口部から斜め下への指向性超音速プラズマ噴流）
+    // 8. 背中ジェット噴射火炎（ノズル先端開口部から吹き出る指向性超音速プラズマ噴流）
     const jet = state.boss.jet;
     if (jet && jet.active) {
       ctx.save();
       ctx.translate(jet.x, jet.y);
-      const jetAngle = jet.angle || (Math.PI * 0.38);
+      const jetAngle = jet.angle || (Math.PI * 0.46);
       ctx.rotate(jetAngle);
 
-      const pulse = 1.0 + Math.sin(performance.now() * 0.05) * 0.18;
-      const length = (68 + Math.random() * 22) * pulse;
-      const width = 17 * pulse;
+      const pulse = 1.0 + Math.sin(performance.now() * 0.05) * 0.12;
+      const length = (78 + Math.random() * 20) * pulse;
 
-      // A. 外層プラズマ火炎プルーム（マゼンタピンク〜シアン）
+      // ノズル開口部の半幅（原画のノズル口径にぴったり一致: 約 6px）
+      const nozzleR = 6.0;
+      // 噴出後の最大コーン幅（後方で適度に広がる）
+      const plumeMaxW = 16.0 * pulse;
+
+      // A. 外層プラズマ火炎プルーム（シアン〜マゼンタの超音速コーン）
       const gradPlume = ctx.createLinearGradient(0, 0, length, 0);
       gradPlume.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-      gradPlume.addColorStop(0.15, "rgba(0, 245, 212, 0.90)");
-      gradPlume.addColorStop(0.55, "rgba(255, 0, 127, 0.65)");
-      gradPlume.addColorStop(1, "rgba(255, 0, 127, 0)");
+      gradPlume.addColorStop(0.12, "rgba(0, 245, 212, 0.90)");
+      gradPlume.addColorStop(0.50, "rgba(255, 0, 127, 0.60)");
+      gradPlume.addColorStop(1.0, "rgba(255, 0, 127, 0)");
 
       ctx.fillStyle = gradPlume;
       ctx.beginPath();
-      ctx.moveTo(0, -width);
+      // ノズル開口部先端（幅 nozzleR*2）からスタート
+      ctx.moveTo(0, -nozzleR);
+      // 後方へ向かって広がり、末端へ収束
+      ctx.lineTo(length * 0.38, -plumeMaxW);
       ctx.lineTo(length, 0);
-      ctx.lineTo(0, width);
+      ctx.lineTo(length * 0.38, plumeMaxW);
+      ctx.lineTo(0, nozzleR);
       ctx.closePath();
       ctx.fill();
 
-      // B. 内層コア火炎（超音速高密度プラズマ：白熱シアン）
-      const coreLength = length * 0.65;
-      const coreWidth = width * 0.55;
-      const gradCore = ctx.createLinearGradient(0, 0, coreLength, 0);
+      // B. 内層コア火炎（超音速高密度白熱プラズマ芯）
+      const coreLen = length * 0.65;
+      const coreW = plumeMaxW * 0.48;
+      const gradCore = ctx.createLinearGradient(0, 0, coreLen, 0);
       gradCore.addColorStop(0, "#ffffff");
-      gradCore.addColorStop(0.4, "#00f5d4");
-      gradCore.addColorStop(1, "rgba(0, 245, 212, 0)");
+      gradCore.addColorStop(0.35, "rgba(0, 245, 212, 0.95)");
+      gradCore.addColorStop(1.0, "rgba(0, 245, 212, 0)");
 
       ctx.fillStyle = gradCore;
       ctx.beginPath();
-      ctx.moveTo(0, -coreWidth);
-      ctx.lineTo(coreLength, 0);
-      ctx.lineTo(0, coreWidth);
+      ctx.moveTo(0, -nozzleR * 0.65);
+      ctx.lineTo(coreLen * 0.32, -coreW);
+      ctx.lineTo(coreLen, 0);
+      ctx.lineTo(coreLen * 0.32, coreW);
+      ctx.lineTo(0, nozzleR * 0.65);
       ctx.closePath();
       ctx.fill();
 
       // C. ショックダイヤモンド（マッハディスク：3連ひし形衝撃波）
       for (let d = 1; d <= 3; d++) {
-        const dx = (length * 0.22) * d;
-        const dw = 5.5 * (1 - d * 0.22) * pulse;
-        const dh = 7.5 * (1 - d * 0.22) * pulse;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        const dx = (length * 0.19) * d;
+        const dw = 4.2 * (1 - d * 0.22) * pulse;
+        const dh = 5.5 * (1 - d * 0.22) * pulse;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
         ctx.beginPath();
         ctx.moveTo(dx - dw, 0);
         ctx.lineTo(dx, -dh);
@@ -1417,13 +1427,13 @@ window.Stage2 = {
         ctx.fill();
       }
 
-      // D. ノズル開口部リング
+      // D. ノズル先端開口部リング（金属リム＆白熱プラズマ縁）
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.ellipse(0, 0, 4, width * 0.85, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 2.5, nozzleR, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = "#00f5d4";
-      ctx.lineWidth = 2.0;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
       ctx.restore();

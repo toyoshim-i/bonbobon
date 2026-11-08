@@ -259,6 +259,8 @@ function prepareBallForLaunch() {
 }
 
 function spawnBall(x = 198, y = 260, vx = 0, vy = -7.5) {
+  // Cap active multiballs to 3 balls max to prevent endless cascading loops
+  if (state.balls.length >= 3) return;
   const jitter = (Math.random() - 0.5) * 1.5;
   state.balls.push({
     x,
@@ -1308,8 +1310,8 @@ function stepPhysics() {
           if (hit) {
             ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
             ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
-            ball.vx = hit.nx * 9.5;
-            ball.vy = hit.ny * 9.5;
+            ball.vx = hit.nx * 7.5;
+            ball.vy = hit.ny < 0 ? Math.max(-6.5, hit.ny * 7.5) : hit.ny * 7.5;
             sfx.metalBumper();
 
             if (state.phase === 2 && state.boss.chestArmorHP > 0) {
@@ -1335,7 +1337,7 @@ function stepPhysics() {
             } else {
               addScore(800, hit.cx, hit.cy, "CHEST SHIELD");
             }
-            addFever(6);
+            addFever(3);
           }
         } else {
           // EXPOSED SOFT BUST ("ぷるぷる" soft bounce + Heart Splash & Sexy SFX)
@@ -1392,7 +1394,8 @@ function stepPhysics() {
             ball.y = bObj.y + ny * (minDist + 2);
             if (!state.overdriveActive) {
               ball.vx = nx * kickSpeed;
-              ball.vy = ny * kickSpeed;
+              // Cap upward rebound speed so the ball returns to flippers naturally
+              ball.vy = ny < 0 ? Math.max(-7.2, ny * kickSpeed) : ny * kickSpeed;
             }
             bObj.flash = 12;
             onHit(bObj);
@@ -1405,11 +1408,11 @@ function stepPhysics() {
           { d: state.boss.droneR, hpKey: "droneR_HP", slot: 1, tag: "R-DRONE" }
         ].forEach(({ d, hpKey, slot, tag }) => {
           const isDestroyed = state.boss[hpKey] === 0;
-          const spd = isDestroyed ? 11.5 : 10.5;
+          const spd = isDestroyed ? 8.5 : 7.2;
           checkCircleBumper(d, spd, () => {
             sfx.metalBumper();
             state.droneComboCount++;
-            addFever(8);
+            addFever(4);
             addParticles(d.x, d.y, isDestroyed ? "#e6ff00" : "#00f5d4", 12, 4.5);
 
             if (state.phase === 1 && state.boss[hpKey] > 0) {
@@ -1472,7 +1475,7 @@ function stepPhysics() {
             addParticles(hit.qx, hit.qy, "#00f5d4", 6, 2.5);
 
             state.boss[litKey] = true;
-            addFever(12);
+            addFever(5);
 
             if (state.skillShotEligible) {
               state.skillShotEligible = false;
@@ -1503,11 +1506,11 @@ function stepPhysics() {
           { which: "R", pod: state.boss.podR, hpKey: "rightShoulderHP", droneKey: "droneR_HP", tag: "R-ARMOR" }
         ].forEach(({ which, pod, hpKey, droneKey, tag }) => {
           const isDestroyed = state.boss[hpKey] === 0;
-          const kickSpd = isDestroyed ? 13.5 : 10.5;
+          const kickSpd = isDestroyed ? 9.2 : 7.5;
           checkCircleBumper(pod, kickSpd, () => {
             if (state.boss[hpKey] > 0) {
               sfx.metalBumper();
-              addFever(8);
+              addFever(4);
               const shielded = state.phase === 1 && state.boss[droneKey] > 0;
               if (shielded) {
                 addScore(500, pod.x, pod.y, `${tag} SHIELDED`);
@@ -1528,14 +1531,14 @@ function stepPhysics() {
                 }
               }
             } else {
-              // Overheat Generator: Super-Kick Plasma Ricochet!
+              // Overheat Generator: Plasma Ricochet
               sfx.exSpark();
-              addFever(14);
-              addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
-              addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
+              addFever(5);
+              addParticles(pod.x, pod.y, "#00f5d4", 18, 5.0);
+              addParticles(pod.x, pod.y, "#e6ff00", 12, 4.0);
               addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
-              state.nudgeOffset.x = (Math.random() - 0.5) * 10;
-              state.nudgeOffset.y = (Math.random() - 0.5) * 8;
+              state.nudgeOffset.x = (Math.random() - 0.5) * 8;
+              state.nudgeOffset.y = (Math.random() - 0.5) * 6;
             }
             updateHUD();
           });
@@ -1547,9 +1550,9 @@ function stepPhysics() {
             { hip: state.boss.hipL, tag: "L-HIP", side: "L" },
             { hip: state.boss.hipR, tag: "R-HIP", side: "R" }
           ].forEach(({ hip, tag, side }) => {
-            checkCircleBumper(hip, 11.5, () => {
+            checkCircleBumper(hip, 7.5, () => {
               sfx.metalBumper();
-              addFever(10);
+              addFever(4);
               addParticles(hip.x, hip.y, "#ff66b2", 14, 4.5);
               addParticles(hip.x, hip.y, "#00f5d4", 8, 3.5);
               if (hip.hp > 0) {
@@ -1561,7 +1564,7 @@ function stepPhysics() {
                   addScore(8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
                   showCutin(`💥【${side === "L" ? "左" : "右"}腰ユニット過熱】<br>冷却系ダウン！ スコア倍率UP！`, 160);
                   state.baseMultiplier += 0.5;
-                  addFever(30);
+                  addFever(15);
                 }
               } else {
                 sfx.exSpark();
@@ -1572,36 +1575,64 @@ function stepPhysics() {
           });
         }
 
-        // Crotch Secret Delta Reactor Gimmick!
+        // Crotch Secret Delta Reactor Gimmick! (Deflects ball toward flippers; unlocks in Phase 2 or Fever!)
         const crotch = state.boss.crotch;
-        checkCircleBumper(crotch, 12.5, () => {
-          crotch.charge++;
-          sfx.burstTrigger();
-          state.boss.expression = "blush";
-          state.boss.expressionTimer = 80;
-          state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
-          addParticles(crotch.x, crotch.y, "#e6ff00", 20, 5.0);
-          addParticles(crotch.x, crotch.y, "#ff1493", 15, 4.0);
+        const dxCr = ball.x - crotch.x;
+        const dyCr = ball.y - crotch.y;
+        const distCr = Math.hypot(dxCr, dyCr);
+        if (distCr < ball.r + crotch.r && distCr > 0.001) {
+          const nx = dxCr / distCr;
+          const ny = dyCr / distCr;
+          ball.x = crotch.x + nx * (ball.r + crotch.r + 2);
+          ball.y = crotch.y + ny * (ball.r + crotch.r + 2);
 
-          if (crotch.charge < crotch.maxCharge) {
-            addScore(3000 * crotch.charge, crotch.x, crotch.y - 16, `⚡DELTA CHARGE ${crotch.charge}/${crotch.maxCharge}`);
-            addPopup(crotch.x, crotch.y - 30, "きゃっ！？ どこ狙ってんのよっ！", "#ff66b2", 1.05);
+          // Deflect downward/sideways toward flippers rather than launching high into the sky!
+          ball.vx = (nx >= 0 ? 1 : -1) * (4.2 + Math.random() * 2.2);
+          ball.vy = Math.max(3.2, ny * 4.5);
+          crotch.flash = 12;
+
+          const isUnlocked = state.phase >= 2 || state.fever.active;
+          if (!isUnlocked) {
+            // Shielded in Phase 1
             sfx.metalBumper();
+            addScore(1000, crotch.x, crotch.y - 16, "DELTA SHIELDED");
+            addPopup(crotch.x, crotch.y - 25, "きゃっ、そこは装甲の外でしょっ！", "#00f5d4", 0.95);
+          } else if (crotch.cooldown && crotch.cooldown > 0) {
+            sfx.metalBumper();
+            addScore(2000, crotch.x, crotch.y - 16, "CORE COOLING...");
           } else {
-            // Gimmick Triggered! DELTA OVERDRIVE & SECRET MULTIBALL!
-            crotch.charge = 0;
+            crotch.charge++;
             sfx.burstTrigger();
-            sfx.exSpark();
-            addScore(25000, crotch.x, crotch.y - 20, "★DELTA OVERDRIVE!! +25,000");
-            addPopup(crotch.x, crotch.y - 35, "「きゃあっ！？ 出力が暴走しちゃう……っ！！」", "#e6ff00", 1.25);
-            showCutin("⚡【DELTA REACTOR OVERLOAD!!】⚡<br>機体コア暴走！ 秘密のマルチボール＆フィーバー突入！", 220);
+            state.boss.expression = "blush";
+            state.boss.expressionTimer = 80;
+            state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 20);
+            addParticles(crotch.x, crotch.y, "#e6ff00", 18, 4.5);
+            addParticles(crotch.x, crotch.y, "#ff1493", 12, 3.5);
 
-            startFeverMode();
-            state.burstMultiplier = Math.max(state.burstMultiplier, 2.5);
-            state.burstTimer = 480; // 8 seconds of mega multiplier!
+            if (crotch.charge < crotch.maxCharge) {
+              addScore(3000 * crotch.charge, crotch.x, crotch.y - 16, `⚡DELTA CHARGE ${crotch.charge}/${crotch.maxCharge}`);
+              addPopup(crotch.x, crotch.y - 30, "きゃっ！？ どこ狙ってんのよっ！", "#ff66b2", 1.05);
+            } else {
+              // Gimmick Triggered! DELTA OVERDRIVE & MULTIBALL!
+              crotch.charge = 0;
+              crotch.cooldown = 60 * 15; // 15 seconds cooldown
+              sfx.burstTrigger();
+              sfx.exSpark();
+              addScore(25000, crotch.x, crotch.y - 20, "★DELTA OVERDRIVE!! +25,000");
+              addPopup(crotch.x, crotch.y - 35, "「きゃあっ！？ 出力が暴走しちゃう……っ！！」", "#e6ff00", 1.25);
+              showCutin("⚡【DELTA REACTOR OVERLOAD!!】⚡<br>機体コア暴走！ 秘密のマルチボール＆フィーバー突入！", 200);
+
+              // Spawn extra ball (Capped at 3 total balls on table)
+              if (state.balls.length < 3) {
+                spawnBall(crotch.x + (Math.random() - 0.5) * 16, crotch.y - 16, (Math.random() - 0.5) * 6, -6.5);
+              }
+              startFeverMode();
+              state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
+              state.burstTimer = 360; // 6 seconds of extra multiplier
+            }
           }
           updateHUD();
-        });
+        }
 
         function checkPhase1Clear() {
           if (state.boss.leftShoulderHP === 0 && state.boss.rightShoulderHP === 0 && state.phase === 1) {
@@ -1615,8 +1646,8 @@ function stepPhysics() {
         }
 
         // Chest Core Gem (Phase 3 Final Target)
-        checkCircleBumper(state.boss.core, 11.2, core => {
-          addFever(14);
+        checkCircleBumper(state.boss.core, 7.8, core => {
+          addFever(6);
           if (state.phase === 3) {
             state.boss.coreHP--;
             sfx.burstTrigger();
@@ -1795,6 +1826,10 @@ function stepPhysics() {
       g.rot += g.flash > 0 ? (0.28 + (g.flash / 12) * 0.18) : 0.035;
     }
   });
+
+  if (state.boss.crotch && state.boss.crotch.cooldown > 0) {
+    state.boss.crotch.cooldown--;
+  }
 
   updateDebrisAndEffects();
 }
@@ -2098,8 +2133,16 @@ function renderTable() {
 
     // 4. Crotch Secret Delta Reactor Gimmick!
     const cr = state.boss.crotch;
-    const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
-    drawCyberTargetGuide(cr.x, cr.y, cr.r, cr.charge > 0 ? "#e6ff00" : "#ff66b2", cr.flash, cr.rot, "DELTA CORE", `[${crChargeStr}]`);
+    const isUnlocked = state.phase >= 2 || state.fever.active;
+    if (isUnlocked) {
+      const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
+      const isCooling = cr.cooldown && cr.cooldown > 0;
+      const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
+      const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
+      drawCyberTargetGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "DELTA CORE", sub);
+    } else {
+      drawCyberTargetGuide(cr.x, cr.y, cr.r, "rgba(255, 102, 178, 0.45)", cr.flash, cr.rot, "DELTA", "🔒SHIELDED");
+    }
 
     // 5. Chest Core Gem Flash (Phase 3 Core Gem)
     if (state.boss.core.flash > 0) {

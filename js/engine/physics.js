@@ -204,16 +204,44 @@ window.Physics = {
     // Plunger resting lock
     if (ball.inShooterLane && state.plunger.waitingForLaunch) {
       ball.x = 393;
-      ball.y = 575 + (state.plunger.power / 100) * 28;
+      const headY = (state.plunger.springY || 575) - 6;
+      ball.y = headY - ball.r;
       ball.vx = 0;
       ball.vy = 0;
       return;
     }
 
-
     ball.vy += gravity;
     ball.x += ball.vx / SUBSTEPS;
     ball.y += ball.vy / SUBSTEPS;
+
+    // Shooter lane plunger spring catch & re-arm
+    if (ball.inShooterLane && !state.plunger.waitingForLaunch && ball.x >= 380 && ball.x <= 405) {
+      const tipY = (state.plunger.springY || 575) - 6;
+      const contactDist = (ball.y + ball.r) - tipY;
+      if (contactDist >= 0 && ball.vy > 0) {
+        ball.y = tipY - ball.r;
+        state.plunger.springVy = (state.plunger.springVy || 0) + Math.min(12, ball.vy * 0.7);
+        ball.vy = -ball.vy * 0.28;
+        ball.vx = 0;
+
+        if (Math.abs(ball.vy) > 0.6 && window.sfx) {
+          window.sfx.metalBumper();
+        }
+
+        // When ball velocity settles on the spring head, catch and re-arm launcher
+        if (Math.abs(ball.vy) < 0.5 && ball.y >= 555) {
+          state.plunger.waitingForLaunch = true;
+          ball.vx = 0;
+          ball.vy = 0;
+          ball.x = 393;
+          ball.y = tipY - ball.r;
+          Particles.addPopup(state, 393, 545, "RE-ARMED!", "#00f5d4", 1.0);
+          UI.updateHUD(state);
+          return;
+        }
+      }
+    }
 
     // Shooter lane exit check & one-way gate
     if (ball.inShooterLane && ball.x < 378 && ball.y < 170) {

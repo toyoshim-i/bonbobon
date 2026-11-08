@@ -43,7 +43,9 @@ window.GameEngine = {
       plunger: {
         power: 0,
         pulling: false,
-        waitingForLaunch: true
+        waitingForLaunch: true,
+        springY: 575,
+        springVy: 0
       },
 
       perm: {
@@ -114,22 +116,28 @@ window.GameEngine = {
     if (!this.state.plunger.pulling) return;
     this.state.plunger.pulling = false;
 
-    const currentPower = this.state.plunger.power || 75;
+    // Linear power based on charge duration / drag distance (respects slight taps)
+    const currentPower = Math.max(3, this.state.plunger.power);
     if (window.sfx) window.sfx.plungerLaunch(currentPower);
 
     const ballInLane = this.state.balls.find(b => b.inShooterLane);
     if (ballInLane) {
-      const p = Math.max(0.15, currentPower / 100);
-      const launchSpeed = 11.2 + p * 4.8;
+      const p = currentPower / 100;
+      // Complete linear launch speed: ~1.2 at minimal tap up to 16.8 at full 100%
+      const launchSpeed = 1.2 + p * 15.6;
       ballInLane.vy = -launchSpeed;
-      ballInLane.vx = -0.4;
+      ballInLane.vx = -0.3;
       this.state.plunger.waitingForLaunch = false;
 
-      if (p >= 0.68 && p <= 0.84) {
+      // Spring oscillation recoil impulse
+      this.state.plunger.springVy = -p * 18;
+
+      if (p >= 0.70 && p <= 0.86) {
         this.state.skillShotEligible = true;
       }
     }
     this.state.plunger.power = 0;
+    UI.updateHUD(this.state);
   },
 
   resetGame() {
@@ -172,14 +180,29 @@ window.GameEngine = {
       return;
     }
 
-    // Plunger power charge
+    // Plunger power charge & spring oscillation physics
     if (state.plunger.pulling) {
       const prevStep = Math.floor(state.plunger.power / 16);
-      state.plunger.power = Math.min(100, state.plunger.power + 2.2);
+      state.plunger.power = Math.min(100, state.plunger.power + 1.8);
       const nextStep = Math.floor(state.plunger.power / 16);
       if (nextStep > prevStep && window.sfx) {
         window.sfx.plungerPullClick();
       }
+      state.plunger.springY = 575 + (state.plunger.power / 100) * 36;
+      state.plunger.springVy = 0;
+
+      const pHint = document.getElementById("plungerBtnHint");
+      if (pHint) {
+        pHint.textContent = `POWER ${Math.round(state.plunger.power)}%`;
+        pHint.className = "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse";
+      }
+    } else {
+      // Natural spring-damper oscillation back to rest position (575)
+      const restY = 575;
+      const dy = restY - (state.plunger.springY || restY);
+      state.plunger.springVy = (state.plunger.springVy || 0) + dy * 0.32;
+      state.plunger.springVy *= 0.74;
+      state.plunger.springY = (state.plunger.springY || restY) + state.plunger.springVy;
     }
 
     // Burst Buff Timer
@@ -486,20 +509,47 @@ window.GameEngine = {
         ctx.restore();
       });
 
-      // Plunger Spring
+      // Plunger Coil Spring & Striker Plate (Always visible in shooter lane)
       ctx.save();
-      const plungerY = 575 + (state.plunger.power / 100) * 36;
-      ctx.strokeStyle = state.plunger.pulling ? "#e6ff00" : "#603090";
-      ctx.lineWidth = 4;
+      const plungerY = state.plunger.springY || 575;
+      const springBottomY = 635;
+      const springHeight = Math.max(10, springBottomY - plungerY);
+
+      // Draw Zigzag Spring Coil
+      ctx.strokeStyle = state.plunger.pulling ? "#e6ff00" : (state.plunger.waitingForLaunch ? "#00f5d4" : "#ff1493");
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.moveTo(393, 635);
+      ctx.moveTo(393, springBottomY);
+      const coils = 8;
+      for (let i = 1; i <= coils; i++) {
+        const segY = springBottomY - (springHeight / coils) * (i - 0.5);
+        const segX = i % 2 === 1 ? 388 : 398;
+        ctx.lineTo(segX, segY);
+      }
       ctx.lineTo(393, plungerY);
       ctx.stroke();
 
-      ctx.fillStyle = state.plunger.pulling ? "#ff1493" : "#00f5d4";
+      // Plunger Head / Striker Plate
+      ctx.fillStyle = state.plunger.pulling ? "#e6ff00" : (state.plunger.waitingForLaunch ? "#00f5d4" : "#ff1493");
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.rect(385, plungerY - 6, 16, 6);
+      if (ctx.roundRect) {
+        ctx.roundRect(385, plungerY - 6, 16, 6, 2);
+      } else {
+        ctx.rect(385, plungerY - 6, 16, 6);
+      }
       ctx.fill();
+      ctx.stroke();
+
+      // Vertical Power Charge Gauge Bar along Shooter Lane when pulling
+      if (state.plunger.pulling && state.plunger.power > 0) {
+        const gaugeH = (state.plunger.power / 100) * 120;
+        ctx.fillStyle = "rgba(230, 255, 0, 0.4)";
+        ctx.fillRect(402, 575 - gaugeH, 3, gaugeH);
+        ctx.fillStyle = "#e6ff00";
+        ctx.fillRect(401, 575 - gaugeH, 5, 2);
+      }
       ctx.restore();
 
       // Balls
@@ -548,8 +598,12 @@ window.GameEngine = {
 
   loop() {
     if (!this.isSimulationRunning) return;
-    this.stepPhysics();
-    this.renderTable();
+    try {
+      this.stepPhysics();
+      this.renderTable();
+    } catch (err) {
+      console.error("GameEngine loop error:", err);
+    }
     this.rafId = requestAnimationFrame(() => this.loop());
   },
 

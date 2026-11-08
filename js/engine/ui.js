@@ -115,6 +115,27 @@ window.UI = {
     if (window.currentStage && window.currentStage.updateStatusMonitor) {
       window.currentStage.updateStatusMonitor(state);
     }
+
+    // Plunger Button Status
+    const pBtn = document.getElementById("btnPlunger");
+    const pHint = document.getElementById("plungerBtnHint");
+    if (pBtn && pHint) {
+      if (state.plunger.waitingForLaunch) {
+        pBtn.classList.remove("opacity-40", "grayscale");
+        pBtn.classList.add("cursor-pointer");
+        if (state.plunger.pulling) {
+          pHint.textContent = `POWER ${Math.round(state.plunger.power)}%`;
+          pHint.className = "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse";
+        } else {
+          pHint.textContent = "引いて離す";
+          pHint.className = "text-[9px] text-[#00f5d4] leading-none mt-0.5";
+        }
+      } else {
+        pBtn.classList.add("opacity-40", "grayscale");
+        pHint.textContent = "発射済み";
+        pHint.className = "text-[9px] text-gray-400 leading-none mt-0.5";
+      }
+    }
   },
 
   initControls(engine) {
@@ -167,45 +188,35 @@ window.UI = {
       }
     });
 
-    // Touch / Button Bindings
+    // Touch / Button Bindings with Pointer Capture (Prevents accidental release on slight finger drift)
     const bindHold = (id, onDown, onUp) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener("pointerdown", e => { e.preventDefault(); onDown(); });
-      el.addEventListener("pointerup", e => { e.preventDefault(); onUp(); });
-      el.addEventListener("pointerleave", () => onUp());
-      el.addEventListener("pointercancel", () => onUp());
+      el.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        onDown();
+      });
+      const endHold = e => {
+        e.preventDefault();
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        onUp();
+      };
+      el.addEventListener("pointerup", endHold);
+      el.addEventListener("pointercancel", endHold);
     };
 
     bindHold("btnLeftFlip", () => setLeft(true), () => setLeft(false));
     bindHold("btnRightFlip", () => setRight(true), () => setRight(false));
 
-    // Plunger button
+    // Plunger button (Linear charge on hold, release on lift)
     const plungerBtn = document.getElementById("btnPlunger");
     if (plungerBtn) {
-      let plungerInterval = null;
-      plungerBtn.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        if (!engine.state.plunger.waitingForLaunch) return;
-        engine.state.plunger.pulling = true;
-        if (plungerInterval) clearInterval(plungerInterval);
-        plungerInterval = setInterval(() => {
-          engine.state.plunger.power = Math.min(100, engine.state.plunger.power + 4.0);
-        }, 25);
-      });
-      const finishPlungerBtn = () => {
-        if (plungerInterval) {
-          clearInterval(plungerInterval);
-          plungerInterval = null;
-        }
-        if (engine.state.plunger.pulling) {
-          if (engine.state.plunger.power < 20) engine.state.plunger.power = 76;
-          engine.releasePlunger();
-        }
-      };
-      plungerBtn.addEventListener("pointerup", finishPlungerBtn);
-      plungerBtn.addEventListener("pointerleave", finishPlungerBtn);
-      plungerBtn.addEventListener("pointercancel", finishPlungerBtn);
+      bindHold(
+        "btnPlunger",
+        () => engine.startPlungerPull(),
+        () => engine.releasePlunger()
+      );
     }
 
     // Direct Playfield Multi-Touch Tap & Swipe
@@ -280,7 +291,6 @@ window.UI = {
       activeTouches.delete(e.pointerId);
 
       if (t.type === "plunger") {
-        if (engine.state.plunger.power < 15) engine.state.plunger.power = 76;
         engine.releasePlunger();
       }
 

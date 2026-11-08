@@ -146,29 +146,37 @@ window.UI = {
     if (dtFever) dtFever.textContent = state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`;
 
     if (state.boss) {
-      const dtDrone = document.getElementById("dtDroneStatus");
-      if (dtDrone) {
-        const dHp = (state.boss.droneL_HP || 0) + (state.boss.droneR_HP || 0);
-        dtDrone.textContent = dHp <= 0 ? "DESTROYED" : `ACTIVE (${dHp}/6)`;
-        dtDrone.className = dHp <= 0 ? "font-bold text-[#ff1493]" : "font-bold text-[#00f5d4]";
+      const dtArmR = document.getElementById("dtArmRStatus");
+      if (dtArmR) {
+        dtArmR.textContent = state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`;
+        dtArmR.className = state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
       }
-      const dtShoulder = document.getElementById("dtShoulderStatus");
-      if (dtShoulder) {
-        const sHp = (state.boss.podL_HP || 0) + (state.boss.podR_HP || 0);
-        dtShoulder.textContent = sHp <= 0 ? "SHATTERED" : (state.boss.droneL_HP <= 0 && state.boss.droneR_HP <= 0 ? `VULNERABLE (${sHp}/10)` : "SHIELDED");
-        dtShoulder.className = sHp <= 0 ? "font-bold text-[#ff1493]" : "font-bold text-[#e6ff00]";
+      const dtArmL = document.getElementById("dtArmLStatus");
+      if (dtArmL) {
+        dtArmL.textContent = state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`;
+        dtArmL.className = state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
       }
       const dtChest = document.getElementById("dtChestStatus");
       if (dtChest) {
-        dtChest.textContent = state.boss.chestArmorBroken ? "PURGED (SOFT)" : "ARMORED";
-        dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-gray-400";
+        dtChest.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`;
+        dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]";
       }
       const dtCrotch = document.getElementById("dtCrotchStatus");
       if (dtCrotch) {
         if (state.boss.chestArmorBroken && state.boss.crotch) {
           const ch = state.boss.crotch.charge || 0;
-          dtCrotch.textContent = state.boss.crotch.cooldown > 0 ? "COOLING" : `ACTIVE [${"◆".repeat(ch)}${"◇".repeat(3-ch)}]`;
-          dtCrotch.className = "font-bold text-[#e6ff00]";
+          const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
+          const isExcited = excitementRatio > 0.30;
+          if (state.boss.crotch.cooldown > 0) {
+            dtCrotch.textContent = "COOLING";
+            dtCrotch.className = "font-bold text-purple-400";
+          } else if (isExcited) {
+            dtCrotch.textContent = `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`;
+            dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
+          } else {
+            dtCrotch.textContent = `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`;
+            dtCrotch.className = "font-bold text-gray-400";
+          }
         } else {
           dtCrotch.textContent = "INACTIVE";
           dtCrotch.className = "font-bold text-gray-400";

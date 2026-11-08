@@ -45,10 +45,23 @@ window.Stage1 = {
     return {
       droneL_HP: 3,
       droneR_HP: 3,
-      leftShoulderHP: 5,
-      rightShoulderHP: 5,
-      chestArmorHP: 10,
+
+      // 3 Major Armor Sections: Right Arm, Left Arm, Torso/Chest
+      armR_HP: 6,
+      armR_Broken: false,
+      armL_HP: 6,
+      armL_Broken: false,
+      chestArmorHP: 8,
       chestArmorBroken: false,
+      allArmorsPurged: false,
+
+      // Legacy aliases for backward compatibility
+      leftShoulderHP: 6,
+      rightShoulderHP: 6,
+
+      // Bust Bouncing Excitement level (0..100) - Boosts crotch suction!
+      bustExcitement: 0,
+
       coreHP: 16,
       leftEarLit: false,
       rightEarLit: false,
@@ -107,14 +120,14 @@ window.Stage1 = {
 
   getTargetDesc(state) {
     if (state.stageCleared) return "大破・強制装甲パージ 成功！";
-    if (state.phase === 1) {
+    if (!state.boss.armR_Broken || !state.boss.armL_Broken) {
       if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return "ドローン撃破でシールド解除！";
-      return "両肩アーマーを集中砲火！";
+      return "右手・左手・胴体の装甲を破壊せよ！";
     }
-    if (state.phase === 2) {
-      return state.boss.chestArmorBroken ? "露出コアに集中連打せよ！" : `胸部装甲破壊 (残HP:${state.boss.chestArmorHP})`;
+    if (!state.boss.chestArmorBroken) {
+      return `胴体装甲を集中砲火！ (残HP:${state.boss.chestArmorHP})`;
     }
-    return `BOSS CORE 撃破チャンス！ (残HP:${state.boss.coreHP})`;
+    return `露出コアに集中連打！ (残HP:${state.boss.coreHP})`;
   },
 
   updateStatusMonitor(state) {
@@ -124,10 +137,14 @@ window.Stage1 = {
     if (blushBar) blushBar.style.width = `${state.boss.blushGauge}%`;
 
     const shText = document.getElementById("statusShoulders");
-    if (shText) shText.textContent = `L:${state.boss.leftShoulderHP}/5 R:${state.boss.rightShoulderHP}/5`;
+    if (shText) {
+      const rStr = state.boss.armR_Broken ? "PURGED" : `${state.boss.armR_HP}/6`;
+      const lStr = state.boss.armL_Broken ? "PURGED" : `${state.boss.armL_HP}/6`;
+      shText.textContent = `右手:${rStr} / 左手:${lStr}`;
+    }
 
     const chestText = document.getElementById("statusChestArmor");
-    if (chestText) chestText.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/10`;
+    if (chestText) chestText.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/8`;
 
     const earsText = document.getElementById("statusEars");
     if (earsText) earsText.textContent = `L:${state.boss.leftEarLit ? "ON" : "OFF"} / R:${state.boss.rightEarLit ? "ON" : "OFF"}`;
@@ -259,6 +276,11 @@ window.Stage1 = {
     if (state.boss.winkTimer > 0) state.boss.winkTimer--;
     if (state.boss.talkTimer > 0) state.boss.talkTimer--;
 
+    // Bust excitement decay (natural cooldown for crotch suction)
+    if (state.boss.bustExcitement > 0) {
+      state.boss.bustExcitement = Math.max(0, state.boss.bustExcitement - 0.42);
+    }
+
     // Gaze tracking
     if (state.balls.length > 0) {
       const b = state.balls[0];
@@ -318,13 +340,13 @@ window.Stage1 = {
         ball.vy = hit.ny * 9.5;
         if (window.sfx) window.sfx.metalBumper();
 
-        if (state.phase === 2 && state.boss.chestArmorHP > 0) {
+        if (state.boss.chestArmorHP > 0) {
           state.boss.chestArmorHP--;
           Particles.add(state, hit.cx, hit.cy, "#ff1493", 16, 5.0);
           Systems.addFever(state, 6);
 
-          if (state.boss.chestArmorHP === 5) {
-            UI.showCutin("⚠️【胸部装甲に亀裂発生】<br>第1装甲破壊！ あと5回直撃でパージ！", 180);
+          if (state.boss.chestArmorHP === 4) {
+            UI.showCutin("⚠️【胴体装甲に亀裂発生】<br>第1チェスト装甲破壊！ あと4回直撃でパージ！", 180);
             Particles.triggerArmorBreakEffect(state, "chest", hit.cx, hit.cy);
             state.boss.expression = "shock";
             state.boss.expressionTimer = 60;
@@ -333,12 +355,20 @@ window.Stage1 = {
             Particles.triggerArmorBreakEffect(state, "chest", hit.cx, hit.cy);
             state.boss.expression = "blush";
             state.boss.expressionTimer = 85;
-            UI.showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！<br>秘密のグラビティコア起動！", 240);
-            Systems.addScore(state, 15000, hit.cx, hit.cy, "FULL PURGE!!");
+            UI.showCutin("💥【胴体装甲パージ！】💥<br>胸部装甲完全パージ！<br>秘密のグラビティコア起動！", 220);
+            Systems.addScore(state, 18000, hit.cx, hit.cy, "TORSO PURGED!!");
             Systems.spawnFloatingCapsule(state, 2, "buff");
             Systems.spawnFloatingCapsule(state, 5, "buff");
+
+            // Check full armor strip bonus
+            if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
+              state.boss.allArmorsPurged = true;
+              Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+              UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+              Systems.startFeverMode(state);
+            }
           } else {
-            Systems.addScore(state, 1200, hit.cx, hit.cy, `ARMOR HIT [${state.boss.chestArmorHP}]`);
+            Systems.addScore(state, 1500, hit.cx, hit.cy, `TORSO HIT [${state.boss.chestArmorHP}]`);
           }
         } else {
           Systems.addScore(state, 400, hit.cx, hit.cy, "ARMOR RICOCHET");
@@ -375,6 +405,19 @@ window.Stage1 = {
           ball.vy = ny * newNormalSpd + tanY * tanSpd * 0.94;
 
           this.impulseBust(state, side, -nx * 4.2, -ny * 4.2);
+
+          b.flash = 22;
+          if (window.sfx) window.sfx.softPuru();
+
+          state.boss.expression = "blush";
+          state.boss.expressionTimer = 85;
+          state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
+
+          // Boost bust excitement (scales crotch suction heavily!)
+          state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 40);
+
+          Systems.addFever(state, state.fever.active ? 10 : 8);
+          Systems.addScore(state, state.fever.active ? 6000 : 2500, cx, cy, state.fever.active ? "♥HYPER BOING♥" : "♥PURU-PURU♥");
 
           for (let h = 0; h < (state.fever.active ? 4 : 2); h++) {
             Particles.spawnHeart(state, cx, cy, false);
@@ -464,13 +507,14 @@ window.Stage1 = {
       }
     });
 
-    // 4. Shoulder Armor Clusters
+    // 4. Arm / Shoulder Armor Clusters (Right Arm = Left Screen, Left Arm = Right Screen)
     [
-      { pod: state.boss.podL, which: "L", tag: "L-ARMOR" },
-      { pod: state.boss.podR, which: "R", tag: "R-ARMOR" }
-    ].forEach(({ pod, which, tag }) => {
+      { pod: state.boss.podL, which: "L", armKey: "armR", label: "右手装甲", tag: "R-ARM" },
+      { pod: state.boss.podR, which: "R", armKey: "armL", label: "左手装甲", tag: "L-ARM" }
+    ].forEach(({ pod, which, armKey, label, tag }) => {
       checkBumper(pod, 8.2, () => {
-        const hpKey = which === "L" ? "leftShoulderHP" : "rightShoulderHP";
+        const hpKey = `${armKey}_HP`;
+        const brokenKey = `${armKey}_Broken`;
         const droneHPKey = which === "L" ? "droneL_HP" : "droneR_HP";
         const isShielded = state.phase === 1 && state.boss[droneHPKey] > 0;
 
@@ -480,21 +524,31 @@ window.Stage1 = {
           Systems.addScore(state, 500, pod.x, pod.y - 12, "🛡️SHIELDED!");
           Particles.addPopup(state, pod.x, pod.y - 15, `先に${which}-DRONEを倒せ!`, "#00f5d4", 0.95);
         } else {
-          if (state.boss[hpKey] > 0) {
+          if (!state.boss[brokenKey] && state.boss[hpKey] > 0) {
             state.boss[hpKey]--;
+            state.boss[which === "L" ? "leftShoulderHP" : "rightShoulderHP"] = state.boss[hpKey];
             if (window.sfx) window.sfx.metalBumper();
-            Systems.addFever(state, 4);
+            Systems.addFever(state, 5);
             Particles.add(state, pod.x, pod.y, "#ff1493", 14, 4.5);
-            Systems.addScore(state, 1800, pod.x, pod.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
+            Systems.addScore(state, 2000, pod.x, pod.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
 
             if (state.boss[hpKey] === 0) {
+              state.boss[brokenKey] = true;
               Particles.triggerArmorBreakEffect(state, which === "L" ? "shoulder_l" : "shoulder_r", pod.x, pod.y);
               state.boss.expression = "shock";
               state.boss.expressionTimer = 65;
-              Systems.addScore(state, 5000, pod.x, pod.y, `💥${tag} BREAK!!`);
-              UI.showCutin(`💥【${which === "L" ? "左" : "右"}肩アーマー破壊】<br>内部ジェネレータ露出！<br>⚡EX-BOUNCE活性化！`, 180);
+              Systems.addScore(state, 12000, pod.x, pod.y, `💥${tag} PURGED!!`);
+              UI.showCutin(`💥【${label}パージ！】💥<br>${tag} ARMOR SHATTERED!<br>⚡素肌露出＆EX-BOUNCE活性化！`, 200);
               Systems.spawnFloatingCapsule(state, which === "L" ? 3 : 4, "perm");
               this.checkPhase1Clear(state);
+
+              // Check full armor strip bonus
+              if (state.boss.armR_Broken && state.boss.armL_Broken && state.boss.chestArmorBroken && !state.boss.allArmorsPurged) {
+                state.boss.allArmorsPurged = true;
+                Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+                UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+                Systems.startFeverMode(state);
+              }
             } else {
               this.impulseBust(state, which, (Math.random() - 0.5) * 2, -2.5);
             }
@@ -545,37 +599,46 @@ window.Stage1 = {
       const dyCr = crotch.y - ball.y;
       const distCr = Math.hypot(dxCr, dyCr);
 
-      // Natural Gravitational Pull
+      // Bust excitement scaling (strong suction when bust bounces, weak when calm)
+      const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
+
+      // Base pull is very gentle (curves slightly), boosted heavily when bust bounces!
+      const basePull = 0.08;
+      const boostPull = 0.54 * excitementRatio;
+      const totalPull = basePull + boostPull;
+
       if (distCr < crotch.gravRadius && distCr > 1.5) {
         const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.35);
-        const force = 0.48 * pullFactor;
+        const force = totalPull * pullFactor;
         ball.vx += (dxCr / distCr) * force;
         ball.vy += (dyCr / distCr) * force;
 
-        // Subtle damping near the core so weak balls can naturally balance against downward gravity
-        if (distCr < 40) {
-          ball.vx *= 0.982;
-          ball.vy *= 0.982;
+        // Damping is only active when excited; when excitement decays, damping vanishes and ball naturally falls!
+        if (distCr < 40 && excitementRatio > 0.2) {
+          const damp = 0.995 - 0.015 * excitementRatio;
+          ball.vx *= damp;
+          ball.vy *= damp;
         }
-        if (distCr < 18) {
-          ball.vx *= 0.92;
-          ball.vy *= 0.92;
+        if (distCr < 18 && excitementRatio > 0.2) {
+          const dampCore = 0.98 - 0.08 * excitementRatio;
+          ball.vx *= dampCore;
+          ball.vy *= dampCore;
         }
 
-        if (Math.random() < 0.70) {
+        if (excitementRatio > 0.25 && Math.random() < (0.2 + 0.5 * excitementRatio)) {
           const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
           state.particles.push({
             x: ball.x,
             y: ball.y,
             vx: Math.cos(pAngle) * (2.8 + Math.random() * 2.2),
             vy: Math.sin(pAngle) * (2.8 + Math.random() * 2.2),
-            color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
-            life: 15,
-            scale: 1.05
+            color: excitementRatio > 0.4 ? "#ff1493" : "#b84dff",
+            life: 14,
+            scale: 1.0 + excitementRatio * 0.4
           });
         }
 
-        if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.1) {
+        if (distCr < crotch.gravRadius * 0.65 && excitementRatio > 0.3 && Math.random() < 0.12 * excitementRatio) {
           Particles.spawnHeart(state, ball.x, ball.y, true);
         }
       }
@@ -855,10 +918,56 @@ window.Stage1 = {
 
     const IMG_BOX = engine.IMG_BOX;
     const isDefeat = state.clearSequence && state.clearSequence.active && state.clearSequence.cgRevealAlpha > 0 && this.assets.defeatCgImg.complete;
-    const isArmored = !state.boss.chestArmorBroken && this.assets.armoredImg.complete;
-    const baseImg = isDefeat ? this.assets.defeatCgImg : (isArmored ? this.assets.armoredImg : this.assets.bareImg);
+    const isChestArmored = !state.boss.chestArmorBroken && this.assets.armoredImg.complete;
+    const baseImg = isDefeat ? this.assets.defeatCgImg : (isChestArmored ? this.assets.armoredImg : this.assets.bareImg);
 
     ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+
+    // Multi-piece armor stripping overlay: Right Arm, Left Arm, Torso
+    if (!isDefeat && this.assets.bareImg.complete && this.assets.armoredImg.complete) {
+      const natW = this.assets.bareImg.naturalWidth || 768;
+      const natH = this.assets.bareImg.naturalHeight || 1376;
+
+      // Case A: Torso is Armored, but individual arms are PURGED -> patch bare skin onto armored base
+      if (isChestArmored) {
+        // Right Arm (Character Right / Screen Left)
+        if (state.boss.armR_Broken) {
+          const sx = natW * 0.05, sy = natH * 0.26, sw = natW * 0.35, sh = natH * 0.54;
+          const dx = IMG_BOX.x + IMG_BOX.w * 0.05;
+          const dy = IMG_BOX.y + IMG_BOX.h * 0.26;
+          const dw = IMG_BOX.w * 0.35;
+          const dh = IMG_BOX.h * 0.54;
+          ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+        // Left Arm (Character Left / Screen Right)
+        if (state.boss.armL_Broken) {
+          const sx = natW * 0.60, sy = natH * 0.26, sw = natW * 0.35, sh = natH * 0.54;
+          const dx = IMG_BOX.x + IMG_BOX.w * 0.60;
+          const dy = IMG_BOX.y + IMG_BOX.h * 0.26;
+          const dw = IMG_BOX.w * 0.35;
+          const dh = IMG_BOX.h * 0.54;
+          ctx.drawImage(this.assets.bareImg, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+      } else {
+        // Case B: Torso is Purged (Base is Bare), but arms are still ARMORED -> patch armored sleeves onto bare base
+        if (!state.boss.armR_Broken) {
+          const sx = natW * 0.05, sy = natH * 0.26, sw = natW * 0.35, sh = natH * 0.54;
+          const dx = IMG_BOX.x + IMG_BOX.w * 0.05;
+          const dy = IMG_BOX.y + IMG_BOX.h * 0.26;
+          const dw = IMG_BOX.w * 0.35;
+          const dh = IMG_BOX.h * 0.54;
+          ctx.drawImage(this.assets.armoredImg, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+        if (!state.boss.armL_Broken) {
+          const sx = natW * 0.60, sy = natH * 0.26, sw = natW * 0.35, sh = natH * 0.54;
+          const dx = IMG_BOX.x + IMG_BOX.w * 0.60;
+          const dy = IMG_BOX.y + IMG_BOX.h * 0.26;
+          const dw = IMG_BOX.w * 0.35;
+          const dh = IMG_BOX.h * 0.54;
+          ctx.drawImage(this.assets.armoredImg, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+      }
+    }
 
     // Bust Spring Dynamics
     if (state.boss.chestArmorBroken && !isDefeat) {
@@ -990,17 +1099,17 @@ window.Stage1 = {
     drawGuide(dL.x, dL.y, dL.r, state.boss.droneL_HP > 0 ? "#00f5d4" : "#e6ff00", dL.flash, dL.rot, "L-DRONE", state.boss.droneL_HP > 0 ? `HP:${state.boss.droneL_HP}` : "EX-BUMP");
     drawGuide(dR.x, dR.y, dR.r, state.boss.droneR_HP > 0 ? "#00f5d4" : "#e6ff00", dR.flash, dR.rot, "R-DRONE", state.boss.droneR_HP > 0 ? `HP:${state.boss.droneR_HP}` : "EX-BUMP");
 
-    // 2. Shoulder Armor
+    // 2. Arm / Shoulder Armor (R-ARM = Playfield Left, L-ARM = Playfield Right)
     const pL = state.boss.podL;
     const pR = state.boss.podR;
-    const shL_HP = state.boss.leftShoulderHP;
-    const shR_HP = state.boss.rightShoulderHP;
+    const armR_Broken = state.boss.armR_Broken;
+    const armL_Broken = state.boss.armL_Broken;
     const pL_shielded = state.phase === 1 && state.boss.droneL_HP > 0;
     const pR_shielded = state.phase === 1 && state.boss.droneR_HP > 0;
-    const colL = shL_HP === 0 ? "#e6ff00" : (pL_shielded ? "#b59ce6" : "#ff1493");
-    const colR = shR_HP === 0 ? "#e6ff00" : (pR_shielded ? "#b59ce6" : "#ff1493");
-    drawGuide(pL.x, pL.y, pL.r, colL, pL.flash, pL.rot, "L-ARMOR", shL_HP === 0 ? "⚡EX-SPARK" : (pL_shielded ? "🛡️SHIELD" : `HP:${shL_HP}`));
-    drawGuide(pR.x, pR.y, pR.r, colR, pR.flash, pR.rot, "R-ARMOR", shR_HP === 0 ? "⚡EX-SPARK" : (pR_shielded ? "🛡️SHIELD" : `HP:${shR_HP}`));
+    const colL = armR_Broken ? "#e6ff00" : (pL_shielded ? "#b59ce6" : "#ff1493");
+    const colR = armL_Broken ? "#e6ff00" : (pR_shielded ? "#b59ce6" : "#ff1493");
+    drawGuide(pL.x, pL.y, pL.r, colL, pL.flash, pL.rot, "R-ARM", armR_Broken ? "⚡EX-SPARK" : (pL_shielded ? "🛡️SHIELD" : `HP:${state.boss.armR_HP}`));
+    drawGuide(pR.x, pR.y, pR.r, colR, pR.flash, pR.rot, "L-ARM", armL_Broken ? "⚡EX-SPARK" : (pR_shielded ? "🛡️SHIELD" : `HP:${state.boss.armL_HP}`));
 
     // 3. Waist / Hip Units
     const hL = state.boss.hipL;
@@ -1008,8 +1117,10 @@ window.Stage1 = {
     drawGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
     drawGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
 
-    // 4. Exposed Bust Targets
-    if (state.boss.chestArmorBroken) {
+    // 4. Torso Armor / Exposed Bust Targets
+    if (!state.boss.chestArmorBroken) {
+      drawGuide(198, 353, 30, "#ff1493", 0, animTick * 0.02, "TORSO", `HP:${state.boss.chestArmorHP}`);
+    } else {
       const bL = state.boss.bustL;
       const bR = state.boss.bustR;
       const bustCol = state.fever.active ? "#e6ff00" : "#ff1493";
@@ -1017,21 +1128,27 @@ window.Stage1 = {
       drawGuide(bR.x + bR.dx, bR.y + bR.dy, bR.r, bustCol, bR.flash, bR.rot, "R-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
     }
 
-    // 5. Crotch Secret Gravity Well
+    // 5. Crotch Secret Gravity Well (Reacts to Bust-boing Excitement!)
     if (state.boss.chestArmorBroken) {
       const cr = state.boss.crotch;
       const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
       const isCooling = cr.cooldown && cr.cooldown > 0;
-      const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
-      const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
 
-      // Gravitational Pull Waves
+      const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
+      const isExcited = excitementRatio > 0.30;
+
+      const sub = isCooling ? "COOLING" : (isExcited ? "♥BOOSTED♥" : `[${crChargeStr}]`);
+      const col = isCooling ? "#9933ff" : (isExcited ? "#e6ff00" : (cr.charge > 0 ? "#ff66b2" : "#b84dff"));
+
+      // Gravitational Pull Waves (intensifies with excitement)
       ctx.save();
       ctx.translate(cr.x, cr.y);
-      const inwardPhase = (animTick * 0.04) % 1.0;
+      const inwardSpeed = 0.03 + 0.05 * excitementRatio;
+      const inwardPhase = (animTick * inwardSpeed) % 1.0;
       const waveRadius = cr.r + (cr.gravRadius - cr.r) * (1.0 - inwardPhase);
-      ctx.strokeStyle = "rgba(184, 77, 255, " + (0.45 * inwardPhase).toFixed(2) + ")";
-      ctx.lineWidth = 1.6;
+      const waveAlpha = (0.25 + 0.65 * excitementRatio) * inwardPhase;
+      ctx.strokeStyle = isExcited ? `rgba(255, 20, 147, ${waveAlpha.toFixed(2)})` : `rgba(184, 77, 255, ${waveAlpha.toFixed(2)})`;
+      ctx.lineWidth = 1.4 + 2.0 * excitementRatio;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.arc(0, 0, waveRadius, 0, Math.PI * 2);

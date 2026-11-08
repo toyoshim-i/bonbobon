@@ -243,6 +243,12 @@ function prepareBallForLaunch() {
   state.plunger.power = 0;
   state.plunger.pulling = false;
   state.skillShotEligible = true;
+
+  // Recharge table defenses on new ball
+  if (state.perm.kickbackL > 0) state.perm.kickbackL_charges = 1;
+  if (state.perm.kickbackR > 0) state.perm.kickbackR_charges = 1;
+  if (state.perm.centerPost > 0) state.perm.centerPostHP = 3;
+
   showCutin("【ゲーム開始】<br>発射ボタン長押し または 右下スワイプで発射！", 140);
 }
 
@@ -927,7 +933,7 @@ function getFlippers() {
   return [mainL, mainR];
 }
 
-// Clean static table walls & inlanes/outlanes
+// Clean static table walls & inlanes/outlanes (True Pinball Inlane/Outlane Architecture)
 const TABLE_WALLS = [
   // Outer perimeter arch
   { x1: 16,  y1: 590, x2: 16,  y2: 95 },
@@ -941,17 +947,29 @@ const TABLE_WALLS = [
   { x1: 380, y1: 175, x2: 380, y2: 635 },
   { x1: 380, y1: 635, x2: 404, y2: 635 },
 
-  // Mid playfield outer guide walls
-  { x1: 16,  y1: 280, x2: 46,  y2: 470 },
-  { x1: 380, y1: 280, x2: 350, y2: 470 },
+  // Mid playfield upper outer guide deflectors (funnels stray balls toward outlane entrance)
+  { x1: 16,  y1: 280, x2: 20,  y2: 360 },
+  { x1: 380, y1: 280, x2: 376, y2: 360 },
 
-  // Inlane walls feeding Main Flippers
-  { x1: 46,  y1: 470, x2: 46,  y2: 562 },
-  { x1: 46,  y1: 562, x2: 110, y2: 602 },
-  { x1: 350, y1: 470, x2: 350, y2: 562 },
-  { x1: 350, y1: 562, x2: 286, y2: 602 },
+  // Lane Dividers (Separates Outlane from Inlane; Top is open for ball entry!)
+  // Left Divider: Outlane width = 34px (x: 16..50), Inlane width = 32px (x: 50..82)
+  { x1: 50,  y1: 420, x2: 50,  y2: 558 },
+  { x1: 50,  y1: 558, x2: 110, y2: 600 }, // Inlane floor feeding left flipper
 
-  // Outlane Drain Slopes
+  // Right Divider: Outlane width = 34px (x: 346..380), Inlane width = 32px (x: 314..346)
+  { x1: 346, y1: 420, x2: 346, y2: 558 },
+  { x1: 346, y1: 558, x2: 286, y2: 600 }, // Inlane floor feeding right flipper
+
+  // Slingshot Inner Walls (Forms inner boundary of inlane + triangular slingshot body)
+  { x1: 84,  y1: 450, x2: 84,  y2: 535 },
+  { x1: 84,  y1: 450, x2: 106, y2: 565, isSlingshot: true, kickDir: { x: 0.98, y: -0.19 } }, // Left Slingshot kicker face
+  { x1: 84,  y1: 535, x2: 106, y2: 565 },
+
+  { x1: 312, y1: 450, x2: 312, y2: 535 },
+  { x1: 312, y1: 450, x2: 290, y2: 565, isSlingshot: true, kickDir: { x: -0.98, y: -0.19 } }, // Right Slingshot kicker face
+  { x1: 312, y1: 535, x2: 290, y2: 565 },
+
+  // Outlane Drain Slopes (below kickback)
   { x1: 16,  y1: 590, x2: 86,  y2: 648 },
   { x1: 380, y1: 590, x2: 310, y2: 648 }
 ];
@@ -1175,7 +1193,15 @@ function stepPhysics() {
           ball.x = cp.x + nx * minDist;
           ball.y = cp.y + ny * minDist;
           const dot = ball.vx * nx + ball.vy * ny;
-          if (dot < 0) {
+          if (w.isSlingshot && dot < 0) {
+            // Slingshot powerful elastic kicker!
+            ball.vx = w.kickDir.x * 11.2;
+            ball.vy = w.kickDir.y * 11.2;
+            sfx.metalBumper();
+            addParticles(cp.x, cp.y, "#e6ff00", 10, 4.0);
+            addParticles(cp.x, cp.y, "#ff1493", 6, 3.0);
+            addScore(500, cp.x, cp.y, "SLINGSHOT!");
+          } else if (dot < 0) {
             ball.vx = (ball.vx - 1.75 * dot * nx) * 0.96;
             ball.vy = (ball.vy - 1.75 * dot * ny) * 0.96;
           }
@@ -1584,22 +1610,26 @@ function stepPhysics() {
           }
         }
 
-        // (B) Kickbacks with 1-charge consumption
-        if (state.perm.kickbackL > 0 && state.perm.kickbackL_charges > 0 && ball.x < 46 && ball.y > 530 && ball.vy > 0) {
-          ball.vy = -14.5;
-          ball.vx = 4.0;
+        // (B) Kickbacks with 1-charge consumption (In the Outlanes)
+        if (state.perm.kickbackL > 0 && state.perm.kickbackL_charges > 0 && ball.x >= 14 && ball.x <= 52 && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
+          ball.vy = -15.2;
+          ball.vx = 4.2;
           state.perm.kickbackL_charges = 0;
-          sfx.metalBumper();
-          addParticles(32, 565, "#00f5d4", 14, 4.2);
-          addScore(1500, 50, 545, "L-LASER SAVE!");
+          sfx.burstTrigger();
+          addParticles(33, 560, "#00f5d4", 18, 5.0);
+          addParticles(33, 560, "#e6ff00", 12, 4.0);
+          addScore(3000, 33, 540, "⚡L-LASER SAVE!");
+          showCutin("🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！", 90);
         }
-        if (state.perm.kickbackR > 0 && state.perm.kickbackR_charges > 0 && !ball.inShooterLane && ball.x > 350 && ball.x < 380 && ball.y > 530 && ball.vy > 0) {
-          ball.vy = -14.5;
-          ball.vx = -4.0;
+        if (state.perm.kickbackR > 0 && state.perm.kickbackR_charges > 0 && !ball.inShooterLane && ball.x >= 344 && ball.x <= 382 && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
+          ball.vy = -15.2;
+          ball.vx = -4.2;
           state.perm.kickbackR_charges = 0;
-          sfx.metalBumper();
-          addParticles(364, 565, "#00f5d4", 14, 4.2);
-          addScore(1500, 345, 545, "R-LASER SAVE!");
+          sfx.burstTrigger();
+          addParticles(363, 560, "#00f5d4", 18, 5.0);
+          addParticles(363, 560, "#e6ff00", 12, 4.0);
+          addScore(3000, 363, 540, "⚡R-LASER SAVE!");
+          showCutin("🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！", 90);
         }
 
         // (C) Sub-Bumpers
@@ -1960,25 +1990,39 @@ function renderTable() {
       });
     }
 
-    // Laser Kickbacks
+    // Laser Kickbacks (In the Outlanes)
     if (state.perm.kickbackL > 0) {
       ctx.save();
-      ctx.strokeStyle = state.perm.kickbackL_charges > 0 ? "#00f5d4" : "#442255";
-      ctx.lineWidth = 3.5;
+      const charged = state.perm.kickbackL_charges > 0;
+      ctx.strokeStyle = charged ? (Math.floor(Date.now() / 120) % 2 === 0 ? "#00f5d4" : "#e6ff00") : "#3d1852";
+      ctx.lineWidth = charged ? 4 : 2;
       ctx.beginPath();
-      ctx.moveTo(18, 558);
-      ctx.lineTo(44, 558);
+      ctx.moveTo(16, 560);
+      ctx.lineTo(50, 560);
       ctx.stroke();
+      if (charged) {
+        ctx.fillStyle = "#00f5d4";
+        ctx.font = "bold 8px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("LASER", 33, 554);
+      }
       ctx.restore();
     }
     if (state.perm.kickbackR > 0) {
       ctx.save();
-      ctx.strokeStyle = state.perm.kickbackR_charges > 0 ? "#00f5d4" : "#442255";
-      ctx.lineWidth = 3.5;
+      const charged = state.perm.kickbackR_charges > 0;
+      ctx.strokeStyle = charged ? (Math.floor(Date.now() / 120) % 2 === 0 ? "#00f5d4" : "#e6ff00") : "#3d1852";
+      ctx.lineWidth = charged ? 4 : 2;
       ctx.beginPath();
-      ctx.moveTo(352, 558);
-      ctx.lineTo(378, 558);
+      ctx.moveTo(346, 560);
+      ctx.lineTo(380, 560);
       ctx.stroke();
+      if (charged) {
+        ctx.fillStyle = "#00f5d4";
+        ctx.font = "bold 8px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("LASER", 363, 554);
+      }
       ctx.restore();
     }
 
@@ -2004,12 +2048,33 @@ function renderTable() {
   // Walls & Neon Rails (Or Shattered Pieces during Stage Clear)
   if (!isShattered && !isPostWhiteout) {
     ctx.save();
-    ctx.strokeStyle = "#ff1493";
-    ctx.lineWidth = 3;
+    // Slingshot triangular bodies
+    ctx.fillStyle = "rgba(45, 12, 60, 0.8)";
+    ctx.beginPath();
+    ctx.moveTo(84, 450);
+    ctx.lineTo(84, 535);
+    ctx.lineTo(106, 565);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(312, 450);
+    ctx.lineTo(312, 535);
+    ctx.lineTo(290, 565);
+    ctx.closePath();
+    ctx.fill();
+
     TABLE_WALLS.forEach(w => {
       ctx.beginPath();
       ctx.moveTo(w.x1, w.y1);
       ctx.lineTo(w.x2, w.y2);
+      if (w.isSlingshot) {
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 4;
+      } else {
+        ctx.strokeStyle = "#ff1493";
+        ctx.lineWidth = 3;
+      }
       ctx.stroke();
     });
     ctx.restore();

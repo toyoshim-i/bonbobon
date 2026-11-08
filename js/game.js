@@ -168,15 +168,17 @@ function createInitialState() {
       bustL: { x: 160, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
       bustR: { x: 236, y: 354, r: 24, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
 
-      // Mecha Colliders
-      droneL: { x: 58,  y: 174, r: 24, flash: 0 },
-      droneR: { x: 338, y: 174, r: 24, flash: 0 },
-      // Hanging Rabbit Ear Tips (Soft-Spring Damper & Sensor)
-      earL:   { x: 74,  y: 92,  r: 22, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
-      earR:   { x: 322, y: 92,  r: 22, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
-      podL:   { x: 111, y: 296, r: 25, flash: 0 },
-      podR:   { x: 285, y: 296, r: 25, flash: 0 },
-      core:   { x: 198, y: 307, r: 17, flash: 0 }
+      // Mecha Colliders (Accurately mapped to centerpiece illustration contours)
+      droneL: { x: 58,  y: 172, r: 24, flash: 0 },
+      droneR: { x: 338, y: 172, r: 24, flash: 0 },
+      // Hanging Rabbit Ear Tips (Vertical oval contour, soft damper)
+      earL:   { x: 73,  y: 92,  rx: 18, ry: 26, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
+      earR:   { x: 323, y: 92,  rx: 18, ry: 26, dx: 0, dy: 0, vx: 0, vy: 0, flash: 0 },
+      // Shoulder Armor Clusters (Broad mechanical shoulder pods)
+      podL:   { x: 88,  y: 275, rx: 28, ry: 32, flash: 0 },
+      podR:   { x: 308, y: 275, rx: 28, ry: 32, flash: 0 },
+      // Core Gem at chest center
+      core:   { x: 198, y: 310, r: 18, flash: 0 }
     },
 
     balls: [],
@@ -1189,47 +1191,57 @@ function stepPhysics() {
         }
       });
 
-      // 3. Collide with Chest (Armor vs Exposed Bust)
+      // 3. Collide with Chest (Heavy Armor Plate vs Exposed Bust)
       if (s === 0) {
+        // Helper: Elliptical collision detection matching visual contours
+        const checkEllipseHit = (cx, cy, rx, ry) => {
+          const dx = ball.x - cx;
+          const dy = ball.y - cy;
+          const ndx = dx / rx;
+          const ndy = dy / ry;
+          const distNorm = Math.hypot(ndx, ndy);
+          if (distNorm < 0.0001) return null;
+          const realDist = Math.hypot(dx, dy);
+          const boundR = realDist / distNorm;
+          const minDist = boundR + ball.r;
+          if (realDist < minDist) {
+            return { nx: dx / realDist, ny: dy / realDist, minDist, cx, cy };
+          }
+          return null;
+        };
+
         if (!state.boss.chestArmorBroken) {
-          // CHEST ARMOR TARGET (Compact Hard Bumper at center x: 198, y: 350)
-          const armorX = 198;
-          const armorY = 352;
-          const armorR = 26;
-          const dx = ball.x - armorX;
-          const dy = ball.y - armorY;
-          const dist = Math.hypot(dx, dy);
-          if (dist < ball.r + armorR && dist > 0.001) {
-            const nx = dx / dist;
-            const ny = dy / dist;
-            ball.x = armorX + nx * (ball.r + armorR + 2);
-            ball.y = armorY + ny * (ball.r + armorR + 2);
-            ball.vx = nx * 9.5;
-            ball.vy = ny * 9.5;
+          // CHEST COMPOSITE ARMOR PLATE (Contour matching illustration: cx: 198, cy: 355, rx: 42, ry: 26)
+          const hit = checkEllipseHit(198, 355, 42, 26);
+          if (hit) {
+            ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
+            ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
+            ball.vx = hit.nx * 9.5;
+            ball.vy = hit.ny * 9.5;
             sfx.metalBumper();
 
             if (state.phase === 2 && state.boss.chestArmorHP > 0) {
               state.boss.chestArmorHP--;
-              addParticles(armorX, armorY, "#ff1493", 16, 5.0);
+              addParticles(hit.cx, hit.cy, "#ff1493", 16, 5.0);
               if (state.boss.chestArmorHP === 5) {
-                triggerArmorBreakEffect("chest", armorX, armorY);
-                addScore(4000, armorX, armorY, "💥ARMOR CRACK!!");
+                triggerArmorBreakEffect("chest", hit.cx, hit.cy);
+                addScore(4000, hit.cx, hit.cy, "💥ARMOR CRACK!!");
                 showCutin("⚠️【胸部装甲に亀裂発生】<br>第1装甲破壊！ あと5回直撃で完全パージ！", 180);
               } else if (state.boss.chestArmorHP === 0) {
                 state.boss.chestArmorBroken = true;
                 state.phase = 3;
-                triggerArmorBreakEffect("chest", armorX, armorY);
+                triggerArmorBreakEffect("chest", hit.cx, hit.cy);
                 state.boss.expression = "blush";
                 state.boss.expressionTimer = 85;
                 showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 最終PHASE 3突入！", 240);
-                addScore(15000, armorX, armorY, "FULL PURGE!!");
+                addScore(15000, hit.cx, hit.cy, "FULL PURGE!!");
                 spawnFloatingCapsule(2, "buff");
                 spawnFloatingCapsule(5, "buff");
               } else {
-                addScore(1500, armorX, armorY, `CHEST HP:${state.boss.chestArmorHP}`);
+                addScore(1500, hit.cx, hit.cy, `CHEST HP:${state.boss.chestArmorHP}`);
               }
             } else {
-              addScore(800, armorX, armorY, "CHEST SHIELD");
+              addScore(800, hit.cx, hit.cy, "CHEST SHIELD");
             }
             addFever(6);
           }
@@ -1295,13 +1307,13 @@ function stepPhysics() {
           }
         };
 
-        // Drones (Phase 1 Shield Generators -> Phase 2+ Laser Reflectors)
+        // Drones (Floating mecha pods near top corners)
         [
           { d: state.boss.droneL, hpKey: "droneL_HP", slot: 0, tag: "L-DRONE" },
           { d: state.boss.droneR, hpKey: "droneR_HP", slot: 1, tag: "R-DRONE" }
         ].forEach(({ d, hpKey, slot, tag }) => {
           const isDestroyed = state.boss[hpKey] === 0;
-          const spd = isDestroyed ? 11.5 : 10.5; // High bounce when destroyed!
+          const spd = isDestroyed ? 11.5 : 10.5;
           checkCircleBumper(d, spd, () => {
             sfx.metalBumper();
             state.droneComboCount++;
@@ -1319,7 +1331,6 @@ function stepPhysics() {
                 addScore(1000, d.x, d.y - 15, `${tag} HP:${state.boss[hpKey]}`);
               }
             } else {
-              // Destroyed Drone acts as an active Laser Ricochet Bumper!
               addScore(2500, d.x, d.y - 15, "⚡LASER RICOCHET!");
               if (state.droneComboCount % 4 === 0) {
                 spawnFloatingCapsule(slot);
@@ -1328,31 +1339,26 @@ function stepPhysics() {
           });
         });
 
-        // Hanging Rabbit Ear Tips (Soft "ふにょん" Spring Damper & Skill Shot Sensor)
+        // Hanging Rabbit Ear Tips (Soft "ふにょん" Damper matching vertical purple ear tip contours)
         [
           { which: "L", ear: state.boss.earL, litKey: "leftEarLit", tag: "L-EAR" },
           { which: "R", ear: state.boss.earR, litKey: "rightEarLit", tag: "R-EAR" }
         ].forEach(({ which, ear, litKey, tag }) => {
           const cx = ear.x + ear.dx;
           const cy = ear.y + ear.dy;
-          const dx = ball.x - cx;
-          const dy = ball.y - cy;
-          const dist = Math.hypot(dx, dy);
-          const minDist = ball.r + ear.r;
-          if (dist < minDist && dist > 0.001) {
-            const nx = dx / dist;
-            const ny = dy / dist;
-            ball.x = cx + nx * (minDist + 2);
-            ball.y = cy + ny * (minDist + 2);
+          const hit = checkEllipseHit(cx, cy, ear.rx, ear.ry);
+          if (hit) {
+            ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
+            ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
 
-            // "ふにょん" speed damper: Absorbs & kills excess velocity, cushioning the ball
+            // "ふにょん" speed damper: Absorbs & cushions ball velocity
             const speed = Math.hypot(ball.vx, ball.vy);
             const dampSpeed = Math.max(2.8, Math.min(5.2, speed * 0.44));
-            ball.vx = nx * dampSpeed;
-            ball.vy = ny * dampSpeed + 0.8; // Gentle downward elastic release
+            ball.vx = hit.nx * dampSpeed;
+            ball.vy = hit.ny * dampSpeed + 0.8;
 
             // Impulse on the ear tip spring!
-            impulseEar(which, -nx * Math.min(10, speed * 1.2), -ny * Math.min(10, speed * 1.2));
+            impulseEar(which, -hit.nx * Math.min(10, speed * 1.2), -hit.ny * Math.min(10, speed * 1.2));
 
             // Soft elastic sound & cute violet/cyan particles
             sfx.earBoing();
@@ -1385,80 +1391,55 @@ function stepPhysics() {
           }
         });
 
-        // Left Shoulder Armor Pod (Phase 1 Target, HP 5 -> Overheat Generator)
-        const isPodLDestroyed = state.boss.leftShoulderHP === 0;
-        checkCircleBumper(state.boss.podL, isPodLDestroyed ? 13.5 : 9.5, pod => {
-          if (state.boss.leftShoulderHP > 0) {
-            sfx.metalBumper();
-            addFever(8);
-            const shielded = state.phase === 1 && state.boss.droneL_HP > 0;
-            if (shielded) {
-              addScore(500, pod.x, pod.y, "L-DRONE SHIELDED");
-              addPopup(pod.x, pod.y - 15, "先にL-DRONEを倒せ!", "#00f5d4", 0.95);
-            } else {
-              state.boss.leftShoulderHP--;
-              addParticles(pod.x, pod.y, "#ff1493", 14, 4.5);
-              if (state.boss.leftShoulderHP === 0) {
-                triggerArmorBreakEffect("shoulder_l", pod.x, pod.y);
-                state.boss.expression = "shock";
-                state.boss.expressionTimer = 65;
-                addScore(5000, pod.x, pod.y, "💥L-ARMOR BREAK!!");
-                showCutin("💥【左肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！", 180);
-                spawnFloatingCapsule(3, "perm");
-                checkPhase1Clear();
-              } else {
-                addScore(1500, pod.x, pod.y, `L-POD HP:${state.boss.leftShoulderHP}`);
-              }
-            }
-          } else {
-            // Overheat Generator: Super-Kick Plasma Ricochet!
-            sfx.exSpark();
-            addFever(14);
-            addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
-            addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
-            addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
-            state.nudgeOffset.x = (Math.random() - 0.5) * 10;
-            state.nudgeOffset.y = (Math.random() - 0.5) * 8;
-          }
-          updateHUD();
-        });
+        // Shoulder Armor Clusters (Contoured to broad shoulder armor shapes)
+        [
+          { which: "L", pod: state.boss.podL, hpKey: "leftShoulderHP", droneKey: "droneL_HP", tag: "L-ARMOR" },
+          { which: "R", pod: state.boss.podR, hpKey: "rightShoulderHP", droneKey: "droneR_HP", tag: "R-ARMOR" }
+        ].forEach(({ which, pod, hpKey, droneKey, tag }) => {
+          const isDestroyed = state.boss[hpKey] === 0;
+          const hit = checkEllipseHit(pod.x, pod.y, pod.rx, pod.ry);
+          if (hit) {
+            const kickSpd = isDestroyed ? 13.5 : 9.5;
+            ball.x = hit.cx + hit.nx * (hit.minDist + 1.5);
+            ball.y = hit.cy + hit.ny * (hit.minDist + 1.5);
+            ball.vx = hit.nx * kickSpd;
+            ball.vy = hit.ny * kickSpd;
+            pod.flash = 12;
 
-        // Right Shoulder Armor Pod (Phase 1 Target, HP 5 -> Overheat Generator)
-        const isPodRDestroyed = state.boss.rightShoulderHP === 0;
-        checkCircleBumper(state.boss.podR, isPodRDestroyed ? 13.5 : 9.5, pod => {
-          if (state.boss.rightShoulderHP > 0) {
-            sfx.metalBumper();
-            addFever(8);
-            const shielded = state.phase === 1 && state.boss.droneR_HP > 0;
-            if (shielded) {
-              addScore(500, pod.x, pod.y, "R-DRONE SHIELDED");
-              addPopup(pod.x, pod.y - 15, "先にR-DRONEを倒せ!", "#00f5d4", 0.95);
-            } else {
-              state.boss.rightShoulderHP--;
-              addParticles(pod.x, pod.y, "#ff1493", 14, 4.5);
-              if (state.boss.rightShoulderHP === 0) {
-                triggerArmorBreakEffect("shoulder_r", pod.x, pod.y);
-                state.boss.expression = "shock";
-                state.boss.expressionTimer = 65;
-                addScore(5000, pod.x, pod.y, "💥R-ARMOR BREAK!!");
-                showCutin("💥【右肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！", 180);
-                spawnFloatingCapsule(4, "perm");
-                checkPhase1Clear();
+            if (state.boss[hpKey] > 0) {
+              sfx.metalBumper();
+              addFever(8);
+              const shielded = state.phase === 1 && state.boss[droneKey] > 0;
+              if (shielded) {
+                addScore(500, pod.x, pod.y, `${tag} SHIELDED`);
+                addPopup(pod.x, pod.y - 15, `先に${which}-DRONEを倒せ!`, "#00f5d4", 0.95);
               } else {
-                addScore(1500, pod.x, pod.y, `R-POD HP:${state.boss.rightShoulderHP}`);
+                state.boss[hpKey]--;
+                addParticles(pod.x, pod.y, "#ff1493", 14, 4.5);
+                if (state.boss[hpKey] === 0) {
+                  triggerArmorBreakEffect(which === "L" ? "shoulder_l" : "shoulder_r", pod.x, pod.y);
+                  state.boss.expression = "shock";
+                  state.boss.expressionTimer = 65;
+                  addScore(5000, pod.x, pod.y, `💥${tag} BREAK!!`);
+                  showCutin(`💥【${which === "L" ? "左" : "右"}肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！`, 180);
+                  spawnFloatingCapsule(which === "L" ? 3 : 4, "perm");
+                  checkPhase1Clear();
+                } else {
+                  addScore(1500, pod.x, pod.y, `${tag} HP:${state.boss[hpKey]}`);
+                }
               }
+            } else {
+              // Overheat Generator: Super-Kick Plasma Ricochet!
+              sfx.exSpark();
+              addFever(14);
+              addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
+              addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
+              addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
+              state.nudgeOffset.x = (Math.random() - 0.5) * 10;
+              state.nudgeOffset.y = (Math.random() - 0.5) * 8;
             }
-          } else {
-            // Overheat Generator: Super-Kick Plasma Ricochet!
-            sfx.exSpark();
-            addFever(14);
-            addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
-            addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
-            addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
-            state.nudgeOffset.x = (Math.random() - 0.5) * 10;
-            state.nudgeOffset.y = (Math.random() - 0.5) * 8;
+            updateHUD();
           }
-          updateHUD();
         });
 
         function checkPhase1Clear() {
@@ -1672,122 +1653,47 @@ function renderTable() {
     const baseImg = isDefeat ? defeatCgImg : (isArmored ? centerpieceArmoredImg : centerpieceImg);
     ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
-    // If Chest Armor is Broken AND not in Defeat CG mode -> Draw Dynamic "Puru-Puru" Bust Sprites!
+    // If Chest Armor is Broken AND actively jiggling/fever -> Draw Bust Dynamics
     if (state.boss.chestArmorBroken && !isDefeat) {
-      const drawSpringBustPatch = (b) => {
-        const disp = Math.hypot(b.dx, b.dy);
-        ctx.save();
-        const cx = b.x + b.dx;
-        const cy = b.y + b.dy;
-        const scaleX = 1 + (b.dx * 0.008) - (b.dy * 0.006);
-        const scaleY = 1 + (b.dy * 0.008) - (b.dx * 0.006);
+      const dispL = Math.hypot(state.boss.bustL.dx, state.boss.bustL.dy);
+      const dispR = Math.hypot(state.boss.bustR.dx, state.boss.bustR.dy);
+      if (state.fever.active || dispL > 0.6 || dispR > 0.6) {
+        const drawSpringBustPatch = (b) => {
+          const disp = Math.hypot(b.dx, b.dy);
+          ctx.save();
+          const cx = b.x + b.dx;
+          const cy = b.y + b.dy;
+          const scaleX = 1 + (b.dx * 0.008) - (b.dy * 0.006);
+          const scaleY = 1 + (b.dy * 0.008) - (b.dx * 0.006);
 
-        ctx.translate(cx, cy);
-        ctx.scale(scaleX, scaleY);
-        ctx.beginPath();
-        ctx.arc(0, 0, b.r, 0, Math.PI * 2);
-        ctx.clip();
-
-        const srcScaleX = centerpieceImg.width / IMG_BOX.w;
-        const srcScaleY = centerpieceImg.height / IMG_BOX.h;
-        const sx = (b.x - b.r - IMG_BOX.x) * srcScaleX;
-        const sy = (b.y - b.r - IMG_BOX.y) * srcScaleY;
-        const sw = (b.r * 2) * srcScaleX;
-        const sh = (b.r * 2) * srcScaleY;
-
-        ctx.drawImage(centerpieceImg, sx, sy, sw, sh, -b.r, -b.r, b.r * 2, b.r * 2);
-
-        if (b.flash > 0 || disp > 0.6 || state.fever.active) {
-          ctx.strokeStyle = state.fever.active ? "#e6ff00" : "rgba(255, 20, 147, 0.75)";
-          ctx.lineWidth = b.flash > 0 ? 3 : 2;
+          ctx.translate(cx, cy);
+          ctx.scale(scaleX, scaleY);
           ctx.beginPath();
-          ctx.arc(0, 0, b.r - 1.5, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.restore();
-      };
-      drawSpringBustPatch(state.boss.bustL);
-      drawSpringBustPatch(state.boss.bustR);
-    }
+          ctx.arc(0, 0, b.r, 0, Math.PI * 2);
+          ctx.clip();
 
-    // Dynamic "ふにょん" Hanging Ear Tip Springs (Always active in table mode)
-    if (!isDefeat) {
-      const drawSpringEarPatch = (ear, which) => {
-        const isLit = which === "L" ? state.boss.leftEarLit : state.boss.rightEarLit;
-        const disp = Math.hypot(ear.dx, ear.dy);
-        ctx.save();
-        const cx = ear.x + ear.dx;
-        const cy = ear.y + ear.dy;
+          const srcScaleX = centerpieceImg.width / IMG_BOX.w;
+          const srcScaleY = centerpieceImg.height / IMG_BOX.h;
+          const sx = (b.x - b.r - IMG_BOX.x) * srcScaleX;
+          const sy = (b.y - b.r - IMG_BOX.y) * srcScaleY;
+          const sw = (b.r * 2) * srcScaleX;
+          const sh = (b.r * 2) * srcScaleY;
 
-        // Soft elastic "ふにょん" squash & stretch
-        const scaleX = 1 + (ear.dx * 0.015) - (ear.dy * 0.010);
-        const scaleY = 1 + (ear.dy * 0.015) - (ear.dx * 0.010);
+          ctx.drawImage(centerpieceImg, sx, sy, sw, sh, -b.r, -b.r, b.r * 2, b.r * 2);
 
-        ctx.translate(cx, cy);
-        ctx.scale(scaleX, scaleY);
-        ctx.beginPath();
-        // Oval shape matching the hanging rabbit ear curve
-        ctx.ellipse(0, 0, ear.r * 1.12, ear.r * 1.22, which === "L" ? -0.22 : 0.22, 0, Math.PI * 2);
-        ctx.clip();
-
-        const srcScaleX = centerpieceImg.width / IMG_BOX.w;
-        const srcScaleY = centerpieceImg.height / IMG_BOX.h;
-        const sx = (ear.x - ear.r * 1.12 - IMG_BOX.x) * srcScaleX;
-        const sy = (ear.y - ear.r * 1.22 - IMG_BOX.y) * srcScaleY;
-        const sw = (ear.r * 2.24) * srcScaleX;
-        const sh = (ear.r * 2.44) * srcScaleY;
-
-        const baseImg = (!state.boss.chestArmorBroken && centerpieceArmoredImg.complete) ? centerpieceArmoredImg : centerpieceImg;
-        ctx.drawImage(baseImg, sx, sy, sw, sh, -ear.r * 1.12, -ear.r * 1.22, ear.r * 2.24, ear.r * 2.44);
-
-        // Cybernetic soft neon rim glow
-        if (ear.flash > 0 || isLit || disp > 0.4) {
-          ctx.strokeStyle = ear.flash > 0 ? "#ffffff" : (isLit ? "#e6ff00" : "rgba(184, 77, 255, 0.75)");
-          ctx.lineWidth = ear.flash > 0 ? 3 : (isLit ? 2.5 : 1.6);
-          ctx.beginPath();
-          ctx.ellipse(0, 0, ear.r * 1.12 - 1.5, ear.r * 1.22 - 1.5, which === "L" ? -0.22 : 0.22, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Ear Sensor state indicator label
-        ctx.save();
-        ctx.fillStyle = isLit ? "#e6ff00" : "#ff66b2";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(isLit ? "🐰OK!" : `🐰EAR`, cx, cy - ear.r * 1.22 - 3);
-        ctx.restore();
-      };
-
-      drawSpringEarPatch(state.boss.earL, "L");
-      drawSpringEarPatch(state.boss.earR, "R");
-    }
-
-    // In Phase 2 (Chest Armor under active attack), show cyber-lock targeting bracket & HP
-    if (state.phase === 2 && !state.boss.chestArmorBroken) {
-        ctx.save();
-        const ax = 198, ay = 352;
-        const pulse = (Math.floor(state.boss.animTick / 8) % 2 === 0);
-        ctx.strokeStyle = pulse ? "#e6ff00" : "#ff1493";
-        ctx.lineWidth = 2;
-        // Cybernetic targeting corner brackets around the armored chest
-        const bw = 55, bh = 34;
-        const len = 10;
-        // Top-left
-        ctx.beginPath(); ctx.moveTo(ax - bw, ay - bh + len); ctx.lineTo(ax - bw, ay - bh); ctx.lineTo(ax - bw + len, ay - bh); ctx.stroke();
-        // Top-right
-        ctx.beginPath(); ctx.moveTo(ax + bw - len, ay - bh); ctx.lineTo(ax + bw, ay - bh); ctx.lineTo(ax + bw, ay - bh + len); ctx.stroke();
-        // Bottom-left
-        ctx.beginPath(); ctx.moveTo(ax - bw, ay + bh - len); ctx.lineTo(ax - bw, ay + bh); ctx.lineTo(ax - bw + len, ay + bh); ctx.stroke();
-        // Bottom-right
-        ctx.beginPath(); ctx.moveTo(ax + bw - len, ay + bh); ctx.lineTo(ax + bw, ay + bh); ctx.lineTo(ax + bw, ay + bh - len); ctx.stroke();
-
-        ctx.fillStyle = "#e6ff00";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(`CHEST ARMOR [${"■".repeat(state.boss.chestArmorHP)}]`, ax, ay + bh + 12);
-        ctx.restore();
+          if (b.flash > 0 || state.fever.active) {
+            ctx.strokeStyle = state.fever.active ? "#e6ff00" : "rgba(255, 20, 147, 0.75)";
+            ctx.lineWidth = b.flash > 0 ? 3 : 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, b.r - 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        };
+        drawSpringBustPatch(state.boss.bustL);
+        drawSpringBustPatch(state.boss.bustR);
       }
+    }
 
     // Face Patch Compositing (Skip if in Defeat CG)
     let activePatchKey = null;
@@ -1842,124 +1748,47 @@ function renderTable() {
     ctx.restore();
   }
 
-  // Draw Gimmick Overlays (Hidden after whiteout purge)
+  // Dynamic Hit Flashes & Overheat Sparks (Zero artificial circles; background art stays 100% visible!)
   if (!isPostWhiteout) {
-    const drawRingGimmick = (g, color, label, active = true) => {
+    // Subtle hit flash when any mecha part is struck
+    const drawHitFlash = (x, y, r, color = "#ffffff") => {
       ctx.save();
-      ctx.strokeStyle = g.flash > 0 ? "#ffffff" : color;
-      ctx.lineWidth = g.flash > 0 ? 3.5 : 2;
-      ctx.setLineDash(active ? [] : [4, 4]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.stroke();
-      if (g.flash > 0) {
-        ctx.fillStyle = "rgba(230, 255, 0, 0.35)";
-        ctx.fill();
-      }
-      if (label) {
-        ctx.fillStyle = "#e6ff00";
-        ctx.font = "bold 10px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(label, g.x, g.y - g.r - 4);
-      }
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.fill();
       ctx.restore();
     };
 
-    // Drones (Phase 1 Shield Generator vs Phase 2+ Laser Reflector)
+    if (state.boss.droneL.flash > 0) drawHitFlash(state.boss.droneL.x, state.boss.droneL.y, state.boss.droneL.r, "#00f5d4");
+    if (state.boss.droneR.flash > 0) drawHitFlash(state.boss.droneR.x, state.boss.droneR.y, state.boss.droneR.r, "#00f5d4");
+    if (state.boss.podL.flash > 0) drawHitFlash(state.boss.podL.x, state.boss.podL.y, state.boss.podL.rx, "#ff1493");
+    if (state.boss.podR.flash > 0) drawHitFlash(state.boss.podR.x, state.boss.podR.y, state.boss.podR.rx, "#ff1493");
+    if (state.boss.core.flash > 0) drawHitFlash(state.boss.core.x, state.boss.core.y, state.boss.core.r, "#e6ff00");
+    if (state.boss.earL.flash > 0) drawHitFlash(state.boss.earL.x, state.boss.earL.y, state.boss.earL.rx, "#b84dff");
+    if (state.boss.earR.flash > 0) drawHitFlash(state.boss.earR.x, state.boss.earR.y, state.boss.earR.rx, "#b84dff");
+
+    // Overheat Generator Sparks (Only intermittent sparks from broken shoulder frames, no fake circle rings!)
     [
-      { d: state.boss.droneL, hp: state.boss.droneL_HP, tag: "DRONE-L" },
-      { d: state.boss.droneR, hp: state.boss.droneR_HP, tag: "DRONE-R" }
-    ].forEach(({ d, hp, tag }) => {
-      if (hp > 0) {
-        drawRingGimmick(d, "#00f5d4", `${tag}[${hp}]`, true);
-      } else {
-        // Laser Reflector Bumper
+      { pod: state.boss.podL, hp: state.boss.leftShoulderHP },
+      { pod: state.boss.podR, hp: state.boss.rightShoulderHP }
+    ].forEach(({ pod, hp }) => {
+      if (hp === 0 && Math.random() < 0.35) {
         ctx.save();
-        ctx.strokeStyle = (Math.floor(state.boss.animTick / 6) % 2 === 0) ? "#00f5d4" : "#ff1493";
-        ctx.lineWidth = 2.5;
+        const ang = Math.random() * Math.PI * 2;
+        const len = 12 + Math.random() * 16;
+        ctx.strokeStyle = Math.random() > 0.5 ? "#e6ff00" : "#00f5d4";
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.moveTo(pod.x + (Math.random() - 0.5) * 10, pod.y + (Math.random() - 0.5) * 10);
+        ctx.lineTo(pod.x + Math.cos(ang) * len, pod.y + Math.sin(ang) * len);
         ctx.stroke();
-
-        ctx.strokeStyle = "#e6ff00";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r * 0.6, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = "#00f5d4";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("⚡LASER⚡", d.x, d.y - d.r - 4);
         ctx.restore();
       }
     });
-
-    // Shoulder Armor HP & Overheat Generator
-    [
-      { pod: state.boss.podL, hp: state.boss.leftShoulderHP, tag: "ARMOR-L" },
-      { pod: state.boss.podR, hp: state.boss.rightShoulderHP, tag: "ARMOR-R" }
-    ].forEach(({ pod, hp, tag }) => {
-      if (hp > 0) {
-        drawRingGimmick(pod, "#ff1493", `${tag}[${"■".repeat(hp)}]`, true);
-      } else {
-        // Overheat Generator: Pulsing electric plasma bumper
-        ctx.save();
-        const pulse = Math.sin(state.boss.animTick * 0.2) * 2;
-        ctx.strokeStyle = (Math.floor(state.boss.animTick / 4) % 2 === 0) ? "#e6ff00" : "#ff0055";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(pod.x, pod.y, pod.r + pulse, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner electric spark ring
-        ctx.strokeStyle = "#00f5d4";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(pod.x, pod.y, pod.r * 0.65, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Sparks radiating
-        if (Math.random() > 0.4) {
-          const ang = Math.random() * Math.PI * 2;
-          const len = pod.r + 6 + Math.random() * 8;
-          ctx.strokeStyle = "#e6ff00";
-          ctx.lineWidth = 1.8;
-          ctx.beginPath();
-          ctx.moveTo(pod.x, pod.y);
-          ctx.lineTo(pod.x + Math.cos(ang) * len, pod.y + Math.sin(ang) * len);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = "#e6ff00";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("⚡EX-BOUNCE⚡", pod.x, pod.y - pod.r - 4);
-        ctx.fillText("5,000pts", pod.x, pod.y + 3);
-        ctx.restore();
-      }
-    });
-
-    // Chest Core Gem
-    ctx.save();
-    const core = state.boss.core;
-    ctx.strokeStyle = core.flash > 0 ? "#ffffff" : (state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4"));
-    ctx.lineWidth = (state.phase === 3 || state.boss.coreUnlocked) ? 3 : 2;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const ang = (Math.PI / 3) * i - Math.PI / 6;
-      const px = core.x + Math.cos(ang) * core.r;
-      const py = core.y + Math.sin(ang) * core.r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fillStyle = state.phase === 3 ? "#ff1493" : (state.boss.coreUnlocked ? "#e6ff00" : "#00f5d4");
-    ctx.font = "bold 10px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(state.phase === 3 ? `KO HIT[${state.boss.coreHP}]` : (state.boss.coreUnlocked ? "★JACKPOT★" : "CORE"), core.x, core.y - core.r - 5);
-    ctx.restore();
 
     // Draw Permanent Upgrades
     // Sub-Bumpers

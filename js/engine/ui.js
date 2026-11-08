@@ -449,13 +449,13 @@ window.UI = {
 
       const btnAudio = document.getElementById("btnAudio");
       if (btnAudio) {
-        btnAudio.textContent = nextState ? "FM:ON" : "FM:MUTE";
+        btnAudio.textContent = nextState ? "SFX:ON" : "SFX:MUTE";
         btnAudio.className = nextState 
           ? "px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[9px] sm:text-[10px] cursor-pointer transition"
           : "px-1.5 py-0.5 rounded bg-[#180828] text-gray-400 border border-gray-600 text-[9px] sm:text-[10px] cursor-pointer transition";
       }
       const txtMenuStatus = document.getElementById("txtMenuAudioStatus");
-      if (txtMenuStatus) txtMenuStatus.textContent = nextState ? "FM: ON" : "FM: MUTE";
+      if (txtMenuStatus) txtMenuStatus.textContent = nextState ? "SFX: ON" : "SFX: MUTE";
       const txtMenuIcon = document.getElementById("txtMenuAudioIcon");
       if (txtMenuIcon) txtMenuIcon.textContent = nextState ? "🔊" : "🔇";
       if (nextState && window.sfx.capsuleCatch) window.sfx.capsuleCatch();

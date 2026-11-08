@@ -46,15 +46,15 @@
         </div>
       </div>
 
-      <!-- SOUND / AUDIO ENGINE -->
+      <!-- SOUND SYSTEM -->
       <div class="space-y-1 bg-[#140730]/90 p-2.5 rounded-lg border border-[#ff1493]/20">
         <div class="text-[11px] font-extrabold text-[#ff66b2] flex items-center gap-1 border-b border-[#ff1493]/20 pb-1">
           <span>🔊 SOUND SYSTEM</span>
         </div>
         <div class="text-[10px] text-gray-300 leading-tight space-y-0.5 pt-1">
-          <div>CH: FM 6音 / SSG 3音 相当</div>
-          <div class="text-[#00f5d4] font-bold">YM2608 OPNA FM Synth</div>
-          <div class="text-[9px] text-gray-400">リアルタイムFM変調サウンド</div>
+          <div>ENGINE: Web Audio API</div>
+          <div class="text-[#00f5d4] font-bold">SYNTHESIZED SFX</div>
+          <div class="text-[9px] text-gray-400">リアルタイム変調効果音</div>
         </div>
       </div>
 
@@ -91,7 +91,7 @@
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <button id="btnAudio" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[9px] sm:text-[10px] cursor-pointer transition">
-          FM:ON
+          SFX:ON
         </button>
         <button id="btnReset" class="px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#ff1493] text-white border border-[#ff1493]/60 text-[9px] sm:text-[10px] font-bold cursor-pointer transition">
           RESET
@@ -236,7 +236,7 @@
             <div class="grid grid-cols-2 gap-2 pt-1">
               <button id="btnMenuToggleAudio" class="p-2 rounded-xl bg-[#1c083e] hover:bg-[#281058] border border-[#00f5d4]/50 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                 <span id="txtMenuAudioIcon">🔊</span>
-                <span id="txtMenuAudioStatus">FM: ON</span>
+                <span id="txtMenuAudioStatus">SFX: ON</span>
               </button>
               <button id="btnMenuReset" class="p-2 rounded-xl bg-[#ff1493]/20 hover:bg-[#ff1493]/40 border border-[#ff1493] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                 <span>🔄</span>

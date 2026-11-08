@@ -6,7 +6,7 @@
 
 - `index.html` — ゲームメイン画面
 - `css/style.css` — ネオサイバー走査線（スキャンライン）・ネオン枠・レイアウト定義
-- `js/audio.js` — Web Audio APIによるFM音源風シンセサイザーSEエンジン (`FMSoundEngine`)
+- `js/audio.js` — Web Audio APIによる変調シンセサイザーSEエンジン (`FMSoundEngine`)
 - `js/engine/physics.js` — サブステップ物理演算、フリッパー＆プランジャー、ナッジ反発
 - `js/engine/particles.js` — 装甲破片・衝撃波・スパークパーティクル描画
 - `js/engine/systems.js` — フィーバーシステム、ホロカプセル生成、スキルショット判定

@@ -70,9 +70,9 @@
     </div>
 
     <!-- CANVAS CONTAINER (AUTO-FIT VERTICAL SPACE, NO SCROLL) -->
-    <div class="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
-      <div class="relative h-full aspect-[420/660] max-w-full rounded-lg overflow-hidden border border-[#ff1493]/70 bg-[#09031c] flex items-center justify-center shadow-inner">
-        <canvas id="pinballCanvas" width="420" height="660" class="w-full h-full block pixel-canvas object-contain"></canvas>
+    <div id="playfieldArea" class="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden touch-none select-none cursor-pointer">
+      <div id="playfieldFrame" class="relative h-full aspect-[420/660] max-w-full rounded-lg overflow-hidden border border-[#ff1493]/70 bg-[#09031c] flex items-center justify-center shadow-inner touch-none select-none">
+        <canvas id="pinballCanvas" width="420" height="660" class="w-full h-full block pixel-canvas object-contain touch-none select-none"></canvas>
         <div class="scanlines pointer-events-none absolute inset-0"></div>
 
         <!-- DIALOGUE / CUT-IN BANNER OVERLAY (HIGH TRANSPARENCY TO PRESERVE BACKDROP EFFECTS) -->
@@ -256,7 +256,7 @@
   </div>
 
   <script src="./js/stage1_assets.js"></script>
-  <script src="./js/audio.js?v=14"></script>
-  <script src="./js/game.js?v=14"></script>
+  <script src="./js/audio.js?v=15"></script>
+  <script src="./js/game.js?v=15"></script>
 </body>
 </html>

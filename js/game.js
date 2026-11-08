@@ -255,7 +255,7 @@ function prepareBallForLaunch() {
   if (state.perm.kickbackR > 0) state.perm.kickbackR_charges = 1;
   if (state.perm.centerPost > 0) state.perm.centerPostHP = 3;
 
-  showCutin("【ゲーム開始】<br>発射ボタン長押し または 右下スワイプで発射！", 140);
+  showCutin("【ゲーム開始】<br>画面の左右タップでパドル操作！ 発射ボタン または 右下スワイプで発射！", 150);
 }
 
 function spawnBall(x = 198, y = 260, vx = 0, vy = -7.5) {
@@ -2604,11 +2604,31 @@ function updateHUD() {
 function setLeftFlip(down) {
   if (down && !state.leftFlipperDown) sfx.flip();
   state.leftFlipperDown = down;
+  const btn = document.getElementById("btnLeftFlip");
+  if (btn) {
+    if (down) {
+      btn.classList.add("bg-[#00f5d4]", "text-[#09031c]", "scale-95");
+      btn.classList.remove("bg-[#1b0b42]", "text-[#00f5d4]");
+    } else {
+      btn.classList.remove("bg-[#00f5d4]", "text-[#09031c]", "scale-95");
+      btn.classList.add("bg-[#1b0b42]", "text-[#00f5d4]");
+    }
+  }
 }
 
 function setRightFlip(down) {
   if (down && !state.rightFlipperDown) sfx.flip();
   state.rightFlipperDown = down;
+  const btn = document.getElementById("btnRightFlip");
+  if (btn) {
+    if (down) {
+      btn.classList.add("bg-[#00f5d4]", "text-[#09031c]", "scale-95");
+      btn.classList.remove("bg-[#1b0b42]", "text-[#00f5d4]");
+    } else {
+      btn.classList.remove("bg-[#00f5d4]", "text-[#09031c]", "scale-95");
+      btn.classList.add("bg-[#1b0b42]", "text-[#00f5d4]");
+    }
+  }
 }
 
 function triggerDirectionalNudge(dirX = 0, dirY = -1, intensity = 1.0) {
@@ -2764,61 +2784,79 @@ if (plungerBtn) {
   plungerBtn.addEventListener("pointercancel", finishPlungerBtn);
 }
 
-// Full Multi-Touch Support for Direct Canvas Play
+// Full Multi-Touch Support for Direct Screen / Playfield Tap Play
 const activeTouches = new Map();
+const playfieldEl = document.getElementById("playfieldArea") || canvas;
 
-canvas.addEventListener("pointerdown", e => {
+const handlePlayfieldDown = e => {
   e.preventDefault();
-  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) * (W / rect.width);
-  const y = (e.clientY - rect.top) * (H / rect.height);
+  try { playfieldEl.setPointerCapture(e.pointerId); } catch (_) {}
 
-  if (state.plunger.waitingForLaunch) {
-    // If waiting for launch, touch anywhere on right side or lower screen pulls the plunger!
-    if (x > 220 || y > 420) {
-      activeTouches.set(e.pointerId, { type: "plunger", startY: y, lastY: y });
-      state.plunger.pulling = true;
-      return;
-    }
+  const canvasRect = canvas.getBoundingClientRect();
+  const canvasX = (e.clientX - canvasRect.left) * (W / canvasRect.width);
+  const canvasY = (e.clientY - canvasRect.top) * (H / canvasRect.height);
+
+  // Dedicated Plunger Pull: Only when waiting for launch AND touching specifically near the right shooter lane!
+  if (state.plunger.waitingForLaunch && canvasX > 370 && canvasY > 440) {
+    activeTouches.set(e.pointerId, { type: "plunger", startY: canvasY, lastY: canvasY });
+    state.plunger.pulling = true;
+    return;
   }
 
-  // Normal Gameplay Multi-Touch with Swipe-to-Nudge Support
-  const side = x < W / 2 ? "L" : "R";
+  // Left vs Right half of screen/playfield:
+  // Using playfield horizontal center ensures reliable detection on all screen sizes & aspect ratios!
+  const areaRect = playfieldEl.getBoundingClientRect();
+  const isLeft = e.clientX < (areaRect.left + areaRect.width / 2);
+  const side = isLeft ? "L" : "R";
+
   activeTouches.set(e.pointerId, {
     type: side,
-    startX: x,
-    startY: y,
     clientStartX: e.clientX,
     clientStartY: e.clientY,
     hasNudged: false
   });
+
   if (side === "L") setLeftFlip(true);
   else setRightFlip(true);
-});
+};
 
-canvas.addEventListener("pointermove", e => {
+const handlePlayfieldMove = e => {
   const t = activeTouches.get(e.pointerId);
   if (!t) return;
+
   if (t.type === "plunger") {
-    const rect = canvas.getBoundingClientRect();
-    const y = (e.clientY - rect.top) * (H / rect.height);
+    const canvasRect = canvas.getBoundingClientRect();
+    const y = (e.clientY - canvasRect.top) * (H / canvasRect.height);
     const dragDist = Math.max(0, y - t.startY);
     state.plunger.power = Math.min(100, (dragDist / 60) * 100);
     t.lastY = y;
-  } else if (!t.hasNudged) {
-    // Quick flick/swipe on canvas triggers directional nudge
-    const dx = e.clientX - t.clientStartX;
-    const dy = e.clientY - t.clientStartY;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 35) {
-      t.hasNudged = true;
-      triggerDirectionalNudge(dx, dy, Math.min(1.5, dist / 45));
+  } else {
+    // Check if dragging across centerline
+    const areaRect = playfieldEl.getBoundingClientRect();
+    const currentSide = e.clientX < (areaRect.left + areaRect.width / 2) ? "L" : "R";
+    if (currentSide !== t.type) {
+      // Switched sides while holding!
+      t.type = currentSide;
+      const stillHoldingL = Array.from(activeTouches.values()).some(v => v.type === "L");
+      const stillHoldingR = Array.from(activeTouches.values()).some(v => v.type === "R");
+      setLeftFlip(stillHoldingL);
+      setRightFlip(stillHoldingR);
+    }
+
+    // Quick flick/swipe on screen triggers directional nudge
+    if (!t.hasNudged) {
+      const dx = e.clientX - t.clientStartX;
+      const dy = e.clientY - t.clientStartY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 38) {
+        t.hasNudged = true;
+        triggerDirectionalNudge(dx, dy, Math.min(1.5, dist / 45));
+      }
     }
   }
-});
+};
 
-const handlePointerEnd = e => {
+const handlePlayfieldEnd = e => {
   const t = activeTouches.get(e.pointerId);
   if (!t) return;
   activeTouches.delete(e.pointerId);
@@ -2826,17 +2864,18 @@ const handlePointerEnd = e => {
   if (t.type === "plunger") {
     if (state.plunger.power < 15) state.plunger.power = 76; // Tap-to-launch default power
     releasePlunger();
-  } else if (t.type === "L") {
-    const stillHoldingL = Array.from(activeTouches.values()).some(v => v.type === "L");
-    if (!stillHoldingL) setLeftFlip(false);
-  } else if (t.type === "R") {
-    const stillHoldingR = Array.from(activeTouches.values()).some(v => v.type === "R");
-    if (!stillHoldingR) setRightFlip(false);
   }
+
+  const stillHoldingL = Array.from(activeTouches.values()).some(v => v.type === "L");
+  const stillHoldingR = Array.from(activeTouches.values()).some(v => v.type === "R");
+  if (!stillHoldingL) setLeftFlip(false);
+  if (!stillHoldingR) setRightFlip(false);
 };
 
-canvas.addEventListener("pointerup", handlePointerEnd);
-canvas.addEventListener("pointercancel", handlePointerEnd);
+playfieldEl.addEventListener("pointerdown", handlePlayfieldDown);
+playfieldEl.addEventListener("pointermove", handlePlayfieldMove);
+playfieldEl.addEventListener("pointerup", handlePlayfieldEnd);
+playfieldEl.addEventListener("pointercancel", handlePlayfieldEnd);
 
 // Direct Swipe-to-Nudge Button Handler
 const nudgeBtn = document.getElementById("btnNudge");

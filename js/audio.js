@@ -84,6 +84,12 @@ class RetroSoundEngine {
     this.playFM(150, 65, 400, 0.32, "sawtooth", 42, 0.2);
   }
 
+  // High-energy Overheat Generator Spark bounce
+  exSpark() {
+    this.playFM(1200, 800, 300, 0.12, "sawtooth", 2400, 0.18);
+    setTimeout(() => this.playFM(440, 220, 200, 0.15, "square", 880, 0.14), 30);
+  }
+
   // Plunger pull / ratchet click sound
   plungerPullClick() {
     this.playFM(420, 840, 90, 0.025, "triangle", 320, 0.08);

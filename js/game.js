@@ -183,6 +183,10 @@ function createInitialState() {
     particles: [],
     popups: [],
     lightningArcs: [],
+    armorDebris: [],   // Flying shattered armor plates
+    shockwaves: [],    // Expanding optical shockwave rings
+    hearts: [],        // Floating pink heart particles on bust hit
+    hitStopTimer: 0,   // Freeze-frame impact feedback (frames)
 
     leftFlipperDown: false,
     rightFlipperDown: false,
@@ -494,6 +498,84 @@ function addScore(basePts, x, y, label = "") {
   }
 
   updateHUD();
+}
+
+// =========================================================================
+// 3.4. DYNAMIC ARMOR BREAK & PURGE EFFECTS
+// =========================================================================
+function triggerArmorBreakEffect(type, cx, cy) {
+  // type: "shoulder_l" | "shoulder_r" | "chest"
+  // 1. Violent Screen Shake & Hit-stop Impact
+  state.nudgeOffset.x = (Math.random() - 0.5) * 22;
+  state.nudgeOffset.y = (Math.random() - 0.5) * 18;
+  state.hitStopTimer = 4; // 4 frames of micro-freeze for heavy impact sensation
+
+  // 2. Optical Shockwave Ring
+  state.shockwaves.push({
+    x: cx,
+    y: cy,
+    r: 8,
+    maxR: type === "chest" ? 95 : 68,
+    speed: type === "chest" ? 5.2 : 4.0,
+    color: type === "chest" ? "#ff1493" : "#00f5d4",
+    lineWidth: 3.5,
+    alpha: 1.0
+  });
+
+  // 3. High-pressure steam purge exhaust
+  for (let i = 0; i < 10; i++) {
+    const ang = (Math.PI * 2 * i) / 10 + (Math.random() - 0.5) * 0.4;
+    const spd = 2.5 + Math.random() * 3.5;
+    state.particles.push({
+      x: cx,
+      y: cy,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      color: "#ffffff",
+      life: 28 + Math.floor(Math.random() * 18)
+    });
+  }
+
+  // 4. Chunky Armor Plate Shards (Metal debris flying off!)
+  const shardCount = type === "chest" ? 16 : 10;
+  for (let i = 0; i < shardCount; i++) {
+    const angle = Math.atan2(cy - 300, cx - 198) + (Math.random() - 0.5) * 1.8;
+    const spd = 4.2 + Math.random() * 6.8;
+    state.armorDebris.push({
+      x: cx + (Math.random() - 0.5) * 24,
+      y: cy + (Math.random() - 0.5) * 20,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd - (2.5 + Math.random() * 3.0), // Kick upwards first
+      angle: Math.random() * Math.PI * 2,
+      vAngle: (Math.random() - 0.5) * 0.38,
+      w: 12 + Math.random() * 14,
+      h: 8 + Math.random() * 10,
+      color: Math.random() > 0.35 ? "#ff1493" : "#e6ff00",
+      stroke: "#ffffff",
+      life: 65 + Math.floor(Math.random() * 30),
+      maxLife: 95
+    });
+  }
+
+  // 5. Heavy Sparks & Audio
+  sfx.armorBreak();
+  addParticles(cx, cy, "#ff1493", 26, 7.5);
+  addParticles(cx, cy, "#e6ff00", 22, 6.0);
+}
+
+function spawnHeartParticle(x, y) {
+  state.hearts.push({
+    x: x + (Math.random() - 0.5) * 24,
+    y: y + (Math.random() - 0.5) * 16,
+    vx: (Math.random() - 0.5) * 2.2,
+    vy: -1.8 - Math.random() * 2.2, // Rising up
+    size: 10 + Math.random() * 8,
+    scale: 0.2,
+    maxScale: 1.0 + Math.random() * 0.4,
+    life: 50 + Math.floor(Math.random() * 25),
+    maxLife: 75,
+    alpha: 1.0
+  });
 }
 
 // =========================================================================
@@ -842,10 +924,44 @@ function releasePlunger() {
 // =========================================================================
 // 6. MAIN PHYSICS STEP
 // =========================================================================
+function updateDebrisAndEffects() {
+  // Armor plate shards physics
+  for (let i = state.armorDebris.length - 1; i >= 0; i--) {
+    const d = state.armorDebris[i];
+    d.x += d.vx;
+    d.y += d.vy;
+    d.vy += 0.22;
+    d.vx *= 0.985;
+    d.angle += d.vAngle;
+    d.life--;
+    if (d.life <= 0) state.armorDebris.splice(i, 1);
+  }
+
+  // Shockwaves
+  for (let i = state.shockwaves.length - 1; i >= 0; i--) {
+    const sw = state.shockwaves[i];
+    sw.r += sw.speed;
+    sw.alpha = Math.max(0, 1 - sw.r / sw.maxR);
+    if (sw.r >= sw.maxR) state.shockwaves.splice(i, 1);
+  }
+
+  // Floating Hearts
+  for (let i = state.hearts.length - 1; i >= 0; i--) {
+    const h = state.hearts[i];
+    h.x += h.vx + Math.sin(h.life * 0.15) * 0.6;
+    h.y += h.vy;
+    h.scale = Math.min(h.maxScale, h.scale + 0.08);
+    h.alpha = Math.min(1.0, h.life / (h.maxLife * 0.4));
+    h.life--;
+    if (h.life <= 0) state.hearts.splice(i, 1);
+  }
+}
+
 function stepPhysics() {
   if (state.clearSequence && state.clearSequence.active) {
     updateClearSequence();
     updateBossSprings();
+    updateDebrisAndEffects();
     // Continue running particle and popup physics even after clear!
     state.particles.forEach(p => {
       p.x += p.vx;
@@ -858,6 +974,13 @@ function stepPhysics() {
       pop.life--;
     });
     state.popups = state.popups.filter(pop => pop.life > 0);
+    return;
+  }
+
+  // Hit-stop micro freeze on heavy armor break impact
+  if (state.hitStopTimer > 0) {
+    state.hitStopTimer--;
+    updateDebrisAndEffects();
     return;
   }
 
@@ -1019,33 +1142,19 @@ function stepPhysics() {
               state.boss.chestArmorHP--;
               addParticles(armorX, armorY, "#ff1493", 16, 5.0);
               if (state.boss.chestArmorHP === 5) {
-                sfx.armorBreak();
+                triggerArmorBreakEffect("chest", armorX, armorY);
                 addScore(4000, armorX, armorY, "💥ARMOR CRACK!!");
                 showCutin("⚠️【胸部装甲に亀裂発生】<br>第1装甲破壊！ あと5回直撃で完全パージ！", 180);
               } else if (state.boss.chestArmorHP === 0) {
                 state.boss.chestArmorBroken = true;
                 state.phase = 3;
-                sfx.armorBreak();
+                triggerArmorBreakEffect("chest", armorX, armorY);
                 state.boss.expression = "blush";
                 state.boss.expressionTimer = 85;
                 showCutin("💥【CHEST ARMOR PURGE】💥<br>完全装甲パージ！ 最終PHASE 3突入！", 240);
-                addScore(12000, armorX, armorY, "FULL PURGE!!");
+                addScore(15000, armorX, armorY, "FULL PURGE!!");
                 spawnFloatingCapsule(2, "buff");
                 spawnFloatingCapsule(5, "buff");
-
-                // Big armor break debris explosion!
-                for (let i = 0; i < 40; i++) {
-                  const ang = Math.random() * Math.PI * 2;
-                  const spd = 2.5 + Math.random() * 6.5;
-                  state.particles.push({
-                    x: armorX + (Math.random() - 0.5) * 60,
-                    y: armorY + (Math.random() - 0.5) * 40,
-                    vx: Math.cos(ang) * spd,
-                    vy: Math.sin(ang) * spd,
-                    color: Math.random() < 0.5 ? "#ff1493" : (Math.random() < 0.5 ? "#00f5d4" : "#e6ff00"),
-                    life: 35 + Math.floor(Math.random() * 25)
-                  });
-                }
               } else {
                 addScore(1500, armorX, armorY, `CHEST HP:${state.boss.chestArmorHP}`);
               }
@@ -1055,7 +1164,7 @@ function stepPhysics() {
             addFever(6);
           }
         } else {
-          // EXPOSED SOFT BUST ("ぷるぷる" soft bounce)
+          // EXPOSED SOFT BUST ("ぷるぷる" soft bounce + Heart Splash & Sexy SFX)
           [
             { key: "L", obj: state.boss.bustL },
             { key: "R", obj: state.boss.bustR }
@@ -1074,12 +1183,24 @@ function stepPhysics() {
 
               const speed = Math.hypot(ball.vx, ball.vy);
               const softSpeed = state.fever.active
-                ? Math.max(7.5, Math.min(13.0, speed * 1.3)) // High bounce in Fever!
-                : Math.max(3.2, Math.min(6.5, speed * 0.58)); // Soft cushion normally
+                ? Math.max(8.5, Math.min(14.0, speed * 1.35)) // High bounce in Fever!
+                : Math.max(3.8, Math.min(7.2, speed * 0.65)); // Elastic cushion
 
               ball.vx = nx * softSpeed;
               ball.vy = ny * softSpeed - 1.2;
-              impulseBust(key, -nx * Math.min(8, speed), -ny * Math.min(8, speed));
+              impulseBust(key, -nx * Math.min(10, speed * 1.2), -ny * Math.min(10, speed * 1.2));
+
+              // Soft bounce SFX, floating hearts & boss blushing reaction!
+              sfx.softPuru();
+              for (let i = 0; i < 5; i++) {
+                spawnHeartParticle(cx, cy);
+              }
+              state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 14);
+              state.boss.expression = "blush";
+              state.boss.expressionTimer = 55;
+              addFever(10);
+              addScore(3000, cx, cy, "💖PURU-PURU HIT!");
+              updateHUD();
             }
           });
         }
@@ -1104,29 +1225,32 @@ function stepPhysics() {
           }
         };
 
-        // Drones (Phase 1 Shield Generators + Capsule Dispensers)
+        // Drones (Phase 1 Shield Generators -> Phase 2+ Laser Reflectors)
         [
           { d: state.boss.droneL, hpKey: "droneL_HP", slot: 0, tag: "L-DRONE" },
           { d: state.boss.droneR, hpKey: "droneR_HP", slot: 1, tag: "R-DRONE" }
         ].forEach(({ d, hpKey, slot, tag }) => {
-          checkCircleBumper(d, 10.5, () => {
+          const isDestroyed = state.boss[hpKey] === 0;
+          const spd = isDestroyed ? 11.5 : 10.5; // High bounce when destroyed!
+          checkCircleBumper(d, spd, () => {
             sfx.metalBumper();
             state.droneComboCount++;
             addFever(8);
-            addParticles(d.x, d.y, "#00f5d4", 10, 4.0);
+            addParticles(d.x, d.y, isDestroyed ? "#e6ff00" : "#00f5d4", 12, 4.5);
 
             if (state.phase === 1 && state.boss[hpKey] > 0) {
               state.boss[hpKey]--;
               if (state.boss[hpKey] === 0) {
-                sfx.armorBreak();
-                addScore(3000, d.x, d.y - 15, `💥${tag} DOWN!!`);
+                triggerArmorBreakEffect("shoulder_l", d.x, d.y);
+                addScore(4000, d.x, d.y - 15, `💥${tag} DOWN!!`);
                 showCutin(`💥【${tag} 撃破】<br>肩アーマーの電磁シールドが解除！`, 160);
                 spawnFloatingCapsule(slot, "buff");
               } else {
                 addScore(1000, d.x, d.y - 15, `${tag} HP:${state.boss[hpKey]}`);
               }
             } else {
-              addScore(800, d.x, d.y - 15, "DRONE HIT");
+              // Destroyed Drone acts as an active Laser Ricochet Bumper!
+              addScore(2500, d.x, d.y - 15, "⚡LASER RICOCHET!");
               if (state.droneComboCount % 4 === 0) {
                 spawnFloatingCapsule(slot);
               }
@@ -1175,11 +1299,12 @@ function stepPhysics() {
           updateHUD();
         });
 
-        // Left Shoulder Armor Pod (Phase 1 Target, HP 5)
-        checkCircleBumper(state.boss.podL, 9.5, pod => {
-          sfx.metalBumper();
-          addFever(8);
+        // Left Shoulder Armor Pod (Phase 1 Target, HP 5 -> Overheat Generator)
+        const isPodLDestroyed = state.boss.leftShoulderHP === 0;
+        checkCircleBumper(state.boss.podL, isPodLDestroyed ? 13.5 : 9.5, pod => {
           if (state.boss.leftShoulderHP > 0) {
+            sfx.metalBumper();
+            addFever(8);
             const shielded = state.phase === 1 && state.boss.droneL_HP > 0;
             if (shielded) {
               addScore(500, pod.x, pod.y, "L-DRONE SHIELDED");
@@ -1188,11 +1313,11 @@ function stepPhysics() {
               state.boss.leftShoulderHP--;
               addParticles(pod.x, pod.y, "#ff1493", 14, 4.5);
               if (state.boss.leftShoulderHP === 0) {
-                sfx.armorBreak();
+                triggerArmorBreakEffect("shoulder_l", pod.x, pod.y);
                 state.boss.expression = "shock";
                 state.boss.expressionTimer = 65;
                 addScore(5000, pod.x, pod.y, "💥L-ARMOR BREAK!!");
-                showCutin("💥【左肩アーマー破壊】<br>防衛ユニット大破！ 強化カプセル放出！", 180);
+                showCutin("💥【左肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！", 180);
                 spawnFloatingCapsule(3, "perm");
                 checkPhase1Clear();
               } else {
@@ -1200,16 +1325,24 @@ function stepPhysics() {
               }
             }
           } else {
-            addScore(1800, pod.x, pod.y, "WEAK SPOT!");
+            // Overheat Generator: Super-Kick Plasma Ricochet!
+            sfx.exSpark();
+            addFever(14);
+            addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
+            addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
+            addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
+            state.nudgeOffset.x = (Math.random() - 0.5) * 10;
+            state.nudgeOffset.y = (Math.random() - 0.5) * 8;
           }
           updateHUD();
         });
 
-        // Right Shoulder Armor Pod (Phase 1 Target, HP 5)
-        checkCircleBumper(state.boss.podR, 9.5, pod => {
-          sfx.metalBumper();
-          addFever(8);
+        // Right Shoulder Armor Pod (Phase 1 Target, HP 5 -> Overheat Generator)
+        const isPodRDestroyed = state.boss.rightShoulderHP === 0;
+        checkCircleBumper(state.boss.podR, isPodRDestroyed ? 13.5 : 9.5, pod => {
           if (state.boss.rightShoulderHP > 0) {
+            sfx.metalBumper();
+            addFever(8);
             const shielded = state.phase === 1 && state.boss.droneR_HP > 0;
             if (shielded) {
               addScore(500, pod.x, pod.y, "R-DRONE SHIELDED");
@@ -1218,11 +1351,11 @@ function stepPhysics() {
               state.boss.rightShoulderHP--;
               addParticles(pod.x, pod.y, "#ff1493", 14, 4.5);
               if (state.boss.rightShoulderHP === 0) {
-                sfx.armorBreak();
+                triggerArmorBreakEffect("shoulder_r", pod.x, pod.y);
                 state.boss.expression = "shock";
                 state.boss.expressionTimer = 65;
                 addScore(5000, pod.x, pod.y, "💥R-ARMOR BREAK!!");
-                showCutin("💥【右肩アーマー破壊】<br>防衛ユニット大破！ 強化カプセル放出！", 180);
+                showCutin("💥【右肩アーマー破壊】<br>内部ジェネレータ露出！ ⚡EX-BOUNCE活性化！", 180);
                 spawnFloatingCapsule(4, "perm");
                 checkPhase1Clear();
               } else {
@@ -1230,7 +1363,14 @@ function stepPhysics() {
               }
             }
           } else {
-            addScore(1800, pod.x, pod.y, "WEAK SPOT!");
+            // Overheat Generator: Super-Kick Plasma Ricochet!
+            sfx.exSpark();
+            addFever(14);
+            addParticles(pod.x, pod.y, "#00f5d4", 18, 6.0);
+            addParticles(pod.x, pod.y, "#e6ff00", 12, 5.0);
+            addScore(5000, pod.x, pod.y, "⚡EX-SPARK!!");
+            state.nudgeOffset.x = (Math.random() - 0.5) * 10;
+            state.nudgeOffset.y = (Math.random() - 0.5) * 8;
           }
           updateHUD();
         });
@@ -1414,6 +1554,8 @@ function stepPhysics() {
     state.boss.podL, state.boss.podR,
     state.boss.core
   ].forEach(g => { if (g.flash > 0) g.flash--; });
+
+  updateDebrisAndEffects();
 }
 
 // =========================================================================
@@ -1584,18 +1726,82 @@ function renderTable() {
       ctx.restore();
     };
 
-    drawRingGimmick(state.boss.droneL, "#00f5d4", "DRONE");
-    drawRingGimmick(state.boss.droneR, "#00f5d4", "DRONE");
+    // Drones (Phase 1 Shield Generator vs Phase 2+ Laser Reflector)
+    [
+      { d: state.boss.droneL, hp: state.boss.droneL_HP, tag: "DRONE-L" },
+      { d: state.boss.droneR, hp: state.boss.droneR_HP, tag: "DRONE-R" }
+    ].forEach(({ d, hp, tag }) => {
+      if (hp > 0) {
+        drawRingGimmick(d, "#00f5d4", `${tag}[${hp}]`, true);
+      } else {
+        // Laser Reflector Bumper
+        ctx.save();
+        ctx.strokeStyle = (Math.floor(state.boss.animTick / 6) % 2 === 0) ? "#00f5d4" : "#ff1493";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = "#00f5d4";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("⚡LASER⚡", d.x, d.y - d.r - 4);
+        ctx.restore();
+      }
+    });
+
     drawRingGimmick(state.boss.earL, state.boss.leftEarLit ? "#e6ff00" : "#ff1493", state.boss.leftEarLit ? "EAR:OK" : "EAR-L");
     drawRingGimmick(state.boss.earR, state.boss.rightEarLit ? "#e6ff00" : "#ff1493", state.boss.rightEarLit ? "EAR:OK" : "EAR-R");
 
-    // Shoulder Armor HP
+    // Shoulder Armor HP & Overheat Generator
     [
       { pod: state.boss.podL, hp: state.boss.leftShoulderHP, tag: "ARMOR-L" },
       { pod: state.boss.podR, hp: state.boss.rightShoulderHP, tag: "ARMOR-R" }
     ].forEach(({ pod, hp, tag }) => {
-      const col = hp > 0 ? "#ff1493" : "#00f5d4";
-      drawRingGimmick(pod, col, hp > 0 ? `${tag}[${"■".repeat(hp)}]` : "BREAK!", hp > 0);
+      if (hp > 0) {
+        drawRingGimmick(pod, "#ff1493", `${tag}[${"■".repeat(hp)}]`, true);
+      } else {
+        // Overheat Generator: Pulsing electric plasma bumper
+        ctx.save();
+        const pulse = Math.sin(state.boss.animTick * 0.2) * 2;
+        ctx.strokeStyle = (Math.floor(state.boss.animTick / 4) % 2 === 0) ? "#e6ff00" : "#ff0055";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(pod.x, pod.y, pod.r + pulse, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner electric spark ring
+        ctx.strokeStyle = "#00f5d4";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(pod.x, pod.y, pod.r * 0.65, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Sparks radiating
+        if (Math.random() > 0.4) {
+          const ang = Math.random() * Math.PI * 2;
+          const len = pod.r + 6 + Math.random() * 8;
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(pod.x, pod.y);
+          ctx.lineTo(pod.x + Math.cos(ang) * len, pod.y + Math.sin(ang) * len);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#e6ff00";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("⚡EX-BOUNCE⚡", pod.x, pod.y - pod.r - 4);
+        ctx.fillText("5,000pts", pod.x, pod.y + 3);
+        ctx.restore();
+      }
     });
 
     // Chest Core Gem
@@ -1843,6 +2049,66 @@ function renderTable() {
       ctx.restore();
     });
   }
+
+  // 1. Optical Shockwaves
+  state.shockwaves.forEach(sw => {
+    ctx.save();
+    ctx.globalAlpha = sw.alpha;
+    ctx.strokeStyle = sw.color;
+    ctx.lineWidth = sw.lineWidth;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // 2. Chunky Armor Plate Shards (Metal debris flying off!)
+  state.armorDebris.forEach(d => {
+    ctx.save();
+    const alpha = Math.min(1.0, d.life / (d.maxLife * 0.4));
+    ctx.globalAlpha = alpha;
+    ctx.translate(d.x, d.y);
+    ctx.rotate(d.angle);
+
+    // Chunky trapezoid/angular armor plate
+    ctx.fillStyle = d.color;
+    ctx.strokeStyle = d.stroke;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-d.w / 2, -d.h / 2);
+    ctx.lineTo(d.w / 2 - 4, -d.h / 2);
+    ctx.lineTo(d.w / 2, d.h / 2);
+    ctx.lineTo(-d.w / 2 + 3, d.h / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Rivet / neon highlight on plate
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(-d.w / 4, -2, 3, 3);
+    ctx.restore();
+  });
+
+  // 3. Floating Pink Hearts (Bust hit splash)
+  state.hearts.forEach(h => {
+    ctx.save();
+    ctx.globalAlpha = h.alpha;
+    ctx.translate(h.x, h.y);
+    ctx.scale(h.scale, h.scale);
+
+    ctx.fillStyle = "#ff1493";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const topCurveHeight = h.size * 0.3;
+    ctx.moveTo(0, topCurveHeight);
+    ctx.bezierCurveTo(-h.size / 2, -topCurveHeight, -h.size, topCurveHeight / 3, 0, h.size);
+    ctx.bezierCurveTo(h.size, topCurveHeight / 3, h.size / 2, -topCurveHeight, 0, topCurveHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  });
 
   // Particles & Popups
   state.particles.forEach(p => {

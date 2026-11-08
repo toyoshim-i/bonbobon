@@ -307,7 +307,7 @@ window.UI = {
         const canvasRect = engine.canvas.getBoundingClientRect();
         const y = (e.clientY - canvasRect.top) * (engine.H / canvasRect.height);
         const dragDist = Math.max(0, y - t.startY);
-        engine.state.plunger.power = Math.min(100, (dragDist / 60) * 100);
+        engine.state.plunger.power = Math.min(100, (dragDist / 38) * 100);
         t.lastY = y;
       } else {
         const areaRect = playfieldEl.getBoundingClientRect();

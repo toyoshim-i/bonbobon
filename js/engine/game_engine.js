@@ -188,9 +188,9 @@ window.GameEngine = {
 
     // Plunger power charge & spring oscillation physics
     if (state.plunger.pulling) {
-      const prevStep = Math.floor(state.plunger.power / 16);
-      state.plunger.power = Math.min(100, state.plunger.power + 1.8);
-      const nextStep = Math.floor(state.plunger.power / 16);
+      const prevStep = Math.floor(state.plunger.power / 12);
+      state.plunger.power = Math.min(100, state.plunger.power + 3.4);
+      const nextStep = Math.floor(state.plunger.power / 12);
       if (nextStep > prevStep && window.sfx) {
         window.sfx.plungerPullClick();
       }
@@ -206,8 +206,8 @@ window.GameEngine = {
       // Natural spring-damper oscillation back to rest position (575)
       const restY = 575;
       const dy = restY - (state.plunger.springY || restY);
-      state.plunger.springVy = (state.plunger.springVy || 0) + dy * 0.32;
-      state.plunger.springVy *= 0.74;
+      state.plunger.springVy = (state.plunger.springVy || 0) + dy * 0.44;
+      state.plunger.springVy *= 0.65;
       state.plunger.springY = (state.plunger.springY || restY) + state.plunger.springVy;
     }
 

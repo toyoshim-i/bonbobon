@@ -41,7 +41,12 @@ window.addEventListener("DOMContentLoaded", () => {
           modal.classList.remove("flex");
         }, 200);
         GameEngine.resetGame();
-        UI.showCutin("🚀【NEXT STAGE】<br>強化を引き継いで再出撃します！", 180);
+        if (window.Stage2) {
+          GameEngine.loadStage(Stage2);
+          UI.showCutin("🚀【STAGE 2 突入】<br>疾風紫電セルティ 迎撃戦開始！", 220);
+        } else {
+          UI.showCutin("🚀【NEXT STAGE】<br>強化を引き継いで再出撃します！", 180);
+        }
       });
     }
 
@@ -75,11 +80,27 @@ window.addEventListener("DOMContentLoaded", () => {
   const dbgFaceAnim = document.getElementById("dbgFaceAnim");
   if (dbgFaceAnim) dbgFaceAnim.addEventListener("click", () => {
     if (window.sfx) window.sfx.capsuleCatch();
-    const modes = ["wink", "blush", "shock", "angry_emp"];
-    const next = modes[(GameEngine.state.boss.animTick) % modes.length];
+    const modes = ["wink", "open_blush", "shock", "wince", "blink", "talk"];
+    window._faceIdx = ((window._faceIdx || 0) + 1) % modes.length;
+    const next = modes[window._faceIdx];
     GameEngine.state.boss.expression = next;
-    GameEngine.state.boss.expressionTimer = 65;
-    GameEngine.state.boss.talkTimer = 100;
+    GameEngine.state.boss.expressionTimer = 90;
+    if (next === "wink") GameEngine.state.boss.winkTimer = 60;
+    if (next === "blink") GameEngine.state.boss.blinkTimer = 6;
+    if (next === "talk") GameEngine.state.boss.talkTimer = 90;
     UI.updateHUD(GameEngine.state);
+    UI.showCutin(`👁【表情テスト】: ${next}`, 90);
+  });
+
+  const dbgStageToggle = document.getElementById("dbgStageToggle");
+  if (dbgStageToggle) dbgStageToggle.addEventListener("click", () => {
+    if (window.sfx) window.sfx.flipperClick();
+    const currentId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
+    const nextStage = currentId === "stage1" ? window.Stage2 : window.Stage1;
+    if (nextStage) {
+      GameEngine.resetGame();
+      GameEngine.loadStage(nextStage);
+      UI.showCutin(`⚡【STAGE SWITCH】<br>${nextStage.name} (${nextStage.bossName})`, 180);
+    }
   });
 });

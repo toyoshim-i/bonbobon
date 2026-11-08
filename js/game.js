@@ -68,12 +68,6 @@ const PERM_DEFS = {
     name: "ロングフリッパー",
     desc: "フリッパー長拡大（打撃・防衛範囲UP）",
     maxLv: 2
-  },
-  subBumpers: {
-    id: "subBumpers",
-    name: "増設プラズマバンパー",
-    desc: "中段空間に連鎖電撃バンパーを2基常設",
-    maxLv: 2
   }
 };
 
@@ -135,8 +129,7 @@ function createInitialState() {
       kickbackL_charges: 0,
       kickbackR: 0,
       kickbackR_charges: 0,
-      wideFlipper: 0,
-      subBumpers: 0
+      wideFlipper: 0
     },
 
     // Kept Buff Slots (max 4)
@@ -382,8 +375,7 @@ function spawnFloatingCapsule(slotIdx = null, category = null) {
       centerPost: "STOPPER",
       kickbackL: "L-LASER",
       kickbackR: "R-LASER",
-      wideFlipper: "WIDE-FLP",
-      subBumpers: "BUMPER+"
+      wideFlipper: "WIDE-FLP"
     };
     state.capsules.push({
       slotIndex: targetIdx,
@@ -1229,6 +1221,28 @@ function stepPhysics() {
         continue;
       }
 
+      // While trapped by Crotch Magnetic Gravity Well, lock ball onto crotch core!
+      if (ball.crotchTrapped) {
+        const cr = state.boss.crotch;
+        ball.crotchTrapTimer = (ball.crotchTrapTimer || 0) + 1;
+        const jiggle = Math.sin(ball.crotchTrapTimer * 0.4) * 1.5;
+        ball.x = cr.x + jiggle;
+        ball.y = cr.y + Math.cos(ball.crotchTrapTimer * 0.4) * 1.0;
+        ball.vx = 0;
+        ball.vy = 0;
+
+        // Auto release safety after ~2.5s (150 frames * SUBSTEPS)
+        if (ball.crotchTrapTimer > 150 * SUBSTEPS) {
+          ball.crotchTrapped = false;
+          ball.crotchHitTimer = 50;
+          ball.vy = 5.2;
+          ball.vx = (Math.random() - 0.5) * 4.0;
+          sfx.burstTrigger();
+          addPopup(cr.x, cr.y - 25, "💥ENERGY BURST!", "#ff1493", 1.2);
+        }
+        continue;
+      }
+
       ball.vy += gravity;
       ball.x += ball.vx / SUBSTEPS;
       ball.y += ball.vy / SUBSTEPS;
@@ -1635,86 +1649,93 @@ function stepPhysics() {
           const dyCr = crotch.y - ball.y;
           const distCr = Math.hypot(dxCr, dyCr);
 
-          // 1. Strong Gravitational Pull (Distinct trajectory curvature & suction towards the core!)
-          if (distCr < crotch.gravRadius && distCr > 2.0) {
-            const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.2);
-            // Peak force 0.44 is DOUBLE table gravity (0.22)! Curves paths dramatically!
-            const force = 0.44 * pullFactor;
-            ball.vx += (dxCr / distCr) * force;
-            ball.vy += (dyCr / distCr) * force;
+          if (!ball.crotchTrapped) {
+            // 1. Powerful Gravitational Pull (Distinct trajectory curvature & deep suction towards the core!)
+            if (distCr < crotch.gravRadius && distCr > 2.0) {
+              const pullFactor = Math.pow(1.0 - distCr / crotch.gravRadius, 1.25);
+              // Powerful suction force: peak 1.35 (6x table gravity 0.22!)
+              const force = 1.35 * pullFactor;
+              ball.vx += (dxCr / distCr) * force;
+              ball.vy += (dyCr / distCr) * force;
 
-            // Inward particle suction stream toward core
-            if (Math.random() < 0.7) {
-              const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
-              state.particles.push({
-                x: ball.x,
-                y: ball.y,
-                vx: Math.cos(pAngle) * (2.8 + Math.random() * 2.2),
-                vy: Math.sin(pAngle) * (2.8 + Math.random() * 2.2),
-                color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
-                life: 16,
-                scale: 1.1
-              });
-            }
-
-            // Subtle tiny hearts floating when pulled deep into crotch gravity!
-            if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.08) {
-              spawnHeartParticle(ball.x, ball.y, true);
-            }
-          }
-
-          // 2. Core Penetration & Slingshot Dynamics (Traversing the inner event horizon)
-          if (distCr < ball.r + crotch.r) {
-            if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
-              ball.crotchHitTimer = 40; // Debounce per traversal
-              crotch.flash = 18;
-              sfx.burstTrigger();
-              // Spawn modest little heart on crotch core penetration
-              spawnHeartParticle(crotch.x, crotch.y, true);
-
-              // Tangential deflection boost: curves the ball through and ejects toward flippers
-              const spinDir = ball.vx >= 0 ? 1 : -1;
-              ball.vx += spinDir * 2.4;
-              ball.vy = Math.max(ball.vy * 0.8, 1.8); // Always maintain downward flow!
-
-              if (crotch.cooldown && crotch.cooldown > 0) {
-                sfx.metalBumper();
-                addScore(1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
-              } else {
-                crotch.charge++;
-                state.boss.expression = "blush";
-                state.boss.expressionTimer = 85;
-                state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
-                addParticles(crotch.x, crotch.y, "#e6ff00", 22, 5.0);
-                addParticles(crotch.x, crotch.y, "#ff1493", 16, 4.0);
-
-                if (crotch.charge < crotch.maxCharge) {
-                  addScore(4000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY CHARGE ${crotch.charge}/${crotch.maxCharge}`);
-                  addPopup(crotch.x, crotch.y - 30, "「きゃあっ……重力炉に触らないでっ！」", "#ff66b2", 1.1);
-                } else {
-                  // GRAVITY OVERLOAD TRIGGERED!
-                  crotch.charge = 0;
-                  crotch.cooldown = 60 * 18; // 18 seconds cooldown
-                  sfx.burstTrigger();
-                  sfx.exSpark();
-                  addScore(30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
-                  addPopup(crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
-                  showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
-
-                  // Repulsion shockwave blasts ball outward!
-                  ball.vy = -8.5;
-                  ball.vx = (Math.random() - 0.5) * 6;
-
-                  // Spawn extra ball (Capped at 3 total balls on table)
-                  if (state.balls.length < 3) {
-                    spawnBall(crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
-                  }
-                  startFeverMode();
-                  state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
-                  state.burstTimer = 360;
-                }
+              // Viscous aerodynamic damping so balls readily get drawn right into the core!
+              if (distCr < 55) {
+                ball.vx *= 0.94;
+                ball.vy *= 0.94;
               }
-              updateHUD();
+
+              // Inward particle suction stream toward core
+              if (Math.random() < 0.75) {
+                const pAngle = Math.atan2(dyCr, dxCr) + (Math.random() - 0.5) * 0.4;
+                state.particles.push({
+                  x: ball.x,
+                  y: ball.y,
+                  vx: Math.cos(pAngle) * (3.0 + Math.random() * 2.5),
+                  vy: Math.sin(pAngle) * (3.0 + Math.random() * 2.5),
+                  color: Math.random() > 0.4 ? "#b84dff" : "#00f5d4",
+                  life: 16,
+                  scale: 1.1
+                });
+              }
+
+              // Subtle tiny hearts floating when pulled deep into crotch gravity!
+              if (distCr < crotch.gravRadius * 0.65 && Math.random() < 0.1) {
+                spawnHeartParticle(ball.x, ball.y, true);
+              }
+            }
+
+            // 2. Core Penetration & Magnetic Suction Trap (Stuck until nudged!)
+            if (distCr < ball.r + crotch.r + 2.0) {
+              if (!ball.crotchHitTimer || ball.crotchHitTimer <= 0) {
+                ball.crotchTrapped = true;
+                ball.crotchTrapTimer = 0;
+                crotch.flash = 22;
+                sfx.burstTrigger();
+                sfx.softPuru();
+                spawnHeartParticle(crotch.x, crotch.y, true);
+
+                if (crotch.cooldown && crotch.cooldown > 0) {
+                  sfx.metalBumper();
+                  addScore(1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
+                } else {
+                  crotch.charge++;
+                  state.boss.expression = "blush";
+                  state.boss.expressionTimer = 90;
+                  state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 25);
+                  addParticles(crotch.x, crotch.y, "#e6ff00", 22, 5.0);
+                  addParticles(crotch.x, crotch.y, "#ff1493", 16, 4.0);
+
+                  if (crotch.charge < crotch.maxCharge) {
+                    addScore(5000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY CAPTURE ${crotch.charge}/${crotch.maxCharge}`);
+                    addPopup(crotch.x, crotch.y - 30, "「きゃあっ……吸い付いちゃった……！？ は、離してっ！」", "#ff66b2", 1.1);
+                    showCutin("🧲【クロッチ吸着！】<br>台揺らし（画面スワイプ/SPACE）ではがせ！", 150);
+                  } else {
+                    // GRAVITY OVERLOAD TRIGGERED!
+                    crotch.charge = 0;
+                    crotch.cooldown = 60 * 18; // 18 seconds cooldown
+                    sfx.burstTrigger();
+                    sfx.exSpark();
+                    addScore(30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
+                    addPopup(crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
+                    showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
+
+                    // Overload blasts trapped ball outward immediately!
+                    ball.crotchTrapped = false;
+                    ball.crotchHitTimer = 50;
+                    ball.vy = -8.5;
+                    ball.vx = (Math.random() - 0.5) * 6;
+
+                    // Spawn extra ball (Capped at 3 total balls on table)
+                    if (state.balls.length < 3) {
+                      spawnBall(crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
+                    }
+                    startFeverMode();
+                    state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
+                    state.burstTimer = 360;
+                  }
+                }
+                updateHUD();
+              }
             }
           }
         }
@@ -1807,21 +1828,6 @@ function stepPhysics() {
           addParticles(363, 560, "#e6ff00", 12, 4.0);
           addScore(3000, 363, 540, "⚡R-LASER SAVE!");
           showCutin("🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！", 90);
-        }
-
-        // (C) Sub-Bumpers
-        if (state.perm.subBumpers > 0) {
-          [
-            { x: 146, y: 465, r: 15 },
-            { x: 250, y: 465, r: 15 }
-          ].forEach(sb => {
-            checkCircleBumper(sb, 9.2, () => {
-              sfx.metalBumper();
-              addFever(6);
-              addParticles(sb.x, sb.y, "#e6ff00", 10, 3.8);
-              addScore(950 * state.perm.subBumpers, sb.x, sb.y - 12, "⚡PLASMA");
-            });
-          });
         }
       }
 
@@ -2239,8 +2245,9 @@ function renderTable() {
       const cr = state.boss.crotch;
       const crChargeStr = "◆".repeat(cr.charge) + "◇".repeat(cr.maxCharge - cr.charge);
       const isCooling = cr.cooldown && cr.cooldown > 0;
-      const sub = isCooling ? "COOLING" : `[${crChargeStr}]`;
-      const col = isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493");
+      const isTrapped = state.balls.some(b => b.crotchTrapped);
+      const sub = isTrapped ? "⚠️SHAKE TO FREE!" : (isCooling ? "COOLING" : `[${crChargeStr}]`);
+      const col = isTrapped ? "#e6ff00" : (isCooling ? "#9933ff" : (cr.charge > 0 ? "#e6ff00" : "#ff1493"));
 
       // Inward Gravitational Pull Waves (Distortion rings converging into the core)
       ctx.save();
@@ -2324,29 +2331,6 @@ function renderTable() {
         ctx.restore();
       }
     });
-
-    // Draw Permanent Upgrades
-    // Sub-Bumpers
-    if (state.perm.subBumpers > 0) {
-      [
-        { x: 146, y: 465, r: 15 },
-        { x: 250, y: 465, r: 15 }
-      ].forEach(sb => {
-        ctx.save();
-        ctx.fillStyle = "rgba(0, 245, 212, 0.22)";
-        ctx.strokeStyle = "#00f5d4";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(sb.x, sb.y, sb.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = "#e6ff00";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(`⚡Lv${state.perm.subBumpers}`, sb.x, sb.y + 3);
-        ctx.restore();
-      });
-    }
 
     // Laser Kickbacks (In the Outlanes)
     if (state.perm.kickbackL > 0) {
@@ -2837,6 +2821,19 @@ function triggerDirectionalNudge(dirX = 0, dirY = -1, intensity = 1.0) {
   state.balls.forEach(b => {
     b.vx += nx * 4.6 * intensity;
     b.vy += ny * 4.6 * intensity;
+
+    // Release crotch trapped balls upon NUDGE!
+    if (b.crotchTrapped) {
+      b.crotchTrapped = false;
+      b.crotchHitTimer = 45;
+      b.vy = Math.max(3.8, ny * 4.0 + 4.5);
+      b.vx = nx * 5.2 + (Math.random() - 0.5) * 2.0;
+      sfx.metalBumper();
+      if (state.boss && state.boss.crotch) {
+        addPopup(state.boss.crotch.x, state.boss.crotch.y - 25, "💨NUDGE RELEASE!", "#00f5d4", 1.25);
+        addParticles(state.boss.crotch.x, state.boss.crotch.y, "#e6ff00", 18, 5.0);
+      }
+    }
   });
 
   // Inertial reaction on Lilith's bust springs

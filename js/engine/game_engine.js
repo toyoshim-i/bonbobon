@@ -105,6 +105,11 @@ window.GameEngine = {
 
     Systems.prepareBallForLaunch(this.state);
     UI.updateHUD(this.state);
+
+    const txtHeader = document.getElementById("txtHeaderStage");
+    if (txtHeader) {
+      txtHeader.textContent = stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
+    }
   },
 
   startPlungerPull() {

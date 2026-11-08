@@ -29,7 +29,7 @@ window.UI = {
     if (window.currentStage && window.currentStage.getTargetDesc) {
       targetDesc = window.currentStage.getTargetDesc(state);
     }
-    const targetEl = document.getElementById("hudTargetDesc");
+    const targetEl = document.getElementById("hudTargetDesc") || document.getElementById("hudPhaseTarget");
     if (targetEl) targetEl.textContent = targetDesc;
 
     const phaseEl = document.getElementById("hudPhase");

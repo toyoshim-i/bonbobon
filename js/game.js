@@ -649,6 +649,14 @@ function triggerStageClear() {
 
   // Generate shattering table frame pieces
   state.clearSequence.shatterPieces = shatterTableFrame();
+
+  // Blast active balls away with dramatic explosion shockwave
+  state.balls.forEach(ball => {
+    const blastAngle = Math.atan2(ball.y - 307, ball.x - 198) + (Math.random() - 0.5) * 0.6;
+    const blastSpeed = 8.0 + Math.random() * 4.5;
+    ball.vx = Math.cos(blastAngle) * blastSpeed;
+    ball.vy = Math.sin(blastAngle) * blastSpeed - 3.0;
+  });
 }
 
 function updateClearSequence() {
@@ -656,7 +664,7 @@ function updateClearSequence() {
   if (!seq.active) return;
   seq.frame++;
 
-  // Step 1: 0..45 Frame -> Table Frame Shatter & Violent Screen Shake
+  // Step 1: 0..45 Frame -> Table Frame Shatter & Violent Screen Shake, then smoothly dampen
   if (seq.frame < 45) {
     state.nudgeOffset.x = (Math.random() - 0.5) * 16;
     state.nudgeOffset.y = (Math.random() - 0.5) * 12;
@@ -664,6 +672,10 @@ function updateClearSequence() {
       sfx.armorBreak();
       addParticles(198 + (Math.random() - 0.5) * 120, 307 + (Math.random() - 0.5) * 80, "#ff1493", 16, 5.0);
     }
+  } else {
+    // Smoothly restore screen to normal center position!
+    state.nudgeOffset.x *= 0.84;
+    state.nudgeOffset.y *= 0.84;
   }
 
   // Update flying wall shards
@@ -701,6 +713,18 @@ function updateClearSequence() {
     seq.cgRevealAlpha = 1.0;
     // Whiteout fading out (1.0 -> 0)
     seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
+
+    // Ambient floating glowing dust & sparks over defeat CG (Keeps screen alive!)
+    if (Math.random() < 0.35) {
+      state.particles.push({
+        x: 60 + Math.random() * 280,
+        y: 480 + Math.random() * 120,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -0.8 - Math.random() * 1.2,
+        color: Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#00f5d4" : "#e6ff00"),
+        life: 50 + Math.floor(Math.random() * 35)
+      });
+    }
   }
 
   // Update rising & expanding smoke clouds
@@ -986,6 +1010,28 @@ function stepPhysics() {
     updateClearSequence();
     updateBossSprings();
     updateDebrisAndEffects();
+
+    // Keep ball physics and gravity active until blinded by whiteout! (Frame < 105)
+    if (state.clearSequence.frame < 105) {
+      state.balls.forEach(ball => {
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        ball.vy += 0.22; // Gravity
+        ball.vx *= 0.99;
+        ball.trail.push({ x: ball.x, y: ball.y });
+        if (ball.trail.length > 9) ball.trail.shift();
+      });
+
+      // Update flippers smoothly during shatter sequence
+      const flippers = getFlippers();
+      flippers.forEach((f, idx) => {
+        const st = flipperState[idx];
+        const pressed = f.isLeft ? state.leftFlipperDown : state.rightFlipperDown;
+        const target = pressed ? f.activeAngle : f.restAngle;
+        st.angle += (target - st.angle) * 0.44;
+      });
+    }
+
     // Continue running particle and popup physics even after clear!
     state.particles.forEach(p => {
       p.x += p.vx;

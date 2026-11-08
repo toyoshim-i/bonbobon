@@ -198,8 +198,8 @@ function createInitialState() {
       podL:   { x: 108, y: 290, r: 23, flash: 0, rot: 0 },
       podR:   { x: 288, y: 290, r: 23, flash: 0, rot: 0 },
       // Waist / Hip Cyber Units (Exposed & active after chest armor breaks)
-      hipL:   { x: 134, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
-      hipR:   { x: 262, y: 450, r: 17, flash: 0, rot: 0, hp: 4 },
+      hipL:   { x: 126, y: 485, r: 14, flash: 0, rot: 0, hp: 4 },
+      hipR:   { x: 270, y: 485, r: 14, flash: 0, rot: 0, hp: 4 },
       // Crotch Secret Gravity Well (Activated when chest armor is shattered; weak gravitational pull!)
       crotch: { x: 198, y: 556, r: 17, gravRadius: 85, flash: 0, rot: 0, charge: 0, maxCharge: 3, cooldown: 0 },
       // Core Gem at chest center
@@ -2086,6 +2086,17 @@ function renderTable() {
       ctx.save();
       ctx.rotate(rot || 0);
       const rMain = r * baseScale;
+
+      // Draw subtle full circular ring so it's always clearly ONE cohesive target!
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.0;
+      ctx.globalAlpha = isHit ? 0.7 : 0.35;
+      ctx.beginPath();
+      ctx.arc(0, 0, rMain, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
       ctx.strokeStyle = isHit ? "#ffffff" : color;
       ctx.lineWidth = isHit ? 3.2 : 2.0;
       ctx.globalAlpha = isHit ? 1.0 : 0.85;
@@ -2132,17 +2143,23 @@ function renderTable() {
 
       // 5. Small Cyber Label & HP/Status HUD
       if (label && !isHit) {
-        ctx.fillStyle = color;
         ctx.font = "bold 8px monospace";
         ctx.textAlign = "center";
-        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(label, 0, -rMain - 4);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.95;
         ctx.fillText(label, 0, -rMain - 4);
       }
       if (subInfo && !isHit) {
-        ctx.fillStyle = "#ffffff";
         ctx.font = "bold 7px monospace";
         ctx.textAlign = "center";
-        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2.0;
+        ctx.strokeText(subInfo, 0, rMain + 10);
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.95;
         ctx.fillText(subInfo, 0, rMain + 10);
       }
 

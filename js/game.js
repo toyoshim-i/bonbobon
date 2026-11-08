@@ -22,6 +22,11 @@ centerpieceImg.src = window.STAGE1_CENTERPIECE_URI || './assets/stage1/centerpie
 const centerpieceArmoredImg = new Image();
 centerpieceArmoredImg.src = './assets/stage1/centerpiece_armored.jpg';
 
+const earTipLImg = new Image();
+earTipLImg.src = './assets/stage1/ear_tip_L.png';
+const earTipRImg = new Image();
+earTipRImg.src = './assets/stage1/ear_tip_R.png';
+
 const defeatCgImg = new Image();
 defeatCgImg.src = './assets/stage1/defeat_cg.jpg';
 
@@ -1793,70 +1798,45 @@ function renderTable() {
       ctx.drawImage(facePatchImgs[activePatchKey], fx, fy, fw, fh);
     }
 
-    // Dynamic Rabbit Ear Tips Swing Animation ("ふにょん" elastic pendulum swing)
+    // Rabbit Ear Tips Sprite Rendering (Always rendered over background; swings with elastic pendulum physics)
     if (!isDefeat) {
-      const drawDynamicEarPatch = (which, ear) => {
-        const isSwinging = Math.abs(ear.angle) > 0.002 || Math.abs(ear.dx) > 0.1 || ear.flash > 0;
-        if (!isSwinging) return;
+      const drawEarTipSprite = (which, ear) => {
+        const img = which === "L" ? earTipLImg : earTipRImg;
+        if (!img.complete) return;
+
+        const isLeft = which === "L";
+        const pivotX = ear.ax;
+        const pivotY = ear.ay;
+
+        // Image scaling from 768x1376 to IMG_BOX
+        const sX = IMG_BOX.w / 768;
+        const sY = IMG_BOX.h / 1376;
+
+        // Pivot in sprite pixel coords
+        // Bboxes: L=(92, 22, 257, 185) -> hinge (255, 70) => (163, 48)
+        //         R=(512, 22, 677, 185) -> hinge (510, 70) => (-2, 48)
+        const sprPivotX = isLeft ? 163 : -2;
+        const sprPivotY = 48;
 
         ctx.save();
-        // Pivot at hinge joint
-        ctx.translate(ear.ax, ear.ay);
-
-        // Vector to tip in local coords
-        const localBx = ear.bx - ear.ax;
-        const localBy = ear.by - ear.ay;
-        const baseAngle = Math.atan2(localBy, localBx);
-        const earLen = Math.hypot(localBx, localBy);
-
-        // First, underlay mask to prevent ghosting behind the swinging ear
-        if (Math.abs(ear.angle) > 0.015) {
-          ctx.save();
-          ctx.rotate(baseAngle);
-          ctx.fillStyle = "#09031c"; // playfield background behind ear
-          ctx.beginPath();
-          ctx.arc(0, 0, ear.r + 2, Math.PI / 2, -Math.PI / 2);
-          ctx.lineTo(earLen, -ear.r * 0.9);
-          ctx.arc(earLen, 0, ear.r * 0.9, -Math.PI / 2, Math.PI / 2);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-        }
-
-        // Apply swing angle around hinge
+        ctx.translate(pivotX, pivotY);
         ctx.rotate(ear.angle);
 
-        // Subtle elastic squash/stretch
-        const squash = Math.sin(ear.angle * 6) * 0.08;
+        // Subtle elastic squash/stretch during bounce
+        const squash = Math.sin(ear.angle * 6) * 0.05;
         ctx.scale(1 - squash, 1 + squash);
 
-        ctx.save();
-        ctx.rotate(baseAngle);
-        ctx.beginPath();
-        // Capsule contour matching dangling purple tip
-        ctx.arc(0, 0, ear.r, Math.PI / 2, -Math.PI / 2);
-        ctx.lineTo(earLen, -ear.r * 0.85);
-        ctx.arc(earLen, 0, ear.r * 0.85, -Math.PI / 2, Math.PI / 2);
-        ctx.closePath();
-        ctx.clip();
+        const drawX = -sprPivotX * sX;
+        const drawY = -sprPivotY * sY;
+        const drawW = img.width * sX;
+        const drawH = img.height * sY;
 
-        // Draw original art aligned
-        ctx.rotate(-baseAngle);
-        ctx.drawImage(baseImg, IMG_BOX.x - ear.ax, IMG_BOX.y - ear.ay, IMG_BOX.w, IMG_BOX.h);
-
-        // Soft elastic ripple / glow outline when hit
-        if (ear.flash > 0) {
-          ctx.strokeStyle = `rgba(230, 255, 0, ${Math.min(1, ear.flash / 8)})`;
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        ctx.restore();
-
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
         ctx.restore();
       };
 
-      drawDynamicEarPatch("L", state.boss.earL);
-      drawDynamicEarPatch("R", state.boss.earR);
+      drawEarTipSprite("L", state.boss.earL);
+      drawEarTipSprite("R", state.boss.earR);
     }
   }
 

@@ -747,10 +747,13 @@ function updateClearSequence() {
   // Step 4: Frame 155+ -> Seamlessly Fade in Clear Modal Overlay!
   if (seq.frame >= 155 && !seq.uiShown) {
     seq.uiShown = true;
+    updateHUD();
     const modal = document.getElementById("clearModal");
     if (modal) {
-      document.getElementById("clearFinalScore").textContent = state.score.toLocaleString();
-      document.getElementById("clearRemainingBalls").textContent = "●".repeat(state.ballsRemaining) + ` (${state.ballsRemaining})`;
+      const scoreEl = document.getElementById("clearFinalScore");
+      if (scoreEl) scoreEl.textContent = state.score.toLocaleString();
+      const ballsEl = document.getElementById("clearRemainingBalls");
+      if (ballsEl) ballsEl.textContent = "●".repeat(state.ballsRemaining) + ` (${state.ballsRemaining})`;
       modal.classList.remove("hidden");
       modal.classList.add("flex");
       // Smooth fade-in
@@ -2109,7 +2112,9 @@ function updateHUD() {
   document.getElementById("hudScore").textContent = state.score.toLocaleString();
 
   let targetDesc = "ドローン＆両肩アーマー破壊";
-  if (state.phase === 1) {
+  if (state.stageCleared) {
+    targetDesc = "大破・強制装甲パージ 成功！";
+  } else if (state.phase === 1) {
     if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) {
       targetDesc = `ドローン撃破 (残 L:${state.boss.droneL_HP} R:${state.boss.droneR_HP})`;
     } else {
@@ -2121,7 +2126,17 @@ function updateHUD() {
     targetDesc = `露出コア直撃KO (残HP: ${state.boss.coreHP})`;
   }
   document.getElementById("hudPhaseTarget").textContent = targetDesc;
-  document.getElementById("hudPhase").textContent = `PHASE ${state.phase}`;
+
+  const phaseEl = document.getElementById("hudPhase");
+  if (phaseEl) {
+    if (state.stageCleared) {
+      phaseEl.textContent = "STAGE CLEAR!";
+      phaseEl.className = "px-1.5 py-0.5 rounded bg-[#ff1493] text-white text-[9px] font-black tracking-wider animate-pulse shadow";
+    } else {
+      phaseEl.textContent = `PHASE ${state.phase}`;
+      phaseEl.className = "px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]";
+    }
+  }
 
   // Fever Gauge HUD (Strict single-line text, never expands or breaks layout)
   const fBar = document.getElementById("feverGaugeBar");

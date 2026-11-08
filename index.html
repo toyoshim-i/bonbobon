@@ -81,35 +81,9 @@
         </div>
 
         <!-- STAGE CLEAR OVERLAY (WITHIN CANVAS PLAYFIELD FRAME, FIXED SURROUNDING UI) -->
-        <div id="clearModal" class="absolute inset-0 z-30 hidden flex-col justify-between p-2 pointer-events-auto opacity-0 transition-opacity duration-700">
-          
-          <!-- TOP BANNER OVERLAY -->
-          <div class="w-full p-2 bg-gradient-to-b from-[#11052c]/95 via-[#11052c]/80 to-transparent rounded-t-lg flex flex-col gap-1 shrink-0 backdrop-blur-xs border-b border-[#00f5d4]/30">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
-                <span class="px-2 py-0.5 rounded bg-[#ff1493] text-white text-[9px] font-black tracking-widest uppercase shadow">
-                  STAGE CLEAR
-                </span>
-                <span class="text-[11px] font-bold text-[#e6ff00]">大破・強制装甲パージ</span>
-              </div>
-              <span class="text-[9px] text-[#00f5d4] px-1 py-0.5 rounded bg-[#00f5d4]/10 border border-[#00f5d4]/40 font-mono">STAGE 1</span>
-            </div>
-            <div class="flex items-center gap-2 mt-0.5">
-              <div class="px-2 py-0.5 rounded bg-black/60 border border-[#00f5d4]/40 flex items-baseline gap-1 text-[10px]">
-                <span class="text-[#00f5d4]/80 text-[9px]">FINAL SCORE:</span>
-                <span id="clearFinalScore" class="font-black text-[#e6ff00]">0</span>
-              </div>
-              <div class="px-2 py-0.5 rounded bg-black/60 border border-[#00f5d4]/40 flex items-baseline gap-1 text-[10px]">
-                <span class="text-[#00f5d4]/80 text-[9px]">BALLS:</span>
-                <span id="clearRemainingBalls" class="font-black text-[#00f5d4]">●●●</span>
-              </div>
-            </div>
-          </div>
+        <div id="clearModal" class="absolute inset-0 z-30 hidden flex-col justify-end p-2 pointer-events-auto opacity-0 transition-opacity duration-700">
 
-          <!-- MIDDLE SPACE: EMPTY FOR FULL DEFEAT CG VISIBILITY -->
-          <div class="flex-1 min-h-0 pointer-events-none"></div>
-
-          <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION -->
+          <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (NO TOP BANNER TO PREVENT DUPLICATING THE FIXED TOP HUD) -->
           <div class="w-full p-2 bg-gradient-to-t from-[#0e0324]/98 via-[#0e0324]/90 to-transparent rounded-b-lg flex flex-col gap-1.5 shrink-0 backdrop-blur-xs border-t border-[#ff1493]/30">
             <!-- CHARACTER DIALOGUE BOX (RETRO-16BIT ADV STYLE) -->
             <div class="bg-[#120429]/95 border border-[#ff1493]/70 rounded p-1.5 shadow">
@@ -138,7 +112,7 @@
                   <div class="text-[8px] text-[#b59ce6] leading-tight mt-0.5">フリッパー反発力+25%＆弾速UP</div>
                 </button>
                 <button class="relic-btn p-1 rounded bg-[#1e0a4f]/80 hover:bg-[#ff1493]/40 border border-[#00f5d4] text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
-                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight">セーフティ機</div>
+                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight">支援ドローン</div>
                   <div class="text-[8px] text-[#b59ce6] leading-tight mt-0.5">投入時ストッパー自動展開</div>
                 </button>
               </div>
@@ -282,7 +256,7 @@
   </div>
 
   <script src="./js/stage1_assets.js"></script>
-  <script src="./js/audio.js?v=4"></script>
-  <script src="./js/game.js?v=4"></script>
+  <script src="./js/audio.js?v=5"></script>
+  <script src="./js/game.js?v=5"></script>
 </body>
 </html>

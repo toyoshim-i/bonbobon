@@ -749,15 +749,42 @@ function updateClearSequence() {
     // Whiteout fading out (1.0 -> 0)
     seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
 
-    // Ambient floating glowing dust & sparks over defeat CG (Keeps screen alive!)
-    if (Math.random() < 0.35) {
+    // Continuous real-time billowing smoke and rising steam from damage zones:
+    // Ensures REAL-TIME smoke animation is constantly billowing behind the translucent dialogue box!
+    // 1. Thigh breach smoke (around x: 285, y: 460)
+    if (seq.frame % 5 === 0) {
+      const thighCloud = spawnSmokeCloud(285 + (Math.random() - 0.5) * 20, 465 + (Math.random() - 0.5) * 15, Math.random() > 0.4 ? "#f0e6ff" : "#ffb6d9");
+      thighCloud.r = 16 + Math.random() * 12;
+      thighCloud.maxR = 48 + Math.random() * 20;
+      thighCloud.vy = -1.2 - Math.random() * 1.5;
+      seq.smokeClouds.push(thighCloud);
+    }
+    // 2. Playfield bottom smoke rising up through translucent dialogue box (around y: 580-620)
+    if (seq.frame % 7 === 0) {
+      const botCloud = spawnSmokeCloud(80 + Math.random() * 260, 600, Math.random() > 0.5 ? "#ffffff" : "#c4b5fd");
+      botCloud.r = 24 + Math.random() * 18;
+      botCloud.maxR = 65 + Math.random() * 25;
+      botCloud.vy = -1.4 - Math.random() * 1.6;
+      seq.smokeClouds.push(botCloud);
+    }
+    // 3. Chest breach smoke (around x: 215, y: 270)
+    if (seq.frame % 8 === 0) {
+      const chestCloud = spawnSmokeCloud(215 + (Math.random() - 0.5) * 15, 270 + (Math.random() - 0.5) * 15, "#e0d0ff");
+      chestCloud.r = 14 + Math.random() * 10;
+      chestCloud.maxR = 42 + Math.random() * 16;
+      chestCloud.vy = -1.0 - Math.random() * 1.2;
+      seq.smokeClouds.push(chestCloud);
+    }
+
+    // Ambient floating glowing dust & electrical sparks over defeat CG (Keeps screen alive!)
+    if (Math.random() < 0.6) {
       state.particles.push({
         x: 60 + Math.random() * 280,
-        y: 480 + Math.random() * 120,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: -0.8 - Math.random() * 1.2,
+        y: 440 + Math.random() * 180,
+        vx: (Math.random() - 0.5) * 1.4,
+        vy: -0.9 - Math.random() * 1.8,
         color: Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#00f5d4" : "#e6ff00"),
-        life: 50 + Math.floor(Math.random() * 35)
+        life: 55 + Math.floor(Math.random() * 40)
       });
     }
   }
@@ -769,10 +796,15 @@ function updateClearSequence() {
     s.vx *= 0.98;
     if (s.r < s.maxR) s.r += s.growth;
     s.life--;
-    if (s.life < 30) {
+    // If post-whiteout (defeat CG view), smoothly fade smoke near character's face
+    // (x: 130..266, y: 140..270) so the expressive face remains crisp and clear!
+    const nearFace = seq.frame >= 105 && s.y > 140 && s.y < 270 && Math.abs(s.x - 198) < 68;
+    if (nearFace) {
+      s.alpha = Math.max(0, s.alpha - 0.045);
+    } else if (s.life < 30) {
       s.alpha = Math.max(0, s.alpha - 0.025);
     } else if (s.alpha < s.maxAlpha) {
-      s.alpha = Math.min(s.maxAlpha, s.alpha + 0.05);
+      s.alpha = Math.min(s.maxAlpha, s.alpha + 0.04);
     }
   });
   seq.smokeClouds = seq.smokeClouds.filter(s => s.life > 0 && s.alpha > 0.01);

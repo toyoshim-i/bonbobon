@@ -201,6 +201,7 @@ window.Stage1 = {
     other.vy += vyImpact * 0.45;
 
     state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
+    state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 35);
     state.boss.expression = "blush";
     state.boss.expressionTimer = 54;
     state.boss.talkTimer = 36;
@@ -250,6 +251,7 @@ window.Stage1 = {
     // Bust Springs
     const stiffness = 0.26;
     const damping = 0.80;
+    let bustMotion = 0;
     [state.boss.bustL, state.boss.bustR].forEach(b => {
       const ax = -stiffness * b.dx;
       const ay = -stiffness * b.dy;
@@ -260,7 +262,15 @@ window.Stage1 = {
       b.dx = Math.max(-18, Math.min(18, b.dx));
       b.dy = Math.max(-18, Math.min(18, b.dy));
       if (b.flash > 0) b.flash--;
+      bustMotion += Math.hypot(b.dx, b.dy) + Math.hypot(b.vx, b.vy);
     });
+
+    // Bust Excitement 自然減衰（胸の振動・ハート放出と連動した興奮・吸引力）
+    // 振動が収まるにつれて毎フレーム自然にクールダウンし、強くなりっぱなしを防止
+    if (state.boss.bustExcitement > 0) {
+      const decay = bustMotion > 3.0 ? 0.25 : 0.60;
+      state.boss.bustExcitement = Math.max(0, state.boss.bustExcitement - decay);
+    }
 
     // Hanging Ear Pendulum Springs
     const earAngStiffness = 0.09;

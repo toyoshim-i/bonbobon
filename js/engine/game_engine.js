@@ -518,27 +518,88 @@ window.GameEngine = {
         ctx.restore();
       }
 
-      // Floating Hologram Capsules
+      // Floating Hologram Pill Capsules (本格的な薬型カプセルスプライト)
       state.capsules.forEach(cap => {
         ctx.save();
-        const pulse = 1 + Math.sin(cap.phase * 2) * 0.12;
-        const capR = cap.r * pulse;
+        ctx.translate(cap.x, cap.y);
 
+        // 浮遊の緩やかな傾き・呼吸パルス
+        const tilt = Math.sin(cap.phase) * 0.14;
+        const pulse = 1 + Math.sin(cap.phase * 2) * 0.08;
+        ctx.rotate(tilt);
+        ctx.scale(pulse, pulse);
+
+        const capW = 44;
+        const capH = 18;
+        const halfW = capW / 2;
+        const halfH = capH / 2;
+        const radius = halfH; // 9px (完全な半円キャップ)
+
+        // 1. カプセル外形パスの生成
+        const drawCapsulePath = () => {
+          ctx.beginPath();
+          ctx.arc(-halfW + radius, 0, radius, Math.PI * 0.5, Math.PI * 1.5);
+          ctx.lineTo(halfW - radius, -radius);
+          ctx.arc(halfW - radius, 0, radius, -Math.PI * 0.5, Math.PI * 0.5);
+          ctx.closePath();
+        };
+
+        // 2. カプセル背後のホログラム発光オーラ
+        ctx.save();
+        ctx.shadowColor = cap.color;
+        ctx.shadowBlur = 12;
         ctx.strokeStyle = cap.color;
-        ctx.lineWidth = 2.2;
+        ctx.lineWidth = 2.0;
+        drawCapsulePath();
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. カプセル本体の塗り分け（左半分：半透明ホワイトシェル / 右半分：ネオンカラーシェル）
+        ctx.save();
+        drawCapsulePath();
+        ctx.clip();
+
+        // 左半身（ホワイトシェル）
+        ctx.fillStyle = "rgba(240, 248, 255, 0.88)";
+        ctx.fillRect(-halfW, -halfH, halfW, capH);
+
+        // 右半身（カラーシェル）
+        ctx.fillStyle = cap.color;
+        ctx.globalAlpha = 0.90;
+        ctx.fillRect(0, -halfH, halfW, capH);
+
+        // カプセル中央の分割リング（金属接合部）
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.arc(cap.x, cap.y, capR, 0, Math.PI * 2);
+        ctx.moveTo(0, -halfH);
+        ctx.lineTo(0, halfH);
         ctx.stroke();
 
-        ctx.fillStyle = cap.color;
-        ctx.globalAlpha = 0.28 + Math.sin(cap.phase * 2) * 0.12;
+        // 上部ガラス光沢ハイライト（ツヤ）
+        ctx.fillStyle = "rgba(255, 255, 255, 0.70)";
+        ctx.beginPath();
+        ctx.ellipse(0, -halfH + 3.2, halfW - 5, 2.0, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 8px monospace";
+        ctx.restore();
+
+        // 4. カプセルのシャープな外周輪郭線
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.6;
+        drawCapsulePath();
+        ctx.stroke();
+
+        // 5. テキストラベル
+        ctx.font = "bold 8.5px monospace";
         ctx.textAlign = "center";
-        ctx.globalAlpha = 0.95;
-        ctx.fillText(cap.label, cap.x, cap.y + 3);
+        ctx.textBaseline = "middle";
+        // ドロップシャドウ
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+        ctx.fillText(cap.label, 1, 1);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(cap.label, 0, 0);
+
         ctx.restore();
       });
 

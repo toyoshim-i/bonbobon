@@ -108,7 +108,7 @@ window.GameEngine = {
 
     const txtHeader = document.getElementById("txtHeaderStage");
     if (txtHeader) {
-      txtHeader.textContent = stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
+      txtHeader.textContent = stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1");
     }
   },
 

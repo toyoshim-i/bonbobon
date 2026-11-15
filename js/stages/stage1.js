@@ -1060,6 +1060,12 @@ window.Stage1 = {
       UI.updateHUD(state);
       const modal = document.getElementById("clearModal");
       if (modal) {
+        const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
+        if (nameEl) nameEl.textContent = "リリス (LILITH)";
+        const quoteEl = modal.querySelector("p");
+        if (quoteEl) {
+          quoteEl.innerHTML = "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」";
+        }
         const scoreEl = document.getElementById("clearFinalScore");
         if (scoreEl) scoreEl.textContent = state.score.toLocaleString();
         const ballsEl = document.getElementById("clearRemainingBalls");

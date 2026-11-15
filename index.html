@@ -218,16 +218,21 @@
               <div class="text-[10px] font-black text-[#e6ff00] tracking-wider uppercase flex items-center gap-1">
                 <span>🚀 SELECT STAGE (ステージ選択)</span>
               </div>
-              <div class="grid grid-cols-2 gap-2">
-                <button id="btnSelectStage1" class="p-2.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-1 transition cursor-pointer text-center group">
-                  <span class="text-[11px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
-                  <span class="text-[10px] font-bold text-white">桃色装甲リリス</span>
-                  <span class="text-[8px] text-gray-400">正面装甲・胸部バイブス</span>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button id="btnSelectStage1" class="p-2 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                  <span class="text-[10px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
+                  <span class="text-[9px] font-bold text-white leading-tight">桃色装甲リリス</span>
+                  <span class="text-[7px] text-gray-400 leading-tight">正面装甲・重力罠</span>
                 </button>
-                <button id="btnSelectStage2" class="p-2.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-1 transition cursor-pointer text-center group">
-                  <span class="text-[11px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
-                  <span class="text-[10px] font-bold text-white">疾風紫電セルティ</span>
-                  <span class="text-[8px] text-gray-400">見返り・電撃＆レーザー砲</span>
+                <button id="btnSelectStage2" class="p-2 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                  <span class="text-[10px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
+                  <span class="text-[9px] font-bold text-white leading-tight">疾風紫電セルティ</span>
+                  <span class="text-[7px] text-gray-400 leading-tight">見返り・電撃＆砲</span>
+                </button>
+                <button id="btnSelectStage3" class="p-2 rounded-xl bg-[#281058]/80 hover:bg-[#e6ff00]/20 border-2 border-[#e6ff00] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                  <span class="text-[10px] font-black text-[#e6ff00] group-hover:text-white">STAGE 3</span>
+                  <span class="text-[9px] font-bold text-white leading-tight">電脳空間ノア</span>
+                  <span class="text-[7px] text-gray-400 leading-tight">浮遊ビット・転送手</span>
                 </button>
               </div>
             </div>
@@ -445,7 +450,7 @@
               👁 表情切替
             </button>
             <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition">
-              ⚡ STAGE 1/2切替
+              ⚡ STAGE 1/2/3切替
             </button>
           </div>
         </div>
@@ -454,16 +459,18 @@
     </div>
   </div>
 
-  <script src="./js/stage1_assets.js?v=122"></script>
-  <script src="./js/stage2_assets.js?v=122"></script>
-  <script src="./js/audio.js?v=122"></script>
-  <script src="./js/engine/particles.js?v=122"></script>
-  <script src="./js/engine/physics.js?v=122"></script>
-  <script src="./js/engine/systems.js?v=122"></script>
-  <script src="./js/engine/ui.js?v=122"></script>
-  <script src="./js/stages/stage1.js?v=122"></script>
-  <script src="./js/stages/stage2.js?v=122"></script>
-  <script src="./js/engine/game_engine.js?v=122"></script>
-  <script src="./js/main.js?v=122"></script>
+  <script src="./js/stage1_assets.js?v=123"></script>
+  <script src="./js/stage2_assets.js?v=123"></script>
+  <script src="./js/stage3_assets.js?v=123"></script>
+  <script src="./js/audio.js?v=123"></script>
+  <script src="./js/engine/particles.js?v=123"></script>
+  <script src="./js/engine/physics.js?v=123"></script>
+  <script src="./js/engine/systems.js?v=123"></script>
+  <script src="./js/engine/ui.js?v=123"></script>
+  <script src="./js/stages/stage1.js?v=123"></script>
+  <script src="./js/stages/stage2.js?v=123"></script>
+  <script src="./js/stages/stage3.js?v=123"></script>
+  <script src="./js/engine/game_engine.js?v=123"></script>
+  <script src="./js/main.js?v=123"></script>
 </body>
 </html>

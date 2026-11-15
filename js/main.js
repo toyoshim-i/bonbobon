@@ -40,14 +40,17 @@ window.addEventListener("DOMContentLoaded", () => {
           modal.classList.add("hidden");
           modal.classList.remove("flex");
         }, 200);
+        const curId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
         GameEngine.resetGame();
-        if (window.Stage2) {
+        if (curId === "stage1" && window.Stage2) {
           GameEngine.loadStage(Stage2);
-          const txtHeader = document.getElementById("txtHeaderStage");
-          if (txtHeader) txtHeader.textContent = "STAGE 2";
           UI.showCutin("🚀【STAGE 2 突入】<br>疾風紫電セルティ 迎撃戦開始！", 220);
-        } else {
-          UI.showCutin("🚀【NEXT STAGE】<br>強化を引き継いで再出撃します！", 180);
+        } else if (curId === "stage2" && window.Stage3) {
+          GameEngine.loadStage(Stage3);
+          UI.showCutin("🚀【STAGE 3 突入】<br>電脳空間ノア ハッキング戦開始！", 220);
+        } else if (window.Stage1) {
+          GameEngine.loadStage(Stage1);
+          UI.showCutin("🚀【STAGE 1 再出撃】<br>桃色装甲リリス 迎撃戦開始！", 200);
         }
       });
     }
@@ -71,9 +74,21 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const dbgPuruTest = document.getElementById("dbgPuruTest");
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
-    GameEngine.state.boss.chestArmorBroken = true;
-    Stage1.impulseBust(GameEngine.state, "L", 6.5, -7.5);
-    Stage1.impulseBust(GameEngine.state, "R", -6.5, -7.5);
+    const cur = GameEngine.currentStage;
+    if (cur && cur.id === "stage3" && window.Stage3) {
+      GameEngine.state.boss.chestArmorBroken = true;
+      Stage3.impulseBust(GameEngine.state, "L", 6.5, -7.5);
+      Stage3.impulseBust(GameEngine.state, "R", -6.5, -7.5);
+    } else if (cur && cur.id === "stage2" && GameEngine.state.boss.tipBust) {
+      GameEngine.state.boss.tipBust.vx += 8.0;
+      GameEngine.state.boss.tipBust.vy -= 8.0;
+      if (GameEngine.state.boss.buttL) GameEngine.state.boss.buttL.vy += 8.0;
+      if (GameEngine.state.boss.buttR) GameEngine.state.boss.buttR.vy += 8.0;
+    } else {
+      GameEngine.state.boss.chestArmorBroken = true;
+      Stage1.impulseBust(GameEngine.state, "L", 6.5, -7.5);
+      Stage1.impulseBust(GameEngine.state, "R", -6.5, -7.5);
+    }
   });
 
   const dbgMultiball = document.getElementById("dbgMultiball");
@@ -98,7 +113,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (dbgStageToggle) dbgStageToggle.addEventListener("click", () => {
     if (window.sfx) window.sfx.flipperClick();
     const currentId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
-    const nextStage = currentId === "stage1" ? window.Stage2 : window.Stage1;
+    const nextStage = currentId === "stage1" ? window.Stage2 : (currentId === "stage2" ? window.Stage3 : window.Stage1);
     if (nextStage) {
       GameEngine.resetGame();
       GameEngine.loadStage(nextStage);

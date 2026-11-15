@@ -407,7 +407,7 @@ window.UI = {
     const btnMenuResume = document.getElementById("btnMenuResume");
     if (btnMenuResume) btnMenuResume.addEventListener("click", closeMenu);
 
-    // Stage Selection (Header Button, Menu Modal Stage 1 & 2 Cards)
+    // Stage Selection (Header Button, Menu Modal Stage 1, 2 & 3 Cards)
     const loadStageFromUI = (stage) => {
       if (!stage) return;
       if (window.sfx) window.sfx.capsuleCatch();
@@ -416,7 +416,7 @@ window.UI = {
 
       const txtHeader = document.getElementById("txtHeaderStage");
       if (txtHeader) {
-        txtHeader.textContent = stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
+        txtHeader.textContent = stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1");
       }
       closeMenu();
       UI.showCutin(`🚀【STAGE SELECT】<br>${stage.name} (${stage.bossName})`, 180);
@@ -426,7 +426,7 @@ window.UI = {
     if (btnHeaderStage) {
       btnHeaderStage.addEventListener("click", () => {
         const curId = engine.currentStage ? engine.currentStage.id : "stage1";
-        const next = curId === "stage1" ? window.Stage2 : window.Stage1;
+        const next = curId === "stage1" ? window.Stage2 : (curId === "stage2" ? window.Stage3 : window.Stage1);
         loadStageFromUI(next);
       });
     }
@@ -438,6 +438,10 @@ window.UI = {
     const btnSelS2 = document.getElementById("btnSelectStage2");
     if (btnSelS2) {
       btnSelS2.addEventListener("click", () => loadStageFromUI(window.Stage2));
+    }
+    const btnSelS3 = document.getElementById("btnSelectStage3");
+    if (btnSelS3) {
+      btnSelS3.addEventListener("click", () => loadStageFromUI(window.Stage3));
     }
 
     // Audio Mute / Unmute Toggle

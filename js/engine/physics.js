@@ -13,32 +13,32 @@ window.Physics = {
     { x1: 404, y1: 95,  x2: 404, y2: 635 },
 
     // Shooter lane inner wall (right side) & bottom wall
-    { x1: 380, y1: 175, x2: 380, y2: 635 },
-    { x1: 380, y1: 635, x2: 404, y2: 635 },
+    { x1: 380, y1: 175, x2: 380, y2: 635, isLane: true },
+    { x1: 380, y1: 635, x2: 404, y2: 635, isLane: true },
 
     // Mid playfield upper outer guide deflectors
     { x1: 16,  y1: 280, x2: 20,  y2: 360 },
     { x1: 380, y1: 280, x2: 376, y2: 360 },
 
-    // Lane Dividers
-    { x1: 50,  y1: 420, x2: 50,  y2: 558 },
-    { x1: 50,  y1: 558, x2: 110, y2: 600 },
+    // Lane Dividers (Inlane vertical passage + smooth feed ramp onto flipper)
+    { x1: 50,  y1: 420, x2: 50,  y2: 558, isLane: true },
+    { x1: 50,  y1: 558, x2: 110, y2: 598.5, isRamp: true },
 
-    { x1: 346, y1: 420, x2: 346, y2: 558 },
-    { x1: 346, y1: 558, x2: 286, y2: 600 },
+    { x1: 346, y1: 420, x2: 346, y2: 558, isLane: true },
+    { x1: 346, y1: 558, x2: 286, y2: 598.5, isRamp: true },
 
-    // Slingshot Inner Walls
-    { x1: 84,  y1: 450, x2: 84,  y2: 535 },
+    // Slingshot Inner Walls (back/bottom faces form the inner wall of the inlane passage)
+    { x1: 84,  y1: 450, x2: 84,  y2: 535, isLane: true },
     { x1: 84,  y1: 450, x2: 106, y2: 565, isSlingshot: true, kickDir: { x: 0.98, y: -0.19 } },
-    { x1: 84,  y1: 535, x2: 106, y2: 565 },
+    { x1: 84,  y1: 535, x2: 106, y2: 565, isLane: true },
 
-    { x1: 312, y1: 450, x2: 312, y2: 535 },
+    { x1: 312, y1: 450, x2: 312, y2: 535, isLane: true },
     { x1: 312, y1: 450, x2: 290, y2: 565, isSlingshot: true, kickDir: { x: -0.98, y: -0.19 } },
-    { x1: 312, y1: 535, x2: 290, y2: 565 },
+    { x1: 312, y1: 535, x2: 290, y2: 565, isLane: true },
 
     // Outlane Drain Slopes
-    { x1: 16,  y1: 590, x2: 86,  y2: 648 },
-    { x1: 380, y1: 590, x2: 310, y2: 648 }
+    { x1: 16,  y1: 590, x2: 86,  y2: 648, isRamp: true },
+    { x1: 380, y1: 590, x2: 310, y2: 648, isRamp: true }
   ],
 
   flipperState: [
@@ -275,7 +275,12 @@ window.Physics = {
         ball.x = cp.x + nx * minDist;
         ball.y = cp.y + ny * minDist;
 
-        if (w.isSlingshot) {
+        const isActiveSlingshotFace =
+          w.isSlingshot &&
+          cp.t > 0.06 &&
+          cp.t < 0.94 &&
+          (nx * w.kickDir.x + ny * w.kickDir.y) > 0.45;
+        if (isActiveSlingshotFace) {
           const kickSpd = 12.5;
           ball.vx = w.kickDir.x * kickSpd + (Math.random() - 0.5) * 1.5;
           ball.vy = w.kickDir.y * kickSpd - 2.0;
@@ -284,10 +289,26 @@ window.Physics = {
           if (window.Systems) window.Systems.addFever(state, 2);
           Particles.add(state, cp.x, cp.y, "#00f5d4", 12, 4.0);
         } else {
-          const dot = ball.vx * nx + ball.vy * ny;
-          if (dot < 0) {
-            ball.vx = (ball.vx - 2 * dot * nx) * 0.88;
-            ball.vy = (ball.vy - 2 * dot * ny) * 0.88;
+          const vn = ball.vx * nx + ball.vy * ny;
+          if (vn < 0) {
+            const tx = -ny;
+            const ty = nx;
+            const vt = ball.vx * tx + ball.vy * ty;
+            // 下部アウトレーン外周壁も通路壁と同様に横跳ねを抑える
+            const isLowerOuterLane = (!ball.inShooterLane && cp.y > 415 && (cp.x < 55 || cp.x > 342));
+            let restN = 0.72;
+            let tangFric = 0.97;
+            if (w.isRamp) {
+              restN = 0.04;
+              tangFric = 0.992;
+            } else if (w.isLane || w.isSlingshot || isLowerOuterLane) {
+              restN = 0.14;
+              tangFric = 0.988;
+            }
+            const newVn = -vn * restN;
+            const newVt = vt * tangFric;
+            ball.vx = nx * newVn + tx * newVt;
+            ball.vy = ny * newVn + ty * newVt;
           }
         }
       }
@@ -321,11 +342,10 @@ window.Physics = {
         const dot = vRelX * nx + vRelY * ny;
 
         if (dot < 0) {
-          const rest = 0.65;
-          ball.vx = (vRelX - (1 + rest) * dot * nx) + vxSurface;
-          ball.vy = (vRelY - (1 + rest) * dot * ny) + vySurface;
-
           if (Math.abs(omega) > 0.15) {
+            const rest = 0.65;
+            ball.vx = (vRelX - (1 + rest) * dot * nx) + vxSurface;
+            ball.vy = (vRelY - (1 + rest) * dot * ny) + vySurface;
             const flipBoost = Math.min(16.5, 7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0);
             ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;
             ball.vx += nx * 4.2;
@@ -333,8 +353,15 @@ window.Physics = {
             Particles.add(state, cp.x, cp.y, "#ff1493", 10, 4.5);
             if (window.Systems) window.Systems.addScore(state, 50, cp.x, cp.y, "FLIP");
           } else {
-            ball.vx *= 0.88;
-            ball.vy *= 0.88;
+            // 静止中のパドル：通路から流れてきた球が跳ねずにピタッと乗って転がるよう法線反発を抑え、接線転がりを維持
+            const tx = -ny;
+            const ty = nx;
+            const vt = vRelX * tx + vRelY * ty;
+            const restPassive = Math.abs(dot) < 4.5 ? 0.08 : 0.26;
+            const newVn = -dot * restPassive;
+            const newVt = vt * 0.988;
+            ball.vx = nx * newVn + tx * newVt + vxSurface;
+            ball.vy = ny * newVn + ty * newVt + vySurface;
           }
         }
       }

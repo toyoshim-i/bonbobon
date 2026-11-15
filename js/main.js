@@ -76,9 +76,16 @@ window.addEventListener("DOMContentLoaded", () => {
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
     const cur = GameEngine.currentStage;
     if (cur && cur.id === "stage3" && window.Stage3) {
-      GameEngine.state.boss.chestArmorBroken = true;
-      Stage3.impulseBust(GameEngine.state, "L", 6.5, -7.5);
-      Stage3.impulseBust(GameEngine.state, "R", -6.5, -7.5);
+      const b = GameEngine.state.boss;
+      if (b.chestArmorBroken) {
+        Stage3.impulseBust(GameEngine.state, "L", 7.2, -7.8);
+        Stage3.impulseBust(GameEngine.state, "R", -7.2, -7.8);
+      } else {
+        if (window.sfx) window.sfx.softPuru();
+        b.bustL.vx += 5.2; b.bustL.vy -= 5.6;
+        b.bustR.vx -= 5.2; b.bustR.vy -= 5.6;
+      }
+      Stage3.impulseHip(GameEngine.state, 6.0, -6.5, false);
     } else if (cur && cur.id === "stage2" && GameEngine.state.boss.tipBust) {
       GameEngine.state.boss.tipBust.vx += 8.0;
       GameEngine.state.boss.tipBust.vy -= 8.0;

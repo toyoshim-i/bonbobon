@@ -94,6 +94,38 @@ class FMSoundEngine {
     setTimeout(() => this.playFM(440, 220, 200, 0.15, "square", 880, 0.14), 30);
   }
 
+  // Sharp predictive short laser "Pi-t!" shot
+  laserPew() {
+    this.playFM(1920, 640, 260, 0.12, "sawtooth", 420, 0.15);
+    setTimeout(() => this.playFM(1280, 320, 180, 0.09, "square", 300, 0.11), 28);
+  }
+
+  // Rhythmic target tracking beep (step = 1, 2, 3 ascending pitch)
+  lockBeep(step = 1) {
+    const freqs = [1080, 1320, 1620];
+    const f = freqs[Math.max(0, Math.min(2, (step || 1) - 1))];
+    this.playFM(f, f * 0.5, 60, 0.075, "square", f * 0.85, 0.11);
+  }
+
+  // Urgent double-chirp alarm when lock-on finishes (NUDGE NOW!)
+  lockComplete() {
+    this.playFM(2150, 1075, 140, 0.085, "square", 2480, 0.14);
+    setTimeout(() => this.playFM(2560, 1280, 160, 0.11, "sawtooth", 2880, 0.15), 70);
+  }
+
+  // Pinball shattered into fragments by sniper laser
+  ballShatter() {
+    this.playFM(1850, 430, 520, 0.16, "sawtooth", 340, 0.18);
+    setTimeout(() => this.playFM(920, 195, 420, 0.22, "square", 120, 0.17), 35);
+    setTimeout(() => this.playFM(165, 58, 360, 0.30, "sawtooth", 45, 0.20), 70);
+  }
+
+  // Delta beam formation hum & activation
+  triangleLaser() {
+    this.playFM(660, 330, 260, 0.18, "sawtooth", 1320, 0.14);
+    setTimeout(() => this.playFM(990, 247.5, 180, 0.22, "square", 880, 0.12), 45);
+  }
+
   // Elastic soft damp "Funyon" sound for rabbit ear tips
   earBoing() {
     this.playFM(260, 22, 120, 0.26, "sine", 160, 0.16);

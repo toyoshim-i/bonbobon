@@ -76,11 +76,17 @@ window.Physics = {
   },
 
   updateFlippers(state) {
+    if ((state.flipperReverseTimer || 0) > 0) {
+      state.flipperReverseTimer--;
+    }
+    const rev = (state.flipperReverseTimer || 0) > 0;
     const flippers = this.getFlippers(state);
     flippers.forEach((f, idx) => {
       const st = this.flipperState[idx];
       st.prevAngle = st.angle;
-      const pressed = f.isLeft ? state.leftFlipperDown : state.rightFlipperDown;
+      const pressed = rev
+        ? (f.isLeft ? state.rightFlipperDown : state.leftFlipperDown)
+        : (f.isLeft ? state.leftFlipperDown : state.rightFlipperDown);
       const wasPressed = !!st.wasPressed;
       st.wasPressed = pressed;
 
@@ -243,7 +249,11 @@ window.Physics = {
   // Substep ball physics iteration
   stepBallPhysics(state, ball, gravity, SUBSTEPS, s) {
     // Elevated 3D wireform ramp bypasses ground-level walls & flippers
-    if (ball._onWireRamp) return;
+    if (ball._onWireRamp || ball._inNavelTrap || ball._fusionStasis) return;
+
+    if (ball._crotchSpitActive && ball.y < 340) {
+      ball._crotchSpitActive = false;
+    }
 
     // Plunger resting lock
     if (ball.inShooterLane && state.plunger.waitingForLaunch) {
@@ -311,6 +321,7 @@ window.Physics = {
       const dist = Math.hypot(dx, dy);
       const minDist = ball.r + 2.5;
       if (dist < minDist && dist > 0.0001) {
+        ball._crotchSpitActive = false;
         const nx = dx / dist;
         const ny = dy / dist;
         ball.x = cp.x + nx * minDist;
@@ -368,6 +379,7 @@ window.Physics = {
       const minDist = ball.r + 5.0;
 
       if (dist < minDist && dist > 0.0001) {
+        ball._crotchSpitActive = false;
         const nx = dx / dist;
         const ny = dy / dist;
         ball.x = cp.x + nx * minDist;
@@ -410,7 +422,7 @@ window.Physics = {
 
     // Permanent Installed Defenses (Center Post, Kickbacks)
     if (s === 0) {
-      if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0) {
+      if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0 && !ball._crotchSpitActive) {
         const postR = 7 + state.perm.centerPost * 3.5;
         const px = 198;
         const py = 614;

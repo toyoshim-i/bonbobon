@@ -198,6 +198,41 @@ class FMSoundEngine {
     setTimeout(() => this.playFM(1980, 495, 420, 0.15, "square", 1540, 0.15), 26);
   }
 
+  // Stage 5: Cosmic Gamma-Ray Burst plasma roar!
+  gammaBurst() {
+    this.playFM(180, 45, 720, 0.34, "sawtooth", 70, 0.22);
+    [880, 1320, 1760].forEach((f, i) => {
+      setTimeout(() => this.playFM(f, f * 0.5, 480, 0.18, "square", f * 0.72, 0.14), i * 28);
+    });
+  }
+
+  // Stage 5: Micro Black Hole gravitational warble / slingshot!
+  blackHolePulse() {
+    this.playFM(115, 29, 340, 0.32, "sine", 58, 0.22);
+    setTimeout(() => this.playFM(240, 60, 260, 0.24, "triangle", 480, 0.14), 60);
+  }
+
+  // Stage 5: Elastic electric prism harp pluck on Navel Tether Beam!
+  navelBeamPluck() {
+    this.playFM(660, 330, 290, 0.22, "triangle", 990, 0.18);
+    setTimeout(() => this.playFM(880, 220, 220, 0.20, "sine", 520, 0.15), 42);
+  }
+
+  // Stage 5: Angel Halo ring curse (left/right flipper reversal)!
+  haloReverse() {
+    [1046.5, 783.99, 659.25, 523.25].forEach((f, i) => {
+      setTimeout(() => this.playFM(f, f * 1.5, 260, 0.15, "square", f * 0.84, 0.15), i * 36);
+    });
+  }
+
+  // Stage 5: Twin Harmonic Fusion into Cyber-Seraph Seraphia!
+  seraphFusion() {
+    const chord = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98, 2093.0];
+    chord.forEach((f, i) => {
+      setTimeout(() => this.playFM(f, f * 0.5, 240, 0.24, "triangle", f * 1.02, 0.17), i * 48);
+    });
+  }
+
   // Elastic soft damp "Funyon" sound for rabbit ear tips
   earBoing() {
     this.playFM(260, 22, 120, 0.26, "sine", 160, 0.16);

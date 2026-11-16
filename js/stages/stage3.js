@@ -60,11 +60,7 @@ window.Stage3 = {
   },
 
   setExpressionSequence(state, seq) {
-    if (!state.boss || !state.boss.faceAnim || !seq || seq.length === 0) return;
-    state.boss.faceAnim.sequence = seq;
-    state.boss.faceAnim.seqIdx = 0;
-    state.boss.faceAnim.seqTimer = seq[0].frames;
-    state.boss.expression = seq[0].expr;
+    StageCommon.setExpressionSequence(state, seq);
   },
 
   getAllBits(b) {
@@ -2086,97 +2082,16 @@ window.Stage3 = {
   },
 
   renderSoftWarp(ctx, IMG_BOX, bodies, isChestBroken, isKneeBroken, slotName = "default") {
-    const active = bodies.filter(b => b && Math.hypot(b.dx, b.dy) >= 0.25);
-    if (active.length === 0) return;
     const src = this._getSrcPixels(IMG_BOX, isChestBroken, isKneeBroken);
     if (!src || !src.data) return;
-
-    const REACH = 1.12;
-    const fields = active.map(b => {
-      const rx = b.rx * REACH, ry = b.ry * REACH;
-      return {
-        cx: b.x - IMG_BOX.x,
-        cy: b.y - IMG_BOX.y,
-        rx,
-        ry,
-        irx: 1 / rx,
-        iry: 1 / ry,
-        dx: b.dx,
-        dy: b.dy,
-        kx: b.dx * 0.008 - b.dy * 0.005,
-        ky: b.dy * 0.008 - b.dx * 0.005
-      };
+    StageCommon.renderSoftWarp(ctx, IMG_BOX, src, bodies, {
+      slotStore: this._warpSlots || (this._warpSlots = {}),
+      slotName,
+      reach: 1.12,
+      minDisp: 0.25,
+      rgba: false,
+      shear: true
     });
-
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    fields.forEach(f => {
-      x0 = Math.min(x0, f.cx - f.rx); x1 = Math.max(x1, f.cx + f.rx);
-      y0 = Math.min(y0, f.cy - f.ry); y1 = Math.max(y1, f.cy + f.ry);
-    });
-    const SW = src.w, SH = src.h;
-    x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
-    x1 = Math.min(SW, Math.ceil(x1)); y1 = Math.min(SH, Math.ceil(y1));
-    const w = x1 - x0, h = y1 - y0;
-    if (w <= 0 || h <= 0) return;
-
-    // iOS Safari (WebKit) の遅延GPU Canvas2Dバッファで同一フレーム内の複数drawImageが
-    // 同じオフスクリーンCanvasの上書き後テクスチャを参照してしまう問題を防ぐため、部位ごとに独立スロットを保持
-    if (!this._warpSlots) this._warpSlots = {};
-    let slot = this._warpSlots[slotName];
-    if (!slot || slot.canvas.width !== w || slot.canvas.height !== h) {
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      const cctx = c.getContext("2d");
-      slot = {
-        canvas: c,
-        ctx: cctx,
-        img: cctx.createImageData(w, h)
-      };
-      this._warpSlots[slotName] = slot;
-    }
-    const out = slot.img;
-    const od = out.data;
-    od.fill(0);
-    const sd = src.data;
-    const nF = fields.length;
-
-    for (let v = 0; v < h; v++) {
-      const Y = y0 + v;
-      for (let u = 0; u < w; u++) {
-        const X = x0 + u;
-        let ox = 0, oy = 0, inside = false;
-        for (let i = 0; i < nF; i++) {
-          const f = fields[i];
-          const rxv = X - f.cx, ryv = Y - f.cy;
-          const nx = rxv * f.irx, ny = ryv * f.iry;
-          const r2 = nx * nx + ny * ny;
-          if (r2 >= 1) continue;
-          const t = 1 - r2;
-          const wgt = t * t;
-          ox += wgt * (f.dx + f.kx * rxv);
-          oy += wgt * (f.dy + f.ky * ryv);
-          inside = true;
-        }
-        if (!inside) continue;
-
-        let sx = X - ox, sy = Y - oy;
-        if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
-        if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
-        const ix = sx | 0, iy = sy | 0;
-        const fx = sx - ix, fy = sy - iy;
-        const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
-        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
-        const oi = (v * w + u) * 4;
-        od[oi]     = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
-        od[oi + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
-        od[oi + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
-        od[oi + 3] = 255;
-      }
-    }
-
-    slot.ctx.putImageData(out, 0, 0);
-    ctx.drawImage(slot.canvas, 0, 0, w, h, IMG_BOX.x + x0, IMG_BOX.y + y0, w, h);
   },
 
   renderBackground(ctx, state, engine) {
@@ -2256,27 +2171,18 @@ window.Stage3 = {
       }
 
       // 7. 表情差分パッチ合成 (FACE_BOX: x=296, y=300, w=174, h=120)
-      const fa = b.faceAnim || {};
-      const isTalking = (b.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
-      const talkCycle = Math.floor(performance.now() * 0.007) % 3;
-      let activePatchKey = null;
-
-      if (b.expression && b.expression !== "normal") {
-        activePatchKey = b.expression;
-      } else if (isTalking) {
-        activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
-      } else if (fa.winkFrame > 0) {
-        activePatchKey = "wink";
-      } else if (fa.blinkFrame > 0) {
-        const bf = fa.blinkFrame;
-        activePatchKey = (bf >= 14) ? "blink_half" : (bf >= 6) ? "blink" : (bf >= 3) ? "blink_half" : null;
-      } else if (fa.talkFrame > 0) {
-        activePatchKey = "talk_sm";
-      }
-
-      if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
-        drawSrcPatch(this.assets.facePatchImgs[activePatchKey], 296, 300, 174, 120);
-      }
+      const activePatchKey = StageCommon.getActiveFacePatchKey(b, state, {
+        defaultExpr: "normal",
+        halfBlink: true
+      });
+      StageCommon.drawFacePatch(
+        ctx,
+        this.assets.facePatchImgs,
+        activePatchKey,
+        IMG_BOX,
+        { x: 296, y: 300, w: 174, h: 120 },
+        { w: 768, h: 1376 }
+      );
 
       // 8. 浮遊ビット4機の可動スプライト描画（破壊済みのビットは消滅）
       if (this.assets.bitOrbImg.complete && this.assets.bitOrbImg.naturalWidth > 0) {
@@ -2288,8 +2194,13 @@ window.Stage3 = {
           const by = bit.y + (bit.bobY || 0);
           ctx.save();
           if (bit.flash > 0) {
-            ctx.shadowColor = "#00f5d4";
-            ctx.shadowBlur = 12;
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = "#00f5d4";
+            ctx.beginPath();
+            ctx.arc(bx, by, orbW * 0.58, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
           }
           ctx.drawImage(this.assets.bitOrbImg, bx - orbW / 2, by - orbH / 2, orbW, orbH);
           ctx.restore();
@@ -2298,23 +2209,7 @@ window.Stage3 = {
     }
 
     // 9. クリア演出スモーククラウド
-    if (state.clearSequence && state.clearSequence.smokeClouds && state.clearSequence.smokeClouds.length > 0) {
-      ctx.save();
-      state.clearSequence.smokeClouds.forEach(smk => {
-        ctx.save();
-        ctx.globalAlpha = smk.alpha;
-        const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
-        grad.addColorStop(0, smk.color);
-        grad.addColorStop(0.65, smk.color);
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-      ctx.restore();
-    }
+    StageCommon.renderSmokeClouds(ctx, state);
 
     ctx.restore();
   },
@@ -2396,8 +2291,21 @@ window.Stage3 = {
             // 3辺の極太ネオンビーム（外周グロー＋中心ホワイトコア）
             const glowCol = (Math.floor(animTick * 0.3) % 2 === 0) ? "#00f5d4" : "#ff1493";
             ctx.lineCap = "round";
-            ctx.shadowColor = glowCol;
-            ctx.shadowBlur = 10;
+
+            // Fast neon outer-glow under-stroke
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            ctx.strokeStyle = glowCol;
+            ctx.lineWidth = 14.0;
+            edges.forEach(ed => {
+              ctx.beginPath();
+              ctx.moveTo(ed.ax, ed.ay);
+              ctx.lineTo(ed.bx, ed.by);
+              ctx.stroke();
+            });
+            ctx.restore();
+
+            // Main neon beam
             ctx.strokeStyle = glowCol;
             ctx.lineWidth = 6.5;
             edges.forEach(ed => {
@@ -2407,7 +2315,7 @@ window.Stage3 = {
               ctx.stroke();
             });
 
-            ctx.shadowBlur = 0;
+            // Bright white inner core
             ctx.strokeStyle = "#ffffff";
             ctx.lineWidth = 2.2;
             edges.forEach(ed => {
@@ -2542,15 +2450,24 @@ window.Stage3 = {
               ctx.stroke();
 
               // 赤色ソリッド照準ビーム
-              ctx.shadowColor = "#ff1744";
-              ctx.shadowBlur = 8;
+              // Fast outer glow under-stroke
+              ctx.save();
+              ctx.globalAlpha = 0.28;
+              ctx.strokeStyle = "#ff1744";
+              ctx.lineWidth = (fastBlink ? 2.8 : 2.0) + 6.0;
+              ctx.beginPath();
+              ctx.moveTo(sx, sy);
+              ctx.lineTo(bx, by);
+              ctx.stroke();
+              ctx.restore();
+
+              // Inner solid targeting beam
               ctx.strokeStyle = mainCol;
               ctx.lineWidth = fastBlink ? 2.8 : 2.0;
               ctx.beginPath();
               ctx.moveTo(sx, sy);
               ctx.lineTo(bx, by);
               ctx.stroke();
-              ctx.shadowBlur = 0;
 
               // ボールに噛み付く二重クリムゾン照準クロスヘア
               ctx.strokeStyle = "#ff1744";
@@ -2606,8 +2523,19 @@ window.Stage3 = {
 
           const tx = sl.x - sl.ux * sl.len;
           const ty = sl.y - sl.uy * sl.len;
-          ctx.shadowColor = "#ff1744";
-          ctx.shadowBlur = 10;
+
+          // Fast neon outer-glow under-stroke
+          ctx.save();
+          ctx.globalAlpha = 0.28;
+          ctx.strokeStyle = "#ff1744";
+          ctx.lineWidth = 14.0;
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(sl.x, sl.y);
+          ctx.stroke();
+          ctx.restore();
+
+          // Main laser beam
           ctx.strokeStyle = "#ff1744";
           ctx.lineWidth = 6.8;
           ctx.beginPath();
@@ -2615,7 +2543,7 @@ window.Stage3 = {
           ctx.lineTo(sl.x, sl.y);
           ctx.stroke();
 
-          ctx.shadowBlur = 0;
+          // Bright inner core
           ctx.strokeStyle = "#e6ff00";
           ctx.lineWidth = 3.0;
           ctx.beginPath();
@@ -2817,109 +2745,89 @@ window.Stage3 = {
     if (!state.boss) return "---";
     const b = state.boss;
     if (state.stageCleared) {
-      return "✨ノア撃破完了！ STAGE 3 CLEAR!!✨";
+      return "✨ノア撃破！ STAGE 3 CLEAR!";
     }
     if (b.bitLasers && b.bitLasers.snipePhase === "locked" && !b.bitLasers.nudgedDuringLock) {
-      return `⚠️赤ロック警報！ 今すぐ『台揺らし』で粉砕レーザーを回避せよ！`;
+      return "⚠️赤ロック！台揺らしで回避！";
     }
     const bitsAlive = this.getAllBits(b).filter(x => !x.broken).length;
     if (state.phase === 3) {
       return bitsAlive > 0
-        ? `💥最終目標: 残存ビット(${bitsAlive}機)＆吸引を突破し首元ペンダント連打！(HP:${b.core.hp})`
-        : `💥最終目標: 強吸引を突破し首元ペンダントへ連打！ (残HP:${b.core.hp})`;
+        ? `首ペンダント連打！(HP:${b.core.hp}/機${bitsAlive})`
+        : `首ペンダントへ連打！(HP:${b.core.hp})`;
     }
     if (state.phase === 2) {
-      return `ビット(残${bitsAlive}/4機)の攻撃に注意しつつ胸部ビスチェを破壊せよ！(HP:${b.chestArmorHP})`;
+      return `胸部ビスチェを破壊！(HP:${b.chestArmorHP})`;
     }
-    return `右膝当てアーマー(残HP:${b.kneePad.hp})を破壊して胸部ビスチェを解錠せよ！(ビット残${bitsAlive}/4)`;
+    return `右膝アーマーを破壊！(HP:${b.kneePad.hp})`;
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const b = state.boss;
 
-    const nameEl = document.getElementById("targetBossName");
-    if (nameEl) nameEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-pulse"></span>TYPE-NOA (ノア)';
-    const briefEl = document.getElementById("targetBriefingText");
-    if (briefEl) {
-      briefEl.textContent = "「4機のビットが3機以上残ってるとデルタビーム！ 2機以下になったら必中ロックオンでボールを砕いちゃうから、赤ロックで台を揺らして避けてみてねっ！」";
+    UI.setBossHeader("#00f5d4", "TYPE-NOA (ノア)");
+    UI.setText("targetBriefingText", "「4機のビットが3機以上残ってるとデルタビーム！ 2機以下になったら必中ロックオンでボールを砕いちゃうから、赤ロックで台を揺らして避けてみてねっ！」");
+
+    UI.setText("dtArmRLabel", "浮遊ビット(4-BITS):");
+    UI.setText("dtArmLLabel", "膝＆腰端子(KNEE/HIP):");
+    UI.setText("dtChestLabel", "胸部＆首ペンダント:");
+    UI.setText("dtCrotchLabel", "両手吸引(VACUUM):");
+
+    const alive = this.getAllBits(b).filter(x => !x.broken).length;
+    if (alive === 0) {
+      UI.setText("dtArmRStatus", "💥ALL DOWN!");
+      UI.setClass("dtArmRStatus", "font-bold text-[#ff1493] animate-pulse");
+    } else if (alive >= 3 && b.bitLasers && b.bitLasers.triMode === "fire") {
+      UI.setText("dtArmRStatus", `🔺DELTA BEAM!! (${alive}/4)`);
+      UI.setClass("dtArmRStatus", "font-bold text-[#e6ff00] animate-pulse");
+    } else if (alive < 3 && b.bitLasers && b.bitLasers.snipePhase === "locked") {
+      UI.setText("dtArmRStatus", "⚠️LOCKED! NUDGE!");
+      UI.setClass("dtArmRStatus", "font-bold text-[#ff1744] animate-pulse");
+    } else if (alive < 3) {
+      UI.setText("dtArmRStatus", `🎯LOCK SNIPE (${alive}/4機)`);
+      UI.setClass("dtArmRStatus", "font-bold text-[#e6ff00]");
+    } else {
+      UI.setText("dtArmRStatus", `DELTA READY (${alive}/4機)`);
+      UI.setClass("dtArmRStatus", "font-bold text-[#00f5d4]");
     }
 
-    const lblArmR = document.getElementById("dtArmRLabel");
-    if (lblArmR) lblArmR.textContent = "浮遊ビット(4-BITS):";
-    const lblArmL = document.getElementById("dtArmLLabel");
-    if (lblArmL) lblArmL.textContent = "膝＆腰端子(KNEE/HIP):";
-    const lblChest = document.getElementById("dtChestLabel");
-    if (lblChest) lblChest.textContent = "胸部＆首ペンダント:";
-    const lblCrotch = document.getElementById("dtCrotchLabel");
-    if (lblCrotch) lblCrotch.textContent = "両手吸引(VACUUM):";
-
-    const dtArmR = document.getElementById("dtArmRStatus");
-    if (dtArmR) {
-      const alive = this.getAllBits(b).filter(x => !x.broken).length;
-      if (alive === 0) {
-        dtArmR.textContent = "💥ALL DOWN!";
-        dtArmR.className = "font-bold text-[#ff1493] animate-pulse";
-      } else if (alive >= 3 && b.bitLasers && b.bitLasers.triMode === "fire") {
-        dtArmR.textContent = `🔺DELTA BEAM!! (${alive}/4)`;
-        dtArmR.className = "font-bold text-[#e6ff00] animate-pulse";
-      } else if (alive < 3 && b.bitLasers && b.bitLasers.snipePhase === "locked") {
-        dtArmR.textContent = "⚠️LOCKED! NUDGE!";
-        dtArmR.className = "font-bold text-[#ff1744] animate-pulse";
-      } else if (alive < 3) {
-        dtArmR.textContent = `🎯LOCK SNIPE (${alive}/4機)`;
-        dtArmR.className = "font-bold text-[#e6ff00]";
-      } else {
-        dtArmR.textContent = `DELTA READY (${alive}/4機)`;
-        dtArmR.className = "font-bold text-[#00f5d4]";
-      }
+    const kBroken = b.kneePad.broken;
+    const hBroken = b.hipPort.broken;
+    if (kBroken && hBroken) {
+      UI.setText("dtArmLStatus", "💥ALL PURGED!");
+      UI.setClass("dtArmLStatus", "font-bold text-[#ff1493] animate-pulse");
+    } else {
+      const kStr = kBroken ? "OK" : `${b.kneePad.hp}`;
+      const hStr = hBroken ? "OK" : `${b.hipPort.hp}`;
+      UI.setText("dtArmLStatus", `膝:${kStr} / 腰:${hStr}`);
+      UI.setClass("dtArmLStatus", "font-bold text-[#e6ff00]");
     }
 
-    const dtArmL = document.getElementById("dtArmLStatus");
-    if (dtArmL) {
-      const kBroken = b.kneePad.broken;
-      const hBroken = b.hipPort.broken;
-      if (kBroken && hBroken) {
-        dtArmL.textContent = "💥ALL PURGED!";
-        dtArmL.className = "font-bold text-[#ff1493] animate-pulse";
-      } else {
-        const kStr = kBroken ? "OK" : `${b.kneePad.hp}`;
-        const hStr = hBroken ? "OK" : `${b.hipPort.hp}`;
-        dtArmL.textContent = `膝:${kStr} / 腰:${hStr}`;
-        dtArmL.className = "font-bold text-[#e6ff00]";
-      }
+    if (state.phase === 3 && b.core.unlocked) {
+      UI.setText("dtChestStatus", b.core.hp === 0 ? "💥CORE K.O.!" : `★PENDANT (${b.core.hp}/${b.core.maxHP})`);
+      UI.setClass("dtChestStatus", "font-bold text-[#00f5d4] animate-pulse");
+    } else {
+      UI.setText("dtChestStatus", b.chestArmorBroken ? "💥PURGED!" : `BUSTIER (${b.chestArmorHP}/${b.chestArmorMaxHP})`);
+      UI.setClass("dtChestStatus", b.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#ff1493]");
     }
 
-    const dtChest = document.getElementById("dtChestStatus");
-    if (dtChest) {
-      if (state.phase === 3 && b.core.unlocked) {
-        dtChest.textContent = b.core.hp === 0 ? "💥CORE K.O.!" : `★PENDANT (${b.core.hp}/${b.core.maxHP})`;
-        dtChest.className = "font-bold text-[#00f5d4] animate-pulse";
-      } else {
-        dtChest.textContent = b.chestArmorBroken ? "💥PURGED!" : `BUSTIER (${b.chestArmorHP}/${b.chestArmorMaxHP})`;
-        dtChest.className = b.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#ff1493]";
-      }
-    }
-
-    const dtCrotch = document.getElementById("dtCrotchStatus");
-    if (dtCrotch && b.hands) {
+    if (b.hands) {
       const lv = b.hands.suctionLevel || 1;
       if (b.hands.mode === "transfer") {
-        dtCrotch.textContent = `⚡WARP (${b.hands.catchSide}→${b.hands.exitSide}) LV.${lv}`;
-        dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
+        UI.setText("dtCrotchStatus", `⚡WARP (${b.hands.catchSide}→${b.hands.exitSide}) LV.${lv}`);
+        UI.setClass("dtCrotchStatus", "font-bold text-[#e6ff00] animate-pulse");
       } else if (b.hands.mode === "suction") {
-        dtCrotch.textContent = lv >= 4 ? "🌀MAX VACUUM!!" : `🌀SUCTION LV.${lv}`;
-        dtCrotch.className = "font-bold text-[#ff1493] animate-pulse";
+        UI.setText("dtCrotchStatus", lv >= 4 ? "🌀MAX VACUUM!!" : `🌀SUCTION LV.${lv}`);
+        UI.setClass("dtCrotchStatus", "font-bold text-[#ff1493] animate-pulse");
       } else {
-        dtCrotch.textContent = `READY [LV.${lv}]`;
-        dtCrotch.className = lv >= 3 ? "font-bold text-[#e6ff00]" : "font-bold text-[#00f5d4]";
+        UI.setText("dtCrotchStatus", `READY [LV.${lv}]`);
+        UI.setClass("dtCrotchStatus", lv >= 3 ? "font-bold text-[#e6ff00]" : "font-bold text-[#00f5d4]");
       }
     }
 
-    const blushText = document.getElementById("blushGaugeText");
-    if (blushText) blushText.textContent = `${b.blushGauge || 0}%`;
-    const blushBar = document.getElementById("blushGaugeBar");
-    if (blushBar) blushBar.style.width = `${b.blushGauge || 0}%`;
+    UI.setText("blushGaugeText", `${b.blushGauge || 0}%`);
+    UI.setWidth("blushGaugeBar", `${b.blushGauge || 0}%`);
 
     const faceMap = {
       normal: "電脳オペレート（余裕）",
@@ -2931,7 +2839,6 @@ window.Stage3 = {
       talk: "データリンク中…",
       talk_sm: "演算処理中…"
     };
-    const faceEl = document.getElementById("bossFaceStatus");
-    if (faceEl) faceEl.textContent = faceMap[b.expression] || "電脳オペレート（余裕）";
+    UI.setText("bossFaceStatus", faceMap[b.expression] || "電脳オペレート（余裕）");
   }
 };

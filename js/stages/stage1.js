@@ -40,11 +40,7 @@ window.Stage1 = {
 
   // 表情アニメーションシーケンス開始ヘルパー
   setExpressionSequence(state, seq) {
-    if (!state.boss || !state.boss.faceAnim || !seq || seq.length === 0) return;
-    state.boss.faceAnim.sequence = seq;
-    state.boss.faceAnim.seqIdx = 0;
-    state.boss.faceAnim.seqTimer = seq[0].frames;
-    state.boss.expression = seq[0].expr;
+    StageCommon.setExpressionSequence(state, seq);
   },
 
   createBossState() {
@@ -139,92 +135,69 @@ window.Stage1 = {
   },
 
   getTargetDesc(state) {
-    if (state.stageCleared) return "大破・強制装甲パージ 成功！";
+    if (state.stageCleared) return "✨リリス撃破！ STAGE 1 CLEAR!";
     if (!state.boss.armR_Broken || !state.boss.armL_Broken) {
       if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return "ドローン撃破でシールド解除！";
-      return "右手・左手・胴体の装甲を破壊せよ！";
+      return "両腕＆胴体の装甲を破壊せよ！";
     }
     if (!state.boss.chestArmorBroken) {
-      return `胴体装甲を集中砲火！ (残HP:${state.boss.chestArmorHP})`;
+      return `胴体装甲を集中砲火！(HP:${state.boss.chestArmorHP})`;
     }
-    return `露出コアに集中連打！ (残HP:${state.boss.coreHP})`;
+    return `露出コアへ集中連打！(HP:${state.boss.coreHP})`;
   },
 
   updateStatusMonitor(state) {
-    const nameEl = document.getElementById("targetBossName");
-    if (nameEl) nameEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ff1493] animate-pulse"></span>TYPE-LILITH (リリス)';
-    const briefEl = document.getElementById("targetBriefingText");
-    if (briefEl) briefEl.textContent = "「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」";
-    const lblArmR = document.getElementById("dtArmRLabel");
-    if (lblArmR) lblArmR.textContent = "右手装甲(R-ARM):";
-    const lblArmL = document.getElementById("dtArmLLabel");
-    if (lblArmL) lblArmL.textContent = "左手装甲(L-ARM):";
-    const lblChest = document.getElementById("dtChestLabel");
-    if (lblChest) lblChest.textContent = "胴体装甲(TORSO):";
-    const lblCrotch = document.getElementById("dtCrotchLabel");
-    if (lblCrotch) lblCrotch.textContent = "クロッチ吸引場:";
+    if (!state.boss) return;
 
-    const dtArmR = document.getElementById("dtArmRStatus");
-    if (dtArmR) {
-      dtArmR.textContent = state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`;
-      dtArmR.className = state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
-    }
-    const dtArmL = document.getElementById("dtArmLStatus");
-    if (dtArmL) {
-      dtArmL.textContent = state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`;
-      dtArmL.className = state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
-    }
-    const dtChest = document.getElementById("dtChestStatus");
-    if (dtChest) {
-      dtChest.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`;
-      dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]";
-    }
-    const dtCrotch = document.getElementById("dtCrotchStatus");
-    if (dtCrotch) {
-      if (state.boss.chestArmorBroken && state.boss.crotch) {
-        const ch = state.boss.crotch.charge || 0;
-        const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
-        const isExcited = excitementRatio > 0.30;
-        if (state.boss.crotch.cooldown > 0) {
-          dtCrotch.textContent = "COOLING";
-          dtCrotch.className = "font-bold text-purple-400";
-        } else if (isExcited) {
-          dtCrotch.textContent = `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`;
-          dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
-        } else {
-          dtCrotch.textContent = `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`;
-          dtCrotch.className = "font-bold text-gray-400";
-        }
+    UI.setBossHeader("#ff1493", "TYPE-LILITH (リリス)");
+    UI.setText("targetBriefingText", "「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」");
+    UI.setText("dtArmRLabel", "右手装甲(R-ARM):");
+    UI.setText("dtArmLLabel", "左手装甲(L-ARM):");
+    UI.setText("dtChestLabel", "胴体装甲(TORSO):");
+    UI.setText("dtCrotchLabel", "クロッチ吸引場:");
+
+    UI.setText("dtArmRStatus", state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`);
+    UI.setClass("dtArmRStatus", state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]");
+
+    UI.setText("dtArmLStatus", state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`);
+    UI.setClass("dtArmLStatus", state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]");
+
+    UI.setText("dtChestStatus", state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`);
+    UI.setClass("dtChestStatus", state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]");
+
+    if (state.boss.chestArmorBroken && state.boss.crotch) {
+      const ch = state.boss.crotch.charge || 0;
+      const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
+      const isExcited = excitementRatio > 0.30;
+      if (state.boss.crotch.cooldown > 0) {
+        UI.setText("dtCrotchStatus", "COOLING");
+        UI.setClass("dtCrotchStatus", "font-bold text-purple-400");
+      } else if (isExcited) {
+        UI.setText("dtCrotchStatus", `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`);
+        UI.setClass("dtCrotchStatus", "font-bold text-[#e6ff00] animate-pulse");
       } else {
-        dtCrotch.textContent = "INACTIVE";
-        dtCrotch.className = "font-bold text-gray-400";
+        UI.setText("dtCrotchStatus", `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`);
+        UI.setClass("dtCrotchStatus", "font-bold text-gray-400");
       }
+    } else {
+      UI.setText("dtCrotchStatus", "INACTIVE");
+      UI.setClass("dtCrotchStatus", "font-bold text-gray-400");
     }
 
-    const blushText = document.getElementById("blushGaugeText");
-    if (blushText) blushText.textContent = `${state.boss.blushGauge}%`;
-    const blushBar = document.getElementById("blushGaugeBar");
-    if (blushBar) blushBar.style.width = `${state.boss.blushGauge}%`;
+    UI.setText("blushGaugeText", `${state.boss.blushGauge}%`);
+    UI.setWidth("blushGaugeBar", `${state.boss.blushGauge}%`);
 
-    const shText = document.getElementById("statusShoulders");
-    if (shText) {
-      const rStr = state.boss.armR_Broken ? "PURGED" : `${state.boss.armR_HP}/6`;
-      const lStr = state.boss.armL_Broken ? "PURGED" : `${state.boss.armL_HP}/6`;
-      shText.textContent = `右手:${rStr} / 左手:${lStr}`;
-    }
+    const rStr = state.boss.armR_Broken ? "PURGED" : `${state.boss.armR_HP}/6`;
+    const lStr = state.boss.armL_Broken ? "PURGED" : `${state.boss.armL_HP}/6`;
+    UI.setText("statusShoulders", `右手:${rStr} / 左手:${lStr}`);
 
-    const chestText = document.getElementById("statusChestArmor");
-    if (chestText) chestText.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/8`;
+    UI.setText("statusChestArmor", state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/8`);
 
-    const earsText = document.getElementById("statusEars");
-    if (earsText) earsText.textContent = `L:${state.boss.leftEarLit ? "ON" : "OFF"} / R:${state.boss.rightEarLit ? "ON" : "OFF"}`;
+    UI.setText("statusEars", `L:${state.boss.leftEarLit ? "ON" : "OFF"} / R:${state.boss.rightEarLit ? "ON" : "OFF"}`);
 
-    const coreText = document.getElementById("statusCore");
-    if (coreText) {
-      coreText.textContent = state.phase === 3
-        ? `HP: ${state.boss.coreHP}/16 [KO可]`
-        : (state.boss.coreUnlocked ? "★UNLOCKED★" : "SHIELDED");
-    }
+    UI.setText("statusCore", state.phase === 3
+      ? `HP: ${state.boss.coreHP}/16 [KO可]`
+      : (state.boss.coreUnlocked ? "★UNLOCKED★" : "SHIELDED"));
 
     const faceMap = {
       smile: "余裕スマイル",
@@ -232,8 +205,7 @@ window.Stage1 = {
       shock: "ダメージ焦り顔!?",
       angry_emp: "EMP逆上カウンター⚡"
     };
-    const faceEl = document.getElementById("bossFaceStatus");
-    if (faceEl) faceEl.textContent = faceMap[state.boss.expression] || "余裕スマイル";
+    UI.setText("bossFaceStatus", faceMap[state.boss.expression] || "余裕スマイル");
   },
 
   impulseBust(state, which, vxImpact, vyImpact) {
@@ -1170,36 +1142,20 @@ window.Stage1 = {
     }
 
     // Face Patch Compositing (瞬き・ウインク・感情遷移シーケンス・口パク)
-    let activePatchKey = null;
     if (!isDefeat) {
-      const fa = state.boss.faceAnim || {};
-      const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
-      const talkCycle = Math.floor(performance.now() * 0.009) % 3;
-
-      if (state.boss.expression && state.boss.expression !== "smile") {
-        activePatchKey = state.boss.expression === "blush" ? "open_blush" :
-                         state.boss.expression === "angry_emp" ? "shout" : state.boss.expression;
-      } else if (isTalking) {
-        activePatchKey = (talkCycle === 0) ? "talk" : ((talkCycle === 1) ? "talk_sm" : null);
-      } else if (fa.winkFrame > 0) {
-        activePatchKey = "wink";
-      } else if (fa.blinkFrame > 0) {
-        if (fa.blinkFrame > 12 || fa.blinkFrame <= 7) {
-          activePatchKey = "blink";
-        } else {
-          activePatchKey = null;
-        }
-      } else if (fa.talkFrame > 0) {
-        activePatchKey = "talk_sm";
-      }
-    }
-
-    if (activePatchKey && this.assets.facePatchImgs[activePatchKey] && this.assets.facePatchImgs[activePatchKey].complete) {
-      const fx = IMG_BOX.x + (135 / 384) * IMG_BOX.w;
-      const fy = IMG_BOX.y + (160 / 688) * IMG_BOX.h;
-      const fw = (115 / 384) * IMG_BOX.w;
-      const fh = (75 / 688) * IMG_BOX.h;
-      ctx.drawImage(this.assets.facePatchImgs[activePatchKey], fx, fy, fw, fh);
+      const activePatchKey = StageCommon.getActiveFacePatchKey(state.boss, state, {
+        defaultExpr: "smile",
+        aliasMap: { blush: "open_blush", angry_emp: "shout" },
+        halfBlink: false
+      });
+      StageCommon.drawFacePatch(
+        ctx,
+        this.assets.facePatchImgs,
+        activePatchKey,
+        IMG_BOX,
+        { x: 135, y: 160, w: 115, h: 75 },
+        { w: 384, h: 688 }
+      );
     }
 
     // Hanging Rabbit Ear Tips
@@ -1237,23 +1193,7 @@ window.Stage1 = {
     }
 
     // Billowing Smoke Clouds
-    if (state.clearSequence && state.clearSequence.smokeClouds.length > 0) {
-      ctx.save();
-      state.clearSequence.smokeClouds.forEach(smk => {
-        ctx.save();
-        ctx.globalAlpha = smk.alpha;
-        const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
-        grad.addColorStop(0, smk.color);
-        grad.addColorStop(0.65, smk.color);
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-      ctx.restore();
-    }
+    StageCommon.renderSmokeClouds(ctx, state);
   },
 
   renderTargets(ctx, state, engine) {

@@ -4,180 +4,244 @@
 
 window.UI = {
   _cutinTimer: null,
+  _cutinVisible: false,
+  _elCache: {},
+
+  el(id) {
+    return this._elCache[id] || (this._elCache[id] = document.getElementById(id));
+  },
+
+  isCutinVisible() {
+    return !!this._cutinVisible;
+  },
+
+  setText(idOrEl, val) {
+    const el = typeof idOrEl === "string" ? this.el(idOrEl) : idOrEl;
+    if (!el) return;
+    const s = String(val ?? "");
+    if (el._lastText !== s) {
+      el._lastText = s;
+      el.textContent = s;
+    }
+  },
+
+  setClass(idOrEl, cls) {
+    const el = typeof idOrEl === "string" ? this.el(idOrEl) : idOrEl;
+    if (!el) return;
+    if (el._lastClass !== cls) {
+      el._lastClass = cls;
+      el.className = cls;
+    }
+  },
+
+  setWidth(idOrEl, val) {
+    const el = typeof idOrEl === "string" ? this.el(idOrEl) : idOrEl;
+    if (!el) return;
+    const s = typeof val === "number" ? `${val}%` : String(val ?? "");
+    if (el._lastWidth !== s) {
+      el._lastWidth = s;
+      el.style.width = s;
+    }
+  },
+
+  setBossHeader(dotColor, titleText) {
+    const el = this.el("targetBossName");
+    if (!el) return;
+    const key = `${dotColor}|${titleText}`;
+    if (el._lastBossHeaderKey !== key) {
+      el._lastBossHeaderKey = key;
+      const bgClass = dotColor.startsWith("bg-") ? dotColor : `bg-[${dotColor}]`;
+      el.innerHTML = `<span class="w-2 h-2 rounded-full ${bgClass} animate-pulse"></span>${titleText}`;
+    }
+  },
 
   showCutin(text, durationFrames = 130) {
-    const banner = document.getElementById("cutinBanner");
-    const txt = document.getElementById("cutinText");
+    const banner = this.el("cutinBanner");
+    const txt = this.el("cutinText");
     if (!banner || !txt) return;
 
     txt.innerHTML = text;
     banner.classList.remove("hidden");
     banner.classList.add("flex");
+    this._cutinVisible = true;
 
     clearTimeout(this._cutinTimer);
     this._cutinTimer = setTimeout(() => {
       banner.classList.remove("flex");
       banner.classList.add("hidden");
+      this._cutinVisible = false;
     }, durationFrames * 16);
   },
 
   updateHUD(state) {
-    const scoreEl = document.getElementById("hudScore");
-    if (scoreEl) scoreEl.textContent = state.score.toLocaleString();
+    this.setText("hudScore", state.score.toLocaleString());
 
     let targetDesc = "ドローン＆両肩アーマー破壊";
     if (window.currentStage && window.currentStage.getTargetDesc) {
       targetDesc = window.currentStage.getTargetDesc(state);
     }
-    const targetEl = document.getElementById("hudTargetDesc") || document.getElementById("hudPhaseTarget");
-    if (targetEl) targetEl.textContent = targetDesc;
+    const targetEl = this.el("hudTargetDesc") || this.el("hudPhaseTarget");
+    if (targetEl) this.setText(targetEl, targetDesc);
 
-    const phaseEl = document.getElementById("hudPhase");
+    const phaseEl = this.el("hudPhase");
     if (phaseEl) {
       if (state.stageCleared) {
-        phaseEl.textContent = "STAGE CLEAR!";
-        phaseEl.className = "px-1.5 py-0.5 rounded bg-[#ff1493] text-white text-[9px] font-black tracking-wider animate-pulse shadow";
+        this.setText(phaseEl, "STAGE CLEAR!");
+        this.setClass(phaseEl, "px-1.5 py-0.5 rounded bg-[#ff1493] text-white text-[9px] font-black tracking-wider animate-pulse shadow");
       } else {
-        phaseEl.textContent = `PHASE ${state.phase}`;
-        phaseEl.className = "px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]";
+        this.setText(phaseEl, `PHASE ${state.phase}`);
+        this.setClass(phaseEl, "px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]");
       }
     }
 
     // Fever Gauge HUD
-    const fBar = document.getElementById("feverGaugeBar");
-    if (fBar) fBar.style.width = `${state.fever.gauge}%`;
-    const fText = document.getElementById("hudBurstTimer");
+    this.setWidth("feverGaugeBar", `${state.fever.gauge}%`);
+    const fText = this.el("hudBurstTimer");
     if (fText) {
       if (state.fever.active) {
         const sec = Math.ceil(state.fever.timer / 60);
-        fText.textContent = `×5 (${sec}s)`;
-        fText.className = "text-[9px] text-[#e6ff00] font-extrabold w-7 text-right shrink-0 leading-none animate-pulse";
+        this.setText(fText, `×5 (${sec}s)`);
+        this.setClass(fText, "text-[9px] text-[#e6ff00] font-extrabold w-7 text-right shrink-0 leading-none animate-pulse");
       } else if (state.burstTimer > 0) {
         const sec = Math.ceil(state.burstTimer / 60);
-        fText.textContent = `B×${state.burstMultiplier.toFixed(1)}`;
-        fText.className = "text-[9px] text-[#ff1493] font-bold w-7 text-right shrink-0 leading-none";
+        this.setText(fText, `B×${state.burstMultiplier.toFixed(1)}`);
+        this.setClass(fText, "text-[9px] text-[#ff1493] font-bold w-7 text-right shrink-0 leading-none");
       } else {
-        fText.textContent = `${Math.floor(state.fever.gauge)}%`;
-        fText.className = "text-[9px] text-[#00f5d4] font-bold w-7 text-right shrink-0 leading-none";
+        this.setText(fText, `${Math.floor(state.fever.gauge)}%`);
+        this.setClass(fText, "text-[9px] text-[#00f5d4] font-bold w-7 text-right shrink-0 leading-none");
       }
     }
 
-    const ballsEl = document.getElementById("hudBalls");
-    if (ballsEl) ballsEl.textContent = "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining));
+    this.setText("hudBalls", "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining)));
 
-    // Buff Slots
-    const slotsContainer = document.getElementById("buffSlots");
-    if (slotsContainer) {
-      slotsContainer.innerHTML = "";
-      state.keptBuffs.forEach((slot, idx) => {
-        const div = document.createElement("div");
-        if (slot) {
-          const def = Systems.BUFF_DEFS[slot.id];
-          div.className = "rounded px-1 py-1 border text-center bg-[#230b4f] flex flex-col justify-center items-center h-10";
-          div.style.borderColor = def.color;
-          div.innerHTML = `
-            <div class="text-[10px] font-bold leading-tight truncate w-full" style="color:${def.color}">${def.label}</div>
-            <div class="text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5">★Lv.${slot.tier}</div>
-          `;
-        } else {
-          div.className = "rounded px-1 py-1 border border-dashed border-[#00f5d4]/30 text-center bg-black/30 flex flex-col justify-center items-center h-10";
-          div.innerHTML = `<div class="text-[9px] text-[#00f5d4]/40 font-mono leading-none">SLOT ${idx + 1}</div><div class="text-[9px] text-[#00f5d4]/30 leading-none mt-0.5">EMPTY</div>`;
-        }
-        slotsContainer.appendChild(div);
-      });
+    // Buff Slots - only rebuild when key string changes
+    const slotsContainer = this.el("buffSlots");
+    if (slotsContainer && state.keptBuffs) {
+      const buffKey = state.keptBuffs.map(slot => slot ? `${slot.id}:${slot.tier}` : "empty").join("|");
+      if (slotsContainer._lastBuffKey !== buffKey) {
+        slotsContainer._lastBuffKey = buffKey;
+        slotsContainer.innerHTML = "";
+        state.keptBuffs.forEach((slot, idx) => {
+          const div = document.createElement("div");
+          if (slot) {
+            const def = window.Systems && Systems.BUFF_DEFS ? Systems.BUFF_DEFS[slot.id] : null;
+            const color = def ? def.color : "#00f5d4";
+            const label = def ? def.label : slot.id;
+            div.className = "rounded px-1 py-1 border text-center bg-[#230b4f] flex flex-col justify-center items-center h-10";
+            div.style.borderColor = color;
+            div.innerHTML = `
+              <div class="text-[10px] font-bold leading-tight truncate w-full" style="color:${color}">${label}</div>
+              <div class="text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5">★Lv.${slot.tier}</div>
+            `;
+          } else {
+            div.className = "rounded px-1 py-1 border border-dashed border-[#00f5d4]/30 text-center bg-black/30 flex flex-col justify-center items-center h-10";
+            div.innerHTML = `<div class="text-[9px] text-[#00f5d4]/40 font-mono leading-none">SLOT ${idx + 1}</div><div class="text-[9px] text-[#00f5d4]/30 leading-none mt-0.5">EMPTY</div>`;
+          }
+          slotsContainer.appendChild(div);
+        });
+      }
     }
 
-    // Permanent Upgrades List
-    const permContainer = document.getElementById("permUpgradesList");
-    if (permContainer) {
-      permContainer.innerHTML = "";
-      Object.values(Systems.PERM_DEFS).forEach(def => {
-        const lv = state.perm[def.id] || 0;
-        let extraStatus = "";
-        if (def.id === "centerPost") extraStatus = ` (残HP: ${state.perm.centerPostHP})`;
-        if (def.id === "kickbackL") extraStatus = ` (残弾: ${state.perm.kickbackL_charges})`;
-        if (def.id === "kickbackR") extraStatus = ` (残弾: ${state.perm.kickbackR_charges})`;
+    // Permanent Upgrades List - only rebuild when key string changes
+    const permContainer = this.el("permUpgradesList");
+    if (permContainer && state.perm && window.Systems && Systems.PERM_DEFS) {
+      const permKey = Object.keys(Systems.PERM_DEFS).map(id => `${id}:${state.perm[id] || 0}`).join("|") +
+        `|${state.perm.centerPostHP || 0}|${state.perm.kickbackL_charges || 0}|${state.perm.kickbackR_charges || 0}`;
+      if (permContainer._lastPermKey !== permKey) {
+        permContainer._lastPermKey = permKey;
+        permContainer.innerHTML = "";
+        Object.values(Systems.PERM_DEFS).forEach(def => {
+          const lv = state.perm[def.id] || 0;
+          let extraStatus = "";
+          if (def.id === "centerPost") extraStatus = ` (残HP: ${state.perm.centerPostHP})`;
+          if (def.id === "kickbackL") extraStatus = ` (残弾: ${state.perm.kickbackL_charges})`;
+          if (def.id === "kickbackR") extraStatus = ` (残弾: ${state.perm.kickbackR_charges})`;
 
-        const row = document.createElement("div");
-        row.className = `p-2 rounded border ${lv > 0 ? "bg-[#00f5d4]/10 border-[#00f5d4]/60" : "bg-black/20 border-[#00f5d4]/30 opacity-70"}`;
-        row.innerHTML = `
-          <div class="flex items-center justify-between font-bold">
-            <span class="${lv > 0 ? "text-[#00f5d4]" : ""}">${def.name}</span>
-            <span class="text-[#e6ff00]">Lv.${lv}/${def.maxLv}${extraStatus}</span>
-          </div>
-          <div class="text-xs text-[#b59ce6] mt-0.5">${def.desc}</div>
-        `;
-        permContainer.appendChild(row);
-      });
+          const row = document.createElement("div");
+          row.className = `p-2 rounded border ${lv > 0 ? "bg-[#00f5d4]/10 border-[#00f5d4]/60" : "bg-black/20 border-[#00f5d4]/30 opacity-70"}`;
+          row.innerHTML = `
+            <div class="flex items-center justify-between font-bold">
+              <span class="${lv > 0 ? "text-[#00f5d4]" : ""}">${def.name}</span>
+              <span class="text-[#e6ff00]">Lv.${lv}/${def.maxLv}${extraStatus}</span>
+            </div>
+            <div class="text-xs text-[#b59ce6] mt-0.5">${def.desc}</div>
+          `;
+          permContainer.appendChild(row);
+        });
+      }
     }
 
     // Plunger Button Status
-    const pBtn = document.getElementById("btnPlunger");
-    const pHint = document.getElementById("plungerBtnHint");
+    const pBtn = this.el("btnPlunger");
+    const pHint = this.el("plungerBtnHint");
     if (pBtn && pHint) {
       if (state.plunger.waitingForLaunch) {
-        pBtn.classList.remove("opacity-40", "grayscale");
-        pBtn.classList.add("cursor-pointer");
+        if (pBtn._lastWaiting !== true) {
+          pBtn._lastWaiting = true;
+          pBtn.classList.remove("opacity-40", "grayscale");
+          pBtn.classList.add("cursor-pointer");
+        }
         if (state.plunger.pulling) {
-          pHint.textContent = `POWER ${Math.round(state.plunger.power)}%`;
-          pHint.className = "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse";
+          this.setText(pHint, `POWER ${Math.round(state.plunger.power)}%`);
+          this.setClass(pHint, "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse");
         } else {
-          pHint.textContent = "引いて離す";
-          pHint.className = "text-[9px] text-[#00f5d4] leading-none mt-0.5";
+          this.setText(pHint, "引いて離す");
+          this.setClass(pHint, "text-[9px] text-[#00f5d4] leading-none mt-0.5");
         }
       } else {
-        pBtn.classList.add("opacity-40", "grayscale");
-        pHint.textContent = "発射済み";
-        pHint.className = "text-[9px] text-gray-400 leading-none mt-0.5";
+        if (pBtn._lastWaiting !== false) {
+          pBtn._lastWaiting = false;
+          pBtn.classList.add("opacity-40", "grayscale");
+          pBtn.classList.remove("cursor-pointer");
+        }
+        this.setText(pHint, "発射済み");
+        this.setClass(pHint, "text-[9px] text-gray-400 leading-none mt-0.5");
       }
     }
 
     // Desktop Right Sidebar Telemetry Sync
-    const dtBall = document.getElementById("dtBallCount");
-    if (dtBall) dtBall.textContent = "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining));
-    const dtMult = document.getElementById("dtMultiplier");
-    if (dtMult) dtMult.textContent = `B×${state.burstMultiplier.toFixed(1)}`;
-    const dtFever = document.getElementById("dtFeverGauge");
-    if (dtFever) dtFever.textContent = state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`;
+    this.setText("dtBallCount", "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining)));
+    this.setText("dtMultiplier", `B×${state.burstMultiplier.toFixed(1)}`);
+    this.setText("dtFeverGauge", state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`);
 
     // Stage Specific Status Monitor or Default Stage 1 fallback
     if (window.currentStage && window.currentStage.updateStatusMonitor) {
       window.currentStage.updateStatusMonitor(state);
     } else if (state.boss) {
-      const dtArmR = document.getElementById("dtArmRStatus");
+      const dtArmR = this.el("dtArmRStatus");
       if (dtArmR) {
-        dtArmR.textContent = state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`;
-        dtArmR.className = state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
+        this.setText(dtArmR, state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`);
+        this.setClass(dtArmR, state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]");
       }
-      const dtArmL = document.getElementById("dtArmLStatus");
+      const dtArmL = this.el("dtArmLStatus");
       if (dtArmL) {
-        dtArmL.textContent = state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`;
-        dtArmL.className = state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]";
+        this.setText(dtArmL, state.boss.armL_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armL_HP}/6)`);
+        this.setClass(dtArmL, state.boss.armL_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]");
       }
-      const dtChest = document.getElementById("dtChestStatus");
+      const dtChest = this.el("dtChestStatus");
       if (dtChest) {
-        dtChest.textContent = state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`;
-        dtChest.className = state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]";
+        this.setText(dtChest, state.boss.chestArmorBroken ? "💥PURGED!" : `ARMORED (${state.boss.chestArmorHP}/8)`);
+        this.setClass(dtChest, state.boss.chestArmorBroken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#00f5d4]");
       }
-      const dtCrotch = document.getElementById("dtCrotchStatus");
+      const dtCrotch = this.el("dtCrotchStatus");
       if (dtCrotch) {
         if (state.boss.chestArmorBroken && state.boss.crotch) {
           const ch = state.boss.crotch.charge || 0;
           const excitementRatio = Math.min(1.0, (state.boss.bustExcitement || 0) / 100);
           const isExcited = excitementRatio > 0.30;
           if (state.boss.crotch.cooldown > 0) {
-            dtCrotch.textContent = "COOLING";
-            dtCrotch.className = "font-bold text-purple-400";
+            this.setText(dtCrotch, "COOLING");
+            this.setClass(dtCrotch, "font-bold text-purple-400");
           } else if (isExcited) {
-            dtCrotch.textContent = `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`;
-            dtCrotch.className = "font-bold text-[#e6ff00] animate-pulse";
+            this.setText(dtCrotch, `♥SUCTION BOOST (${Math.round(excitementRatio * 100)}%)`);
+            this.setClass(dtCrotch, "font-bold text-[#e6ff00] animate-pulse");
           } else {
-            dtCrotch.textContent = `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`;
-            dtCrotch.className = "font-bold text-gray-400";
+            this.setText(dtCrotch, `CALM [${"◆".repeat(ch)}${"◇".repeat(3 - ch)}]`);
+            this.setClass(dtCrotch, "font-bold text-gray-400");
           }
         } else {
-          dtCrotch.textContent = "INACTIVE";
-          dtCrotch.className = "font-bold text-gray-400";
+          this.setText(dtCrotch, "INACTIVE");
+          this.setClass(dtCrotch, "font-bold text-gray-400");
         }
       }
     }
@@ -416,7 +480,7 @@ window.UI = {
 
       const txtHeader = document.getElementById("txtHeaderStage");
       if (txtHeader) {
-        txtHeader.textContent = stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1");
+        txtHeader.textContent = stage.id === "stage4" ? "STAGE 4" : (stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1"));
       }
       closeMenu();
       UI.showCutin(`🚀【STAGE SELECT】<br>${stage.name} (${stage.bossName})`, 180);
@@ -426,7 +490,11 @@ window.UI = {
     if (btnHeaderStage) {
       btnHeaderStage.addEventListener("click", () => {
         const curId = engine.currentStage ? engine.currentStage.id : "stage1";
-        const next = curId === "stage1" ? window.Stage2 : (curId === "stage2" ? window.Stage3 : window.Stage1);
+        const next =
+          curId === "stage1" ? window.Stage2 :
+          curId === "stage2" ? window.Stage3 :
+          curId === "stage3" ? (window.Stage4 || window.Stage1) :
+          window.Stage1;
         loadStageFromUI(next);
       });
     }
@@ -442,6 +510,10 @@ window.UI = {
     const btnSelS3 = document.getElementById("btnSelectStage3");
     if (btnSelS3) {
       btnSelS3.addEventListener("click", () => loadStageFromUI(window.Stage3));
+    }
+    const btnSelS4 = document.getElementById("btnSelectStage4");
+    if (btnSelS4) {
+      btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
     }
 
     // Audio Mute / Unmute Toggle

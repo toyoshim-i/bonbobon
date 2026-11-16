@@ -25,6 +25,16 @@ window.GameEngine = {
   createInitialState() {
     return {
       score: 0,
+      peakScore: 0,
+      stageIndex: 1,
+      gameMode: "arcade",
+      inTitle: true,
+      inEnding: false,
+      gameOver: false,
+      totalMisses: 0,
+      stageMisses: 0,
+      relics: { radar: 0, spring: 0, drone: 0 },
+      selectedRelic: "radar",
       baseMultiplier: 1.0,
       burstMultiplier: 1.0,
       burstTimer: 0,
@@ -35,8 +45,7 @@ window.GameEngine = {
         mult: 1.0
       },
       balls: [],
-      ballsRemaining: 3,
-      extraBallMilestones: [50000, 150000, 300000, 600000, 1000000],
+      ballsRemaining: 1,
       stageCleared: false,
       phase: 1,
 
@@ -101,15 +110,116 @@ window.GameEngine = {
     this.state.boss = stage.createBossState();
     this.state.phase = 1;
     this.state.stageCleared = false;
+    this.state._clearBonusAwarded = false;
     this.state.clearSequence.active = false;
+
+    if (stage.id === "stage1") this.state.stageIndex = 1;
+    else if (stage.id === "stage2") this.state.stageIndex = 2;
+    else if (stage.id === "stage3") this.state.stageIndex = 3;
+    else if (stage.id === "stage4") this.state.stageIndex = 4;
+    else if (stage.id === "stage5") this.state.stageIndex = 5;
 
     Systems.prepareBallForLaunch(this.state);
     UI.updateHUD(this.state);
 
     const txtHeader = document.getElementById("txtHeaderStage");
     if (txtHeader) {
-      txtHeader.textContent = stage.id === "stage4" ? "STAGE 4" : (stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1"));
+      txtHeader.textContent =
+        stage.id === "stage5" ? "FINAL" :
+        stage.id === "stage4" ? "STAGE 4" :
+        stage.id === "stage3" ? "STAGE 3" :
+        stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
     }
+  },
+
+  getStageWarningCutin(stageIndex) {
+    switch (stageIndex) {
+      case 1:
+        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『桃色装甲リリス』 IS APPROACHING FAST!!<br>シルバーボール、発進せよ！";
+      case 2:
+        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『疾風紫電セルティ』 IS APPROACHING FAST!!";
+      case 3:
+        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳空間ノア』 IS APPROACHING FAST!!";
+      case 4:
+        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳夜桜カスミ』 IS APPROACHING FAST!!";
+      case 5:
+        return "🚨 FINAL WARNING!! TWIN BATTLESHIPS<br>『双子電脳天使エル＆ノエル』 APPROACHING FAST!!";
+      default:
+        return "🚨 WARNING!! A HUGE BATTLESHIP IS APPROACHING FAST!!";
+    }
+  },
+
+  startArcadeCampaign() {
+    this.state = this.createInitialState();
+    this.state.gameMode = "arcade";
+    this.state.stageIndex = 1;
+    this.state.score = 0;
+    this.state.peakScore = 0;
+    this.state.totalMisses = 0;
+    this.state.stageMisses = 0;
+    this.state.inTitle = false;
+    this.state.inEnding = false;
+    this.state.gameOver = false;
+    this.loadStage(window.Stage1 || window.currentStage);
+    UI.updateHUD(this.state);
+    UI.showCutin(this.getStageWarningCutin(1), 220);
+  },
+
+  startPracticeStage(stageNum) {
+    const stageMap = {
+      1: window.Stage1,
+      2: window.Stage2,
+      3: window.Stage3,
+      4: window.Stage4,
+      5: window.Stage5
+    };
+    const targetStage = stageMap[stageNum] || window.Stage1;
+    this.state = this.createInitialState();
+    this.state.gameMode = "practice";
+    this.state.stageIndex = stageNum;
+    this.state.score = 50000;
+    this.state.peakScore = 50000;
+    this.state.totalMisses = 0;
+    this.state.stageMisses = 0;
+    this.state.inTitle = false;
+    this.state.inEnding = false;
+    this.state.gameOver = false;
+    this.loadStage(targetStage);
+    UI.updateHUD(this.state);
+    UI.showCutin(this.getStageWarningCutin(stageNum), 220);
+  },
+
+  advanceToNextStage(chosenRelic) {
+    if (chosenRelic && this.state.relics) {
+      this.state.relics[chosenRelic] = (this.state.relics[chosenRelic] || 0) + 1;
+      this.state.selectedRelic = chosenRelic;
+      if (chosenRelic === "radar") {
+        this.state.baseMultiplier = +(1.0 + (this.state.relics.radar || 0) * 0.25).toFixed(2);
+      }
+    }
+    const nextIdx = (this.state.stageIndex || 1) + 1;
+    if (nextIdx > 5) {
+      if (window.GameFlow && window.GameFlow.startEnding) {
+        window.GameFlow.startEnding(this.state);
+      }
+      return;
+    }
+    this.state.stageIndex = nextIdx;
+    this.state.stageMisses = 0;
+    this.state.stageCleared = false;
+    this.state._clearBonusAwarded = false;
+
+    const stageMap = {
+      1: window.Stage1,
+      2: window.Stage2,
+      3: window.Stage3,
+      4: window.Stage4,
+      5: window.Stage5
+    };
+    const nextStage = stageMap[nextIdx] || window.Stage1;
+    this.loadStage(nextStage);
+    UI.updateHUD(this.state);
+    UI.showCutin(this.getStageWarningCutin(nextIdx), 220);
   },
 
   startPlungerPull() {
@@ -165,7 +275,12 @@ window.GameEngine = {
   },
 
   resetGame() {
+    const prevStageIndex = (this.state && !this.state.inTitle) ? (this.state.stageIndex || 1) : 1;
+    const prevGameMode = (this.state && !this.state.inTitle) ? (this.state.gameMode || "arcade") : "arcade";
     this.state = this.createInitialState();
+    this.state.inTitle = false;
+    this.state.stageIndex = prevStageIndex;
+    this.state.gameMode = prevGameMode;
     if (this.currentStage) {
       this.state.boss = this.currentStage.createBossState();
     }
@@ -176,6 +291,13 @@ window.GameEngine = {
 
   stepPhysics() {
     const state = this.state;
+    if (state.inTitle) {
+      if (window.GameFlow && window.GameFlow.tickIdle) {
+        window.GameFlow.tickIdle();
+      }
+      return;
+    }
+    if (state.inEnding || state.gameOver) return;
 
     // Post-clear freeze bypass & debris animation
     if (state.stageCleared) {
@@ -283,7 +405,7 @@ window.GameEngine = {
       const speed = Math.hypot(ball.vx, ball.vy);
       const isTrappedInWell = (state.boss && state.boss.crotch && state.boss.chestArmorBroken &&
                                Math.hypot(ball.x - state.boss.crotch.x, ball.y - state.boss.crotch.y) < 22);
-      const isStuck = !ball.inShooterLane && !ball._onWireRamp && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
+      const isStuck = !ball.inShooterLane && !ball._onWireRamp && !ball._inNavelTrap && !ball._fusionStasis && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
 
       if (isStuck) {
         ball.stuckTimer = (ball.stuckTimer || 0) + 1;
@@ -305,14 +427,64 @@ window.GameEngine = {
       if (ball.y > this.H + 18) {
         state.balls.splice(bi, 1);
         if (state.balls.length === 0) {
-          state.ballsRemaining--;
-          if (state.ballsRemaining > 0) {
-            Particles.addPopup(state, 210, 580, `BALL LOST... 残り${state.ballsRemaining}球`, "#ff1493", 1.1);
-            Systems.prepareBallForLaunch(state);
+          if (state.score <= 0) {
+            // Strict Sonic Rule: 0 score drain = INSTANT GAME OVER!
+            state.gameOver = true;
+            if (window.sfx && window.sfx.gameOverDown) window.sfx.gameOverDown();
+            if (window.GameFlow && window.GameFlow.showGameOver) {
+              window.GameFlow.showGameOver(state);
+            }
           } else {
-            state.ballsRemaining = 3;
-            UI.showCutin("🔄【コンティニュー】<br>ボールを3球補充しました！", 150);
-            Systems.prepareBallForLaunch(state);
+            // Sonic Ring-Scatter Survival!
+            const stageNum = state.stageIndex || 1;
+            const loss = Math.min(state.score, Math.max(30000 * stageNum, Math.floor(state.score * 0.35)));
+            state.score = Math.max(0, state.score - loss);
+            state.totalMisses = (state.totalMisses || 0) + 1;
+            state.stageMisses = (state.stageMisses || 0) + 1;
+
+            // Debuffs on Miss
+            state.burstTimer = 0;
+            state.burstMultiplier = 1.0;
+            state.magnetActive = false;
+            state.overdriveActive = false;
+            if (state.fever) {
+              state.fever.gauge = Math.floor((state.fever.gauge || 0) * 0.5);
+            }
+
+            // Degrade 1 highest-tier keptBuffs slot by 1 level
+            if (state.keptBuffs && state.keptBuffs.length > 0) {
+              let highestIdx = -1;
+              let highestTier = -1;
+              state.keptBuffs.forEach((slot, idx) => {
+                if (slot && slot.tier > highestTier) {
+                  highestTier = slot.tier;
+                  highestIdx = idx;
+                }
+              });
+              if (highestIdx >= 0) {
+                if (state.keptBuffs[highestIdx].tier > 1) {
+                  state.keptBuffs[highestIdx].tier--;
+                } else {
+                  state.keptBuffs[highestIdx] = null;
+                }
+              }
+            }
+
+            // Sonic Scatter Visuals & SFX
+            if (window.sfx && window.sfx.sonicScatter) window.sfx.sonicScatter();
+            if (window.Particles) {
+              Particles.add(state, 198, 640, "#e6ff00", 16, 7.2);
+              Particles.add(state, 198, 640, "#00f5d4", 12, 6.0);
+              Particles.addPopup(state, 198, 560, "💥SHIELD HIT! -" + loss.toLocaleString(), "#ff0055", 1.2);
+            }
+
+            Systems.prepareBallForLaunch(state, true);
+
+            if (state.score === 0) {
+              UI.showCutin("🚨【DANGER: SCORE 0!!】🚨<br>シールド枯渇！0点のまま落とすと即GAME OVER！！", 200);
+            } else {
+              UI.showCutin("⚠️【MISS! -" + loss.toLocaleString() + " PTS】<br>バフ低下！残シールド: " + state.score.toLocaleString() + " pts", 165);
+            }
           }
           UI.updateHUD(state);
         }

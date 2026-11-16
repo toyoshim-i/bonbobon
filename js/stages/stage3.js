@@ -2028,21 +2028,11 @@ window.Stage3 = {
 
     if (seq.frame >= 155 && !seq.uiShown) {
       seq.uiShown = true;
-      UI.updateHUD(state);
-      const modal = document.getElementById("clearModal");
-      if (modal) {
-        const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
-        if (nameEl) nameEl.textContent = "ノア (NOA)";
-        const quoteEl = modal.querySelector("p");
-        if (quoteEl) {
-          quoteEl.innerHTML = "「あぅぅっ……メインサーバーまでハッキングされるなんて……！<br>わ、わたしの演算コアが熱暴走しちゃうよぉ……っ！」";
-        }
-
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        void modal.offsetWidth;
-        modal.classList.remove("opacity-0");
-        modal.classList.add("opacity-100");
+      if (window.UI && typeof UI.presentStageClearModal === "function") {
+        UI.presentStageClearModal(state, {
+          bossDisplayName: "ノア (NOA)",
+          defeatQuoteHtml: "「あぅぅっ……メインサーバーまでハッキングされるなんて……！<br>わ、わたしの演算コアが熱暴走しちゃうよぉ……っ！」"
+        });
       }
     }
   },

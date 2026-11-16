@@ -413,29 +413,28 @@ window.StageCommon = {
 
     if (seq.frame >= 158 && !seq.uiShown) {
       seq.uiShown = true;
-      if (window.UI && typeof UI.updateHUD === "function") {
-        UI.updateHUD(state);
-      }
-      const modal = document.getElementById("clearModal");
-      if (modal) {
-        if (cfg.bossDisplayName) {
-          const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
-          if (nameEl) nameEl.textContent = cfg.bossDisplayName;
+      if (window.UI && typeof UI.presentStageClearModal === "function") {
+        UI.presentStageClearModal(state, cfg);
+      } else {
+        if (window.UI && typeof UI.updateHUD === "function") {
+          UI.updateHUD(state);
         }
-        if (cfg.defeatQuoteHtml) {
-          const quoteEl = modal.querySelector("p");
-          if (quoteEl) quoteEl.innerHTML = cfg.defeatQuoteHtml;
+        const modal = document.getElementById("clearModal");
+        if (modal) {
+          if (cfg.bossDisplayName) {
+            const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
+            if (nameEl) nameEl.textContent = cfg.bossDisplayName;
+          }
+          if (cfg.defeatQuoteHtml) {
+            const quoteEl = modal.querySelector("p");
+            if (quoteEl) quoteEl.innerHTML = cfg.defeatQuoteHtml;
+          }
+          modal.classList.remove("hidden");
+          modal.classList.add("flex");
+          void modal.offsetWidth;
+          modal.classList.remove("opacity-0");
+          modal.classList.add("opacity-100");
         }
-        const scoreEl = document.getElementById("clearFinalScore");
-        if (scoreEl) scoreEl.textContent = (state.score || 0).toLocaleString();
-        const ballsEl = document.getElementById("clearRemainingBalls");
-        if (ballsEl) ballsEl.textContent = String(state.ballsRemaining ?? 0);
-
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        void modal.offsetWidth;
-        modal.classList.remove("opacity-0");
-        modal.classList.add("opacity-100");
       }
     }
   },

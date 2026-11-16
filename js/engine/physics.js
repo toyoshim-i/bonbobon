@@ -399,9 +399,10 @@ window.Physics = {
             const rest = 0.65;
             ball.vx = (vRelX - (1 + rest) * dot * nx) + vxSurface;
             ball.vy = (vRelY - (1 + rest) * dot * ny) + vySurface;
-            const flipBoost = Math.min(16.5, 7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0);
+            const springMult = (1 + ((state.relics && state.relics.spring) || 0) * 0.14);
+            const flipBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult);
             ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;
-            ball.vx += nx * 4.2;
+            ball.vx += nx * 4.2 * springMult;
             if (window.sfx) window.sfx.flip();
             Particles.add(state, cp.x, cp.y, "#ff1493", 10, 4.5);
             if (window.Systems) window.Systems.addScore(state, 50, cp.x, cp.y, "FLIP");

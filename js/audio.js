@@ -272,6 +272,84 @@ class FMSoundEngine {
       this.playFM(340, 28, 160 * intensity, 0.38, "sine", 180, 0.15);
     }, 45);
   }
+
+  // Sonic ring-scatter cascade on ball drain
+  sonicScatter() {
+    const notes = [1318.51, 1760.0, 2093.0, 1760.0, 2093.0, 2637.02];
+    notes.forEach((f, i) => {
+      setTimeout(() => {
+        this.playFM(f, f * 0.5, 90, 0.12, i % 2 === 0 ? "triangle" : "square", f * 0.88, 0.16);
+      }, i * 28);
+    });
+  }
+
+  // Dramatic power-down sweep on game over
+  gameOverDown() {
+    this.playFM(440, 110, 260, 0.65, "sawtooth", 45, 0.22);
+    setTimeout(() => {
+      this.playFM(120, 30, 400, 0.8, "sine", 25, 0.25);
+    }, 180);
+    [659.25, 523.25, 392.0, 261.63].forEach((f, i) => {
+      setTimeout(() => this.playFM(f, 65, 120, 0.24, "triangle", f * 0.85, 0.14), i * 110);
+    });
+  }
+
+  // DoDonPachi Strategic AI digital glitch reveal
+  glitchReveal() {
+    this.playFM(1850, 1420, 800, 0.22, "sawtooth", 120, 0.20);
+    setTimeout(() => this.playFM(980, 770, 600, 0.28, "square", 330, 0.18), 35);
+    setTimeout(() => {
+      [110, 164.81, 220, 329.63].forEach(f => {
+        this.playFM(f, 55, 40, 1.2, "sine", f * 1.01, 0.15);
+      });
+    }, 120);
+  }
+
+  // "ジョワッ！！" Ultraman-style heroic launch whoosh + fanfare
+  ultramanLaunch() {
+    this.playFM(180, 90, 350, 0.42, "sawtooth", 1480, 0.26);
+    this.playFM(190, 45, 280, 0.45, "triangle", 1520, 0.24);
+    const fanfare = [
+      { f: 523.25, d: 0.18 },
+      { f: 783.99, d: 0.18 },
+      { f: 1046.50, d: 0.22 },
+      { f: 1174.66, d: 0.22 },
+      { f: 1318.51, d: 0.32 },
+      { f: 1567.98, d: 0.65 }
+    ];
+    let delay = 320;
+    fanfare.forEach((n) => {
+      setTimeout(() => {
+        this.playFM(n.f, n.f * 0.5, 120, n.d, "sawtooth", n.f * 1.01, 0.22);
+        this.playFM(n.f * 0.5, n.f * 0.25, 80, n.d, "triangle", null, 0.15);
+      }, delay);
+      delay += Math.floor(n.d * 750);
+    });
+  }
+
+  // Classic dual-burst electronic transceiver ring (ピロリロリン♪ ピロリロリン♪)
+  codecRing() {
+    const playBurst = (startDelay) => {
+      const p = [1480, 1175, 1480, 1175, 1480, 1175];
+      p.forEach((f, i) => {
+        setTimeout(() => {
+          this.playFM(f, f * 0.5, 40, 0.045, "square", null, 0.14);
+        }, startDelay + i * 42);
+      });
+    };
+    playBurst(0);
+    playBurst(360);
+  }
+
+  // Tactical transceiver open pip (ピッ！)
+  codecOpen() {
+    this.playFM(2093, 1046, 60, 0.05, "square", 2349, 0.16);
+  }
+
+  // Tactical transceiver close pip (ピッ！)
+  codecClose() {
+    this.playFM(1760, 880, 50, 0.05, "square", 1318, 0.16);
+  }
 }
 
 const rawSfx = new FMSoundEngine();

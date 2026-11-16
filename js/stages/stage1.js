@@ -1029,25 +1029,11 @@ window.Stage1 = {
     // Step 4: Frame 155+ -> Show Clear Modal
     if (seq.frame >= 155 && !seq.uiShown) {
       seq.uiShown = true;
-      UI.updateHUD(state);
-      const modal = document.getElementById("clearModal");
-      if (modal) {
-        const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
-        if (nameEl) nameEl.textContent = "リリス (LILITH)";
-        const quoteEl = modal.querySelector("p");
-        if (quoteEl) {
-          quoteEl.innerHTML = "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」";
-        }
-        const scoreEl = document.getElementById("clearFinalScore");
-        if (scoreEl) scoreEl.textContent = state.score.toLocaleString();
-        const ballsEl = document.getElementById("clearRemainingBalls");
-        if (ballsEl) ballsEl.textContent = "●".repeat(state.ballsRemaining) + ` (${state.ballsRemaining})`;
-
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        void modal.offsetWidth;
-        modal.classList.remove("opacity-0");
-        modal.classList.add("opacity-100");
+      if (window.UI && typeof UI.presentStageClearModal === "function") {
+        UI.presentStageClearModal(state, {
+          bossDisplayName: "リリス (LILITH)",
+          defeatQuoteHtml: "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」"
+        });
       }
     }
   },

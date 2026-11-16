@@ -1286,20 +1286,11 @@ window.Stage2 = {
     // Step 4: Frame 155+ -> Show Clear Modal
     if (seq.frame >= 155 && !seq.uiShown) {
       seq.uiShown = true;
-      UI.updateHUD(state);
-      const modal = document.getElementById("clearModal");
-      if (modal) {
-        // キャラクター名とセリフをステージ2（セルティ）用に設定
-        const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
-        if (nameEl) nameEl.textContent = "セルティ (CERTI)";
-        const quoteEl = modal.querySelector("p");
-        if (quoteEl) quoteEl.innerHTML = "「な、なによこれぇっ…！？ プラズマ炉がオーバーヒートだなんて……！<br>あ、熱い…装甲パージが止まらないわ……っ！」";
-
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        void modal.offsetWidth;
-        modal.classList.remove("opacity-0");
-        modal.classList.add("opacity-100");
+      if (window.UI && typeof UI.presentStageClearModal === "function") {
+        UI.presentStageClearModal(state, {
+          bossDisplayName: "セルティ (CERTI)",
+          defeatQuoteHtml: "「な、なによこれぇっ…！？ プラズマ炉がオーバーヒートだなんて……！<br>あ、熱い…装甲パージが止まらないわ……っ！」"
+        });
       }
     }
   },

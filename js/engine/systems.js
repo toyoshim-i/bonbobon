@@ -64,25 +64,13 @@ window.Systems = {
   addScore(state, basePts, x, y, label = "") {
     const totalMult = state.baseMultiplier * state.burstMultiplier * state.fever.mult;
     const pts = Math.round(basePts * totalMult);
-    const prevScore = state.score;
     state.score += pts;
+    state.peakScore = Math.max(state.peakScore || 0, state.score);
 
     if (label) {
       Particles.addPopup(state, x, y, `${label} +${pts.toLocaleString()}`, totalMult > 1.5 ? "#e6ff00" : "#00f5d4");
     } else {
       Particles.addPopup(state, x, y, `+${pts.toLocaleString()}`, "#ffffff", 0.9);
-    }
-
-    // Extra Ball score milestones
-    if (state.extraBallMilestones && state.extraBallMilestones.length > 0) {
-      const nextTarget = state.extraBallMilestones[0];
-      if (prevScore < nextTarget && state.score >= nextTarget) {
-        state.extraBallMilestones.shift();
-        state.ballsRemaining = Math.min(5, state.ballsRemaining + 1);
-        if (window.sfx) window.sfx.burstTrigger();
-        Particles.add(state, 198, 550, "#e6ff00", 30, 6.0);
-        if (window.UI) window.UI.showCutin(`⭐【EXTRA BALL 獲得】⭐<br>スコアボーナス！<br>ボール＋1球 (残り${state.ballsRemaining}球)`, 210);
-      }
     }
 
     if (window.UI) window.UI.updateHUD(state);
@@ -309,10 +297,11 @@ window.Systems = {
     if (window.UI) window.UI.updateHUD(state);
   },
 
-  prepareBallForLaunch(state) {
+  prepareBallForLaunch(state, skipIntroCutin = false) {
     state.balls = [];
     state.flipperPinL = 0;
     state.flipperPinR = 0;
+    state.flipperReverseTimer = 0;
     state.plunger.waitingForLaunch = true;
     state.plunger.power = 0;
     state.plunger.pulling = false;
@@ -332,7 +321,15 @@ window.Systems = {
     if (state.perm.kickbackR > 0) state.perm.kickbackR_charges = 1;
     if (state.perm.centerPost > 0) state.perm.centerPostHP = 3;
 
-    if (window.UI) window.UI.showCutin("【ゲーム開始】<br>画面左右タップでパドル操作！<br>発射ボタン または 右下スワイプで射出！", 150);
+    // Relic: Support Drone auto-deploys center post on ball launch
+    if (state.relics && state.relics.drone > 0) {
+      state.perm.centerPost = Math.max(state.perm.centerPost || 0, 1);
+      state.perm.centerPostHP = Math.max(state.perm.centerPostHP || 0, 3);
+    }
+
+    if (!skipIntroCutin && window.UI) {
+      window.UI.showCutin("【ゲーム開始】<br>画面左右タップでパドル操作！<br>発射ボタン または 右下スワイプで射出！", 150);
+    }
   },
 
   spawnBall(state, x = 198, y = 260, vx = 0, vy = -7.5) {

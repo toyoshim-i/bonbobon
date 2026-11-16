@@ -89,16 +89,18 @@ window.GameEngine = {
       leftFlipperDown: false,
       rightFlipperDown: false,
 
-      clearSequence: {
-        active: false,
-        frame: 0,
-        phase: "playing",
-        whiteoutAlpha: 0,
-        cgRevealAlpha: 0,
-        uiShown: false,
-        shatterPieces: [],
-        smokeClouds: []
-      }
+      clearSequence: (window.StageCommon && typeof StageCommon.createClearSequenceState === "function")
+        ? StageCommon.createClearSequenceState(false)
+        : {
+            active: false,
+            frame: 0,
+            phase: "playing",
+            whiteoutAlpha: 0,
+            cgRevealAlpha: 0,
+            uiShown: false,
+            shatterPieces: [],
+            smokeClouds: []
+          }
     };
   },
 
@@ -111,7 +113,25 @@ window.GameEngine = {
     this.state.phase = 1;
     this.state.stageCleared = false;
     this.state._clearBonusAwarded = false;
-    this.state.clearSequence.active = false;
+    this.state.clearSequence = (window.StageCommon && typeof StageCommon.createClearSequenceState === "function")
+      ? StageCommon.createClearSequenceState(false)
+      : {
+          active: false,
+          frame: 0,
+          phase: "playing",
+          whiteoutAlpha: 0,
+          cgRevealAlpha: 0,
+          uiShown: false,
+          shatterPieces: [],
+          smokeClouds: []
+        };
+    this.state.armorDebris = [];
+    this.state.particles = [];
+    this.state.popups = [];
+    this.state.hearts = [];
+    this.state.shockwaves = [];
+    this.state.capsules = [];
+    this.state.nudgeOffset = { x: 0, y: 0 };
 
     if (stage.id === "stage1") this.state.stageIndex = 1;
     else if (stage.id === "stage2") this.state.stageIndex = 2;

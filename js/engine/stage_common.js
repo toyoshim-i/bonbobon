@@ -321,21 +321,26 @@ window.StageCommon = {
     ctx.drawImage(slot.canvas, 0, 0, rw, rh, IMG_BOX.x + x0, IMG_BOX.y + y0, rw, rh);
   },
 
-  startClearSequence(state, walls) {
-    if (!state) return;
-    const wallDefs = walls || (window.Physics && Physics.TABLE_WALLS) || [];
-    state.clearSequence = {
-      active: true,
+  createClearSequenceState(active = false, walls = null) {
+    const wallDefs = active ? (walls || (window.Physics && Physics.TABLE_WALLS) || []) : [];
+    return {
+      active: !!active,
       frame: 0,
-      phase: "exploding",
+      phase: active ? "exploding" : "playing",
       whiteoutAlpha: 0,
       cgRevealAlpha: 0,
       uiShown: false,
-      shatterPieces: (window.Particles && typeof Particles.shatterTableFrame === "function")
+      shatterPieces: active && window.Particles && typeof Particles.shatterTableFrame === "function"
         ? Particles.shatterTableFrame(wallDefs)
         : [],
       smokeClouds: []
     };
+  },
+
+  startClearSequence(state, walls) {
+    if (!state) return;
+    state.stageCleared = true;
+    state.clearSequence = this.createClearSequenceState(true, walls);
   },
 
   spawnSmokeCloud(seq, x, y, color = "rgba(255, 235, 250, 0.9)", rBase = 26) {
@@ -360,6 +365,31 @@ window.StageCommon = {
     const seq = state.clearSequence;
     seq.frame++;
 
+    // 1. Screen shake (0..45 frames) & settle
+    if (state.nudgeOffset) {
+      if (seq.frame < 45) {
+        state.nudgeOffset.x = (Math.random() - 0.5) * 16;
+        state.nudgeOffset.y = (Math.random() - 0.5) * 12;
+        if (seq.frame % 10 === 0) {
+          if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
+          if (cfg.explosionOrigin && window.Particles) {
+            Particles.add(
+              state,
+              cfg.explosionOrigin.x + (Math.random() - 0.5) * 120,
+              cfg.explosionOrigin.y + (Math.random() - 0.5) * 80,
+              cfg.explosionColor || "#ff1493",
+              14,
+              5.0
+            );
+          }
+        }
+      } else {
+        state.nudgeOffset.x *= 0.84;
+        state.nudgeOffset.y *= 0.84;
+      }
+    }
+
+    // 2. Shatter pieces update
     if (seq.shatterPieces) {
       seq.shatterPieces.forEach(p => {
         p.x += p.vx;
@@ -370,14 +400,27 @@ window.StageCommon = {
       });
     }
 
-    if (seq.frame < 95 && seq.frame % 3 === 0) {
-      const x = 110 + Math.random() * 176;
-      const y = 165 + Math.random() * 270;
-      const cols = cfg.smokeColors || ["#ffb7dd", "#00f5d4", "#b84dff", "#ff2a9d", "rgba(255, 235, 250, 0.9)"];
-      const col = cols[Math.floor(Math.random() * cols.length)];
-      this.spawnSmokeCloud(seq, x, y, col);
+    // 3. Pre-whiteout smoke (frame 20..98)
+    if (seq.frame >= 20 && seq.frame < 98) {
+      if (seq.frame % 2 === 0) {
+        const cols = cfg.smokeColors || ["#ffb7dd", "#00f5d4", "#b84dff", "#ff2a9d", "rgba(255, 235, 250, 0.9)"];
+        const col = cols[Math.floor(Math.random() * cols.length)];
+        let sx, sy;
+        if (cfg.explosionOrigin && Math.random() > 0.35) {
+          sx = cfg.explosionOrigin.x + (Math.random() - 0.5) * 120;
+          sy = cfg.explosionOrigin.y + (Math.random() - 0.5) * 80;
+        } else {
+          sx = 110 + Math.random() * 176;
+          sy = 165 + Math.random() * 270;
+        }
+        this.spawnSmokeCloud(seq, sx, sy, col);
+      }
+      if (seq.frame % 3 === 0) {
+        this.spawnSmokeCloud(seq, 100 + Math.random() * 220, 580, "#ffffff");
+      }
     }
 
+    // 4. Update smoke clouds
     if (seq.smokeClouds) {
       for (let i = seq.smokeClouds.length - 1; i >= 0; i--) {
         const smk = seq.smokeClouds[i];
@@ -400,17 +443,26 @@ window.StageCommon = {
       }
     }
 
+    // 5. Whiteout buildup and peak
     if (seq.frame >= 55 && seq.frame < 105) {
       seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 55) / 50);
+      if (seq.frame === 104 && window.sfx) {
+        window.sfx.burstTrigger();
+      }
     } else if (seq.frame >= 105) {
+      if (seq.frame === 105) {
+        seq.smokeClouds = [];
+        seq.cgRevealAlpha = 1.0;
+      }
       seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
-      seq.cgRevealAlpha = Math.min(1.0, (seq.frame - 105) / 50);
+      seq.cgRevealAlpha = 1.0;
     }
 
     if (typeof cfg.onFrame === "function") {
       cfg.onFrame(seq, state);
     }
 
+    // 6. Modal trigger
     if (seq.frame >= 158 && !seq.uiShown) {
       seq.uiShown = true;
       if (window.UI && typeof UI.presentStageClearModal === "function") {
@@ -440,7 +492,7 @@ window.StageCommon = {
   },
 
   renderSmokeClouds(ctx, state) {
-    if (!state || !state.clearSequence || !state.clearSequence.smokeClouds || state.clearSequence.smokeClouds.length === 0) return;
+    if (!state || !state.clearSequence || !state.clearSequence.active || !state.clearSequence.smokeClouds || state.clearSequence.smokeClouds.length === 0) return;
     const clouds = state.clearSequence.smokeClouds;
     ctx.save();
     for (let i = 0; i < clouds.length; i++) {

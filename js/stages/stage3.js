@@ -1237,10 +1237,19 @@ window.Stage3 = {
   update(state, engine) {
     if (!state.boss) return;
     const b = state.boss;
-    b.animTick = (b.animTick || 0) + 1;
 
-    // 0. クリア演出進行
-    this.updateClearSequence(state, engine);
+    // クリア演出進行
+    if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
+      StageCommon.updateClearSequence(state, {
+        bossDisplayName: "ノア (NOA)",
+        defeatQuoteHtml: "「ふぇぇ……中枢ペンダント壊れちゃったよぉ……！<br>電脳空間が……シャットダウンしちゃう……っ！」",
+        explosionOrigin: { x: b.core ? b.core.x : 198, y: b.core ? b.core.y : 330 },
+        smokeColors: ["#00f5d4", "#ff1493", "#ffffff", "#e0ffff"]
+      });
+      return;
+    }
+
+    b.animTick = (b.animTick || 0) + 1;
 
     // 1. 表情アニメーション制御
     const fa = b.faceAnim || (b.faceAnim = {});
@@ -1880,161 +1889,39 @@ window.Stage3 = {
     if (b.hands) {
       this.releaseCapturedBall(b.hands);
     }
+    if (b.bitLasers) {
+      b.bitLasers.shortLasers = [];
+      b.bitLasers.triMode = "cooldown";
+      b.bitLasers.deltaBitIds = [];
+      if (typeof this.resetSnipeState === "function") {
+        this.resetSnipeState(b.bitLasers, 180);
+      }
+    }
 
-    state.stageCleared = true;
-    state.clearSequence.active = true;
-    state.clearSequence.frame = 0;
-    state.clearSequence.phase = "shatter";
+    StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
 
-    if (window.sfx) window.sfx.burstTrigger();
+    if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
     UI.showCutin("💥【CRITICAL K.O.】💥<br>ノアの中枢ペンダント臨界崩壊！ 電脳空間シャットダウン！", 240);
-    Particles.add(state, b.core.x, b.core.y, "#00f5d4", 70, 10.5);
-    Particles.add(state, b.core.x, b.core.y, "#ff1493", 70, 9.5);
-    Particles.add(state, b.core.x, b.core.y, "#ffffff", 70, 10.0);
-
-    state.clearSequence.shatterPieces = Particles.shatterTableFrame(Physics.TABLE_WALLS);
+    const coreX = (b && b.core) ? b.core.x : 198;
+    const coreY = (b && b.core) ? b.core.y : 330;
+    Particles.add(state, coreX, coreY, "#00f5d4", 70, 10.5);
+    Particles.add(state, coreX, coreY, "#ff1493", 70, 9.5);
+    Particles.add(state, coreX, coreY, "#ffffff", 70, 10.0);
 
     b.expression = "open_blush";
     b.expressionTimer = 9999;
 
     state.balls.forEach(ball => {
-      const a = Math.atan2(ball.y - b.core.y, ball.x - b.core.x) + (Math.random() - 0.5) * 0.5;
+      const a = Math.atan2(ball.y - coreY, ball.x - coreX) + (Math.random() - 0.5) * 0.5;
       const spd = 7.5 + Math.random() * 4.0;
       ball.vx = Math.cos(a) * spd;
       ball.vy = Math.sin(a) * spd - 2.5;
     });
+    UI.updateHUD(state);
   },
 
-  spawnSmokeCloud(x, y, color = "#00f5d4") {
-    return {
-      x: x + (Math.random() - 0.5) * 36,
-      y: y + (Math.random() - 0.5) * 20,
-      vx: (Math.random() - 0.5) * 3.0,
-      vy: -1.5 - Math.random() * 2.5,
-      r: 20 + Math.random() * 18,
-      maxR: 65 + Math.random() * 35,
-      growth: 0.75 + Math.random() * 0.65,
-      color,
-      alpha: 0.1,
-      maxAlpha: 0.60 + Math.random() * 0.25,
-      life: 80 + Math.floor(Math.random() * 35),
-      maxLife: 100
-    };
-  },
-
-  updateClearSequence(state, engine) {
-    if (!state.clearSequence || !state.clearSequence.active) return;
-    const seq = state.clearSequence;
-    seq.frame++;
-
-    if (seq.frame < 45) {
-      state.nudgeOffset.x = (Math.random() - 0.5) * 16;
-      state.nudgeOffset.y = (Math.random() - 0.5) * 12;
-      if (seq.frame % 10 === 0 && window.sfx) {
-        window.sfx.armorBreak();
-      }
-    } else {
-      state.nudgeOffset.x *= 0.84;
-      state.nudgeOffset.y *= 0.84;
-    }
-
-    seq.shatterPieces.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.16;
-      p.vx *= 0.98;
-      p.angle += p.vAngle;
-      p.life--;
-    });
-
-    if (seq.frame >= 25 && seq.frame <= 105) {
-      for (let i = 0; i < 3; i++) {
-        const col = Math.random() > 0.5 ? "#00f5d4" : (Math.random() > 0.5 ? "#ff1493" : "#ffffff");
-        seq.smokeClouds.push(this.spawnSmokeCloud(198, 330, col));
-      }
-      if (seq.frame % 2 === 0) {
-        seq.smokeClouds.push(this.spawnSmokeCloud(100 + Math.random() * 220, 580, "#ffffff"));
-      }
-    }
-
-    if (seq.frame >= 65 && seq.frame <= 105) {
-      seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 65) / 38);
-      if (seq.frame === 104 && window.sfx) {
-        window.sfx.burstTrigger();
-      }
-      if (seq.frame === 105) {
-        seq.smokeClouds = [];
-      }
-    }
-
-    if (seq.frame >= 105) {
-      seq.cgRevealAlpha = 1.0;
-      seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
-
-      if (seq.frame % 3 === 0) {
-        const colors = ["#ffffff", "#e0ffff", "#00f5d4", "#ff80df"];
-        const col = colors[Math.floor(Math.random() * colors.length)];
-        seq.smokeClouds.push({
-          x: 288 + (Math.random() - 0.5) * 28,
-          y: 470 + (Math.random() - 0.5) * 18,
-          vx: (Math.random() - 0.5) * 1.4 + 0.3,
-          vy: -0.9 - Math.random() * 1.4,
-          r: 14 + Math.random() * 12,
-          maxR: 42 + Math.random() * 20,
-          growth: 0.45 + Math.random() * 0.4,
-          color: col,
-          alpha: 0.10,
-          maxAlpha: 0.42 + Math.random() * 0.16,
-          life: 65 + Math.floor(Math.random() * 25),
-          maxLife: 85
-        });
-      }
-      if (seq.frame % 4 === 0) {
-        seq.smokeClouds.push({
-          x: 198 + (Math.random() - 0.5) * 160,
-          y: 560 + (Math.random() - 0.5) * 30,
-          vx: (Math.random() - 0.5) * 1.2,
-          vy: -0.8 - Math.random() * 1.3,
-          r: 16 + Math.random() * 14,
-          maxR: 50 + Math.random() * 24,
-          growth: 0.5 + Math.random() * 0.4,
-          color: Math.random() > 0.4 ? "#e0ffff" : "#ffffff",
-          alpha: 0.08,
-          maxAlpha: 0.38 + Math.random() * 0.15,
-          life: 70 + Math.floor(Math.random() * 25),
-          maxLife: 90
-        });
-      }
-    }
-
-    for (let i = seq.smokeClouds.length - 1; i >= 0; i--) {
-      const smk = seq.smokeClouds[i];
-      smk.x += smk.vx;
-      smk.y += smk.vy;
-      smk.vy *= 0.98;
-      smk.vx *= 0.97;
-      if (smk.r < smk.maxR) smk.r += smk.growth;
-      smk.life--;
-      const progress = 1 - (smk.life / smk.maxLife);
-      if (progress < 0.2) {
-        smk.alpha = (progress / 0.2) * smk.maxAlpha;
-      } else {
-        smk.alpha = Math.max(0, (1 - (progress - 0.2) / 0.8) * smk.maxAlpha);
-      }
-      if (smk.life <= 0 || smk.alpha <= 0.01) {
-        seq.smokeClouds.splice(i, 1);
-      }
-    }
-
-    if (seq.frame >= 155 && !seq.uiShown) {
-      seq.uiShown = true;
-      if (window.UI && typeof UI.presentStageClearModal === "function") {
-        UI.presentStageClearModal(state, {
-          bossDisplayName: "ノア (NOA)",
-          defeatQuoteHtml: "「あぅぅっ……メインサーバーまでハッキングされるなんて……！<br>わ、わたしの演算コアが熱暴走しちゃうよぉ……っ！」"
-        });
-      }
-    }
+  triggerStageClear(state, engine) {
+    this.triggerClear(state, engine);
   },
 
   // ゴム膜ワープ用の縮小画素キャッシュ（固定ビット消去済みベース＋破損差分合成）

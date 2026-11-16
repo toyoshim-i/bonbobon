@@ -267,6 +267,19 @@ window.Stage1 = {
   },
 
   update(state, engine) {
+    if (!state.boss) return;
+
+    // クリア演出進行
+    if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
+      StageCommon.updateClearSequence(state, {
+        bossDisplayName: "リリス (LILITH)",
+        defeatQuoteHtml: "「う、嘘でしょ……あたしの桃色装甲が……全パージされちゃうなんてぇ……っ！」",
+        explosionOrigin: { x: 198, y: 307 },
+        smokeColors: ["#ff66b2", "#b84dff", "#e6e0f8", "#ffffff"]
+      });
+      return;
+    }
+
     // Bust Springs
     const stiffness = 0.26;
     const damping = 0.80;
@@ -399,9 +412,6 @@ window.Stage1 = {
     if (state.boss.crotch && state.boss.crotch.cooldown > 0) {
       state.boss.crotch.cooldown--;
     }
-
-    // Clear sequence
-    this.updateClearSequence(state, engine);
   },
 
   checkCollisions(ball, state, engine, s) {
@@ -868,18 +878,17 @@ window.Stage1 = {
 
   triggerClear(state, engine) {
     if (state.stageCleared) return;
-    state.stageCleared = true;
-    state.clearSequence.active = true;
-    state.clearSequence.frame = 0;
-    state.clearSequence.phase = "shatter";
+    if (state.boss) {
+      state.boss.expression = "wince";
+      state.boss.expressionTimer = 300;
+    }
+    StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
 
-    if (window.sfx) window.sfx.burstTrigger();
+    if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
     UI.showCutin("💥【CRITICAL K.O.】💥<br>機体制御崩壊！ 装甲強制パージ！", 180);
     Particles.add(state, 198, 307, "#ffffff", 60, 9.5);
     Particles.add(state, 198, 307, "#ff1493", 60, 8.0);
     Particles.add(state, 198, 307, "#e6ff00", 60, 8.0);
-
-    state.clearSequence.shatterPieces = Particles.shatterTableFrame(Physics.TABLE_WALLS);
 
     state.balls.forEach(ball => {
       const blastAngle = Math.atan2(ball.y - 307, ball.x - 198) + (Math.random() - 0.5) * 0.6;
@@ -887,155 +896,11 @@ window.Stage1 = {
       ball.vx = Math.cos(blastAngle) * blastSpeed;
       ball.vy = Math.sin(blastAngle) * blastSpeed - 3.0;
     });
+    UI.updateHUD(state);
   },
 
-  spawnSmokeCloud(x, y, color = "#ff66b2") {
-    return {
-      x: x + (Math.random() - 0.5) * 36,
-      y: y + (Math.random() - 0.5) * 20,
-      vx: (Math.random() - 0.5) * 3.2,
-      vy: -1.6 - Math.random() * 2.8,
-      r: 22 + Math.random() * 20,
-      maxR: 70 + Math.random() * 40,
-      growth: 0.8 + Math.random() * 0.7,
-      color,
-      alpha: 0.1,
-      maxAlpha: 0.55 + Math.random() * 0.25,
-      life: 100 + Math.floor(Math.random() * 40),
-      maxLife: 120
-    };
-  },
-
-  updateClearSequence(state, engine) {
-    const seq = state.clearSequence;
-    if (!seq.active) return;
-    seq.frame++;
-
-    // Step 1: 0..45 Frame -> Screen Shake
-    if (seq.frame < 45) {
-      state.nudgeOffset.x = (Math.random() - 0.5) * 16;
-      state.nudgeOffset.y = (Math.random() - 0.5) * 12;
-      if (seq.frame % 10 === 0) {
-        if (window.sfx) window.sfx.armorBreak();
-        Particles.add(state, 198 + (Math.random() - 0.5) * 120, 307 + (Math.random() - 0.5) * 80, "#ff1493", 16, 5.0);
-      }
-    } else {
-      state.nudgeOffset.x *= 0.84;
-      state.nudgeOffset.y *= 0.84;
-    }
-
-    // Flying shards
-    seq.shatterPieces.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.16;
-      p.vx *= 0.98;
-      p.angle += p.vAngle;
-      p.life--;
-    });
-
-    // Step 2: 25..120 Frame -> Billowing Smoke & Whiteout
-    if (seq.frame >= 25 && seq.frame <= 120) {
-      for (let i = 0; i < 3; i++) {
-        const col = Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#b84dff" : "#e6e0f8");
-        seq.smokeClouds.push(this.spawnSmokeCloud(198, 320, col));
-      }
-      if (seq.frame % 2 === 0) {
-        seq.smokeClouds.push(this.spawnSmokeCloud(100 + Math.random() * 220, 580, "#ffffff"));
-      }
-    }
-
-    // Whiteout buildup
-    if (seq.frame >= 65 && seq.frame <= 105) {
-      seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 65) / 38);
-      if (seq.frame === 104 && window.sfx) {
-        window.sfx.burstTrigger();
-      }
-    }
-
-    // Step 3: Frame 105+ -> Defeat CG
-    if (seq.frame >= 105) {
-      seq.cgRevealAlpha = 1.0;
-      seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
-
-      if (seq.frame % 2 === 0) {
-        const colors = ["#ffffff", "#f0e6ff", "#d8c8ff", "#ffd1e6", "#6c528a"];
-        const col = colors[Math.floor(Math.random() * colors.length)];
-        seq.smokeClouds.push({
-          x: 288 + (Math.random() - 0.5) * 28,
-          y: 450 + (Math.random() - 0.5) * 16,
-          vx: (Math.random() - 0.5) * 1.8 + 0.4,
-          vy: -1.2 - Math.random() * 2.2,
-          r: 16 + Math.random() * 14,
-          maxR: 55 + Math.random() * 30,
-          growth: 0.65 + Math.random() * 0.55,
-          color: col,
-          alpha: 0.15,
-          maxAlpha: 0.65 + Math.random() * 0.25,
-          life: 85 + Math.floor(Math.random() * 40),
-          maxLife: 100
-        });
-      }
-
-      if (seq.frame % 3 === 0) {
-        seq.smokeClouds.push({
-          x: 200 + (Math.random() - 0.5) * 160,
-          y: 520 + (Math.random() - 0.5) * 40,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: -1.0 - Math.random() * 1.8,
-          r: 18 + Math.random() * 18,
-          maxR: 65 + Math.random() * 35,
-          growth: 0.7 + Math.random() * 0.6,
-          color: Math.random() > 0.4 ? "#f0e6ff" : "#ffffff",
-          alpha: 0.1,
-          maxAlpha: 0.5 + Math.random() * 0.25,
-          life: 90 + Math.floor(Math.random() * 35),
-          maxLife: 110
-        });
-      }
-
-      if (Math.random() < 0.4) {
-        state.particles.push({
-          x: 60 + Math.random() * 280,
-          y: 480 + Math.random() * 120,
-          vx: (Math.random() - 0.5) * 0.8,
-          vy: -0.8 - Math.random() * 1.2,
-          color: Math.random() > 0.5 ? "#ff66b2" : (Math.random() > 0.5 ? "#00f5d4" : "#e6ff00"),
-          life: 50 + Math.floor(Math.random() * 35)
-        });
-      }
-    }
-
-    // Update smoke clouds
-    for (let i = seq.smokeClouds.length - 1; i >= 0; i--) {
-      const smk = seq.smokeClouds[i];
-      smk.x += smk.vx;
-      smk.y += smk.vy;
-      smk.vy *= 0.98;
-      smk.vx *= 0.97;
-      if (smk.r < smk.maxR) smk.r += smk.growth;
-      smk.life--;
-      const progress = 1 - (smk.life / smk.maxLife);
-      if (progress < 0.2) {
-        smk.alpha = (progress / 0.2) * smk.maxAlpha;
-      } else {
-        smk.alpha = Math.max(0, (1 - (progress - 0.2) / 0.8) * smk.maxAlpha);
-      }
-      if (smk.life <= 0 || smk.alpha <= 0.01) {
-        seq.smokeClouds.splice(i, 1);
-      }
-    }
-
-    // Step 4: Frame 155+ -> Show Clear Modal
-    if (seq.frame >= 155 && !seq.uiShown) {
-      seq.uiShown = true;
-      if (window.UI && typeof UI.presentStageClearModal === "function") {
-        UI.presentStageClearModal(state, {
-          bossDisplayName: "リリス (LILITH)",
-          defeatQuoteHtml: "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」"
-        });
-      }
-    }
+  triggerStageClear(state, engine) {
+    this.triggerClear(state, engine);
   },
 
   renderBackground(ctx, state, engine) {

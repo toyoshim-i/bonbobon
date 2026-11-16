@@ -295,10 +295,18 @@ window.Stage2 = {
   update(state, engine) {
     if (!state.boss) return;
 
-    state.boss.animTick = (state.boss.animTick || 0) + 1;
+    // クリア演出進行
+    if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
+      StageCommon.updateClearSequence(state, {
+        bossDisplayName: "セルティ (CERTI)",
+        defeatQuoteHtml: "「あっ、熱い……プラズマが暴走して……っ！<br>あ、あたしが負けるなんて……認めないんだからぁ……っ！」",
+        explosionOrigin: { x: state.boss.core ? state.boss.core.x : 198, y: state.boss.core ? state.boss.core.y : 320 },
+        smokeColors: ["#00f5d4", "#ff007f", "#ffffff", "#e0ffff"]
+      });
+      return;
+    }
 
-    // 0. クリア演出進行（撃破時）
-    this.updateClearSequence(state, engine);
+    state.boss.animTick = (state.boss.animTick || 0) + 1;
 
     // 1. 生き生きとした表情アニメーション・リップシンク制御
     const fa = state.boss.faceAnim || (state.boss.faceAnim = {});
@@ -1163,136 +1171,45 @@ window.Stage2 = {
 
   triggerClear(state, engine) {
     if (state.stageCleared) return;
-    state.stageCleared = true;
-    state.clearSequence.active = true;
-    state.clearSequence.frame = 0;
-    state.clearSequence.phase = "shatter";
+    const b = state.boss;
+    if (b) {
+      if (b.hologram) {
+        b.hologram.laserState = "idle";
+        b.hologram.isLocked = false;
+      }
+      if (b.antenna) {
+        b.antenna.isActive = false;
+        b.antenna.isWarning = false;
+      }
+      if (b.jet) {
+        b.jet.active = false;
+        b.jet.timer = 0;
+      }
+      b.expression = "open_blush";
+      b.expressionTimer = 9999;
+    }
 
-    if (window.sfx) window.sfx.burstTrigger();
+    StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
+
+    if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
     UI.showCutin("💥【CRITICAL K.O.】💥<br>セルティのプラズマ炉臨界オーバーヒート！ 機体制御崩壊！", 240);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#00f5d4", 70, 10.5);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ff007f", 70, 9.5);
-    Particles.add(state, state.boss.core.x, state.boss.core.y, "#ffffff", 70, 10.0);
-
-    state.clearSequence.shatterPieces = Particles.shatterTableFrame(Physics.TABLE_WALLS);
-
-    state.boss.expression = "open_blush";
-    state.boss.expressionTimer = 9999;
+    const coreX = (b && b.core) ? b.core.x : 198;
+    const coreY = (b && b.core) ? b.core.y : 320;
+    Particles.add(state, coreX, coreY, "#00f5d4", 70, 10.5);
+    Particles.add(state, coreX, coreY, "#ff007f", 70, 9.5);
+    Particles.add(state, coreX, coreY, "#ffffff", 70, 10.0);
 
     state.balls.forEach(ball => {
-      const a = Math.atan2(ball.y - state.boss.core.y, ball.x - state.boss.core.x) + (Math.random() - 0.5) * 0.5;
+      const a = Math.atan2(ball.y - coreY, ball.x - coreX) + (Math.random() - 0.5) * 0.5;
       const spd = 7.5 + Math.random() * 4.0;
       ball.vx = Math.cos(a) * spd;
       ball.vy = Math.sin(a) * spd - 2.5;
     });
+    UI.updateHUD(state);
   },
 
-  spawnSmokeCloud(x, y, color = "#00f5d4") {
-    return {
-      x: x + (Math.random() - 0.5) * 36,
-      y: y + (Math.random() - 0.5) * 20,
-      vx: (Math.random() - 0.5) * 3.0,
-      vy: -1.5 - Math.random() * 2.5,
-      r: 20 + Math.random() * 18,
-      maxR: 65 + Math.random() * 35,
-      growth: 0.75 + Math.random() * 0.65,
-      color,
-      alpha: 0.1,
-      maxAlpha: 0.60 + Math.random() * 0.25,
-      life: 80 + Math.floor(Math.random() * 35),
-      maxLife: 100
-    };
-  },
-
-  updateClearSequence(state, engine) {
-    if (!state.clearSequence || !state.clearSequence.active) return;
-    const seq = state.clearSequence;
-    seq.frame++;
-
-    // Step 1: 0..45 Frame -> Shatter table frame pieces
-    seq.shatterPieces.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.16;
-      p.vx *= 0.98;
-      p.angle += p.vAngle;
-      p.life--;
-    });
-
-    // Step 2: 25..120 Frame -> Billowing Smoke & Whiteout
-    if (seq.frame >= 25 && seq.frame <= 120) {
-      for (let i = 0; i < 3; i++) {
-        const col = Math.random() > 0.5 ? "#00f5d4" : (Math.random() > 0.5 ? "#ff007f" : "#ffffff");
-        seq.smokeClouds.push(this.spawnSmokeCloud(state.boss.core.x, state.boss.core.y, col));
-      }
-      if (seq.frame % 2 === 0) {
-        seq.smokeClouds.push(this.spawnSmokeCloud(100 + Math.random() * 220, 580, "#ffffff"));
-      }
-    }
-
-    // Whiteout buildup
-    if (seq.frame >= 65 && seq.frame <= 105) {
-      seq.whiteoutAlpha = Math.min(1.0, (seq.frame - 65) / 38);
-      if (seq.frame === 104 && window.sfx) {
-        window.sfx.burstTrigger();
-      }
-    }
-
-    // Step 3: Frame 105+ -> Soft glow & settle
-    if (seq.frame >= 105) {
-      seq.cgRevealAlpha = 1.0;
-      seq.whiteoutAlpha = Math.max(0, 1.0 - (seq.frame - 105) / 45);
-
-      if (seq.frame % 2 === 0) {
-        const colors = ["#ffffff", "#e0ffff", "#00f5d4", "#ff80df"];
-        const col = colors[Math.floor(Math.random() * colors.length)];
-        seq.smokeClouds.push({
-          x: state.boss.core.x + (Math.random() - 0.5) * 30,
-          y: state.boss.core.y + (Math.random() - 0.5) * 20,
-          vx: (Math.random() - 0.5) * 1.6,
-          vy: -1.0 - Math.random() * 2.0,
-          r: 16 + Math.random() * 14,
-          maxR: 50 + Math.random() * 25,
-          growth: 0.6 + Math.random() * 0.5,
-          color: col,
-          alpha: 0.15,
-          maxAlpha: 0.60 + Math.random() * 0.20,
-          life: 80 + Math.floor(Math.random() * 35),
-          maxLife: 95
-        });
-      }
-    }
-
-    // Update smoke clouds
-    for (let i = seq.smokeClouds.length - 1; i >= 0; i--) {
-      const smk = seq.smokeClouds[i];
-      smk.x += smk.vx;
-      smk.y += smk.vy;
-      smk.vy *= 0.98;
-      smk.vx *= 0.97;
-      if (smk.r < smk.maxR) smk.r += smk.growth;
-      smk.life--;
-      const progress = 1 - (smk.life / smk.maxLife);
-      if (progress < 0.2) {
-        smk.alpha = (progress / 0.2) * smk.maxAlpha;
-      } else {
-        smk.alpha = Math.max(0, (1 - (progress - 0.2) / 0.8) * smk.maxAlpha);
-      }
-      if (smk.life <= 0 || smk.alpha <= 0.01) {
-        seq.smokeClouds.splice(i, 1);
-      }
-    }
-
-    // Step 4: Frame 155+ -> Show Clear Modal
-    if (seq.frame >= 155 && !seq.uiShown) {
-      seq.uiShown = true;
-      if (window.UI && typeof UI.presentStageClearModal === "function") {
-        UI.presentStageClearModal(state, {
-          bossDisplayName: "セルティ (CERTI)",
-          defeatQuoteHtml: "「な、なによこれぇっ…！？ プラズマ炉がオーバーヒートだなんて……！<br>あ、熱い…装甲パージが止まらないわ……っ！」"
-        });
-      }
-    }
+  triggerStageClear(state, engine) {
+    this.triggerClear(state, engine);
   },
 
   getLaserEndPoint(holo, maxW = 420, maxH = 660) {
@@ -2122,55 +2039,6 @@ window.Stage2 = {
   },
 
   renderHUD(ctx, state) {},
-
-  renderOverlays(ctx, state) {
-    if (!state.clearSequence || !state.clearSequence.active) return;
-    const seq = state.clearSequence;
-
-    // 1. シャッターピース（粉砕されたテーブル外枠破片）
-    if (seq.shatterPieces && seq.shatterPieces.length > 0) {
-      ctx.save();
-      seq.shatterPieces.forEach(p => {
-        if (p.life <= 0) return;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.angle);
-        ctx.fillStyle = p.color || "#00f5d4";
-        ctx.globalAlpha = Math.max(0, Math.min(1.0, p.life / 30));
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        ctx.restore();
-      });
-      ctx.restore();
-    }
-
-    // 2. モクモクスモーククラウド
-    if (seq.smokeClouds && seq.smokeClouds.length > 0) {
-      ctx.save();
-      seq.smokeClouds.forEach(smk => {
-        ctx.save();
-        ctx.globalAlpha = smk.alpha;
-        const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
-        grad.addColorStop(0, smk.color);
-        grad.addColorStop(0.65, smk.color);
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-      ctx.restore();
-    }
-
-    // 3. ホワイトアウト閃光フラッシュ
-    if (seq.whiteoutAlpha > 0) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(1.0, seq.whiteoutAlpha);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, 420, 660);
-      ctx.restore();
-    }
-  },
 
   getTargetDesc(state) {
     if (!state.boss) return "---";

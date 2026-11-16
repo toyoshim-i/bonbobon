@@ -73,7 +73,48 @@ window.UI = {
     }, durationFrames * 16);
   },
 
+  updateScreenMode(state) {
+    const isTitle = !!(state && state.inTitle);
+    const hudBar = document.getElementById("inGameHudBar");
+    const buffBar = document.getElementById("inGameBuffBar");
+    const titleControls = document.getElementById("titleControlsBar");
+    const gameControls = document.getElementById("gameControlsBar");
+    const playfieldFrame = document.getElementById("playfieldFrame");
+
+    if (playfieldFrame) {
+      playfieldFrame.classList.toggle("title-screen-mode", isTitle);
+    }
+
+    if (hudBar) {
+      if (isTitle) hudBar.classList.add("hidden");
+      else hudBar.classList.remove("hidden");
+    }
+    if (buffBar) {
+      if (isTitle) buffBar.classList.add("hidden");
+      else buffBar.classList.remove("hidden");
+    }
+    if (titleControls) {
+      if (isTitle) {
+        titleControls.classList.remove("hidden");
+        titleControls.classList.add("grid");
+      } else {
+        titleControls.classList.add("hidden");
+        titleControls.classList.remove("grid");
+      }
+    }
+    if (gameControls) {
+      if (isTitle) {
+        gameControls.classList.add("hidden");
+        gameControls.classList.remove("grid");
+      } else {
+        gameControls.classList.remove("hidden");
+        gameControls.classList.add("grid");
+      }
+    }
+  },
+
   updateHUD(state) {
+    this.updateScreenMode(state);
     this.setText("hudScore", state.score.toLocaleString());
 
     let targetDesc = "ドローン＆両肩アーマー破壊";
@@ -112,7 +153,20 @@ window.UI = {
       }
     }
 
-    this.setText("hudBalls", "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining)));
+    const hudShield = this.el("hudShield");
+    if (hudShield) {
+      if (state.score > 0) {
+        this.setText(hudShield, "🛡️SAFE");
+        this.setClass(hudShield, "px-1.5 py-0.5 rounded text-[9px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider");
+      } else {
+        this.setText(hudShield, "🚨DANGER!");
+        this.setClass(hudShield, "px-1.5 py-0.5 rounded text-[9px] font-extrabold text-[#ff0055] bg-[#ff0055]/20 border border-[#ff0055] tracking-wider animate-pulse");
+      }
+    }
+    const hudMisses = this.el("hudMisses");
+    if (hudMisses) {
+      this.setText(hudMisses, `MISS:${state.stageMisses || 0}`);
+    }
 
     // Buff Slots - only rebuild when key string changes
     const slotsContainer = this.el("buffSlots");
@@ -200,7 +254,16 @@ window.UI = {
     }
 
     // Desktop Right Sidebar Telemetry Sync
-    this.setText("dtBallCount", "●".repeat(state.ballsRemaining) + "○".repeat(Math.max(0, 3 - state.ballsRemaining)));
+    const dtShield = this.el("dtBallCount");
+    if (dtShield) {
+      if (state.score > 0) {
+        this.setText(dtShield, `🛡️SAFE (${state.score.toLocaleString()} pts)`);
+        this.setClass(dtShield, "font-black text-[#00f5d4]");
+      } else {
+        this.setText(dtShield, "🚨DANGER (0 pts)");
+        this.setClass(dtShield, "font-black text-[#ff0055] animate-pulse");
+      }
+    }
     this.setText("dtMultiplier", `B×${state.burstMultiplier.toFixed(1)}`);
     this.setText("dtFeverGauge", state.fever.active ? "♥FEVER♥" : `${Math.floor(state.fever.gauge)}%`);
 
@@ -263,6 +326,23 @@ window.UI = {
 
     // Keyboard Bindings
     window.addEventListener("keydown", e => {
+      if (e.code === "Escape") {
+        e.preventDefault();
+        const menuModal = document.getElementById("menuModal");
+        const rankingModal = document.getElementById("rankingModal");
+        if (window.GameFlow && window.GameFlow.attract && window.GameFlow.attract.active) {
+          window.GameFlow.stopAttractDemo();
+        } else if (menuModal && !menuModal.classList.contains("hidden")) {
+          closeMenu();
+        } else if (rankingModal && !rankingModal.classList.contains("hidden")) {
+          if (window.GameFlow && window.GameFlow.closeRankingModal) {
+            window.GameFlow.closeRankingModal();
+          }
+        } else {
+          openMenu();
+        }
+        return;
+      }
       if (["ArrowLeft", "KeyA", "KeyZ"].includes(e.code)) {
         e.preventDefault();
         setLeft(true);
@@ -444,12 +524,24 @@ window.UI = {
     const openMenu = () => {
       if (!menuModal) return;
       if (window.sfx) window.sfx.flipperClick();
+      if (window.GameFlow && window.GameFlow.stopAttractDemo) {
+        window.GameFlow.stopAttractDemo();
+      }
+      const isInGame = engine.state && !engine.state.inTitle;
+      const inGameActions = document.getElementById("menuInGameActions");
+      if (inGameActions) {
+        if (isInGame) inGameActions.classList.remove("hidden");
+        else inGameActions.classList.add("hidden");
+      }
+      const btnResume = document.getElementById("btnMenuResume");
+      if (btnResume) {
+        btnResume.textContent = isInGame ? "RESUME GAME (ゲームに戻る)" : "閉じる (CLOSE)";
+      }
       menuModal.classList.remove("hidden");
       menuModal.classList.add("flex");
-      requestAnimationFrame(() => {
-        menuModal.classList.remove("opacity-0");
-        menuModal.classList.add("opacity-100");
-      });
+      void menuModal.offsetWidth;
+      menuModal.classList.remove("opacity-0");
+      menuModal.classList.add("opacity-100");
     };
     const closeMenu = () => {
       if (!menuModal) return;
@@ -465,25 +557,32 @@ window.UI = {
     const btnMenu = document.getElementById("btnMenu");
     if (btnMenu) btnMenu.addEventListener("click", openMenu);
 
+    const btnHudSettings = document.getElementById("btnHudSettings");
+    if (btnHudSettings) btnHudSettings.addEventListener("click", openMenu);
+
+    const btnTitleSettings = document.getElementById("btnTitleSettings");
+    if (btnTitleSettings) btnTitleSettings.addEventListener("click", openMenu);
+
     const btnMenuClose = document.getElementById("btnMenuClose");
     if (btnMenuClose) btnMenuClose.addEventListener("click", closeMenu);
 
     const btnMenuResume = document.getElementById("btnMenuResume");
     if (btnMenuResume) btnMenuResume.addEventListener("click", closeMenu);
 
-    // Stage Selection (Header Button, Menu Modal Stage 1, 2 & 3 Cards)
+    // Stage Selection (Header Button, Menu Modal Stage Cards)
     const loadStageFromUI = (stage) => {
       if (!stage) return;
       if (window.sfx) window.sfx.capsuleCatch();
-      engine.resetGame();
-      engine.loadStage(stage);
-
-      const txtHeader = document.getElementById("txtHeaderStage");
-      if (txtHeader) {
-        txtHeader.textContent = stage.id === "stage4" ? "STAGE 4" : (stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1"));
+      if (window.GameFlow && window.GameFlow.hideAllModals) {
+        window.GameFlow.hideAllModals();
       }
+      const stageNum =
+        stage.id === "stage5" ? 5 :
+        stage.id === "stage4" ? 4 :
+        stage.id === "stage3" ? 3 :
+        stage.id === "stage2" ? 2 : 1;
+      engine.startPracticeStage(stageNum);
       closeMenu();
-      UI.showCutin(`🚀【STAGE SELECT】<br>${stage.name} (${stage.bossName})`, 180);
     };
 
     const btnHeaderStage = document.getElementById("btnHeaderStage");
@@ -494,6 +593,7 @@ window.UI = {
           curId === "stage1" ? window.Stage2 :
           curId === "stage2" ? window.Stage3 :
           curId === "stage3" ? (window.Stage4 || window.Stage1) :
+          curId === "stage4" ? (window.Stage5 || window.Stage1) :
           window.Stage1;
         loadStageFromUI(next);
       });
@@ -514,6 +614,10 @@ window.UI = {
     const btnSelS4 = document.getElementById("btnSelectStage4");
     if (btnSelS4) {
       btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
+    }
+    const btnSelS5 = document.getElementById("btnSelectStage5");
+    if (btnSelS5) {
+      btnSelS5.addEventListener("click", () => loadStageFromUI(window.Stage5));
     }
 
     // Audio Mute / Unmute Toggle
@@ -542,5 +646,67 @@ window.UI = {
 
     const btnMenuAudio = document.getElementById("btnMenuToggleAudio");
     if (btnMenuAudio) btnMenuAudio.addEventListener("click", toggleAudio);
+  },
+
+  presentStageClearModal(state, cfg = {}) {
+    const stageIdx = state.stageIndex || 1;
+    const clearBonus = 50000 * stageIdx;
+    const isNoMiss = (state.stageMisses || 0) === 0;
+    const noMissBonus = isNoMiss ? 100000 * stageIdx : 0;
+    const totalBonus = clearBonus + noMissBonus;
+
+    if (!state._clearBonusAwarded) {
+      state._clearBonusAwarded = true;
+      state.score = (state.score || 0) + totalBonus;
+      state.peakScore = Math.max(state.peakScore || 0, state.score);
+    }
+
+    const modal = document.getElementById("clearModal");
+    if (!modal) return;
+
+    // Update clear bonus banner
+    const bonusText = document.getElementById("clearBonusText");
+    if (bonusText) {
+      if (isNoMiss) {
+        bonusText.innerHTML = `+${clearBonus.toLocaleString()} <span class="text-[#e6ff00]">/ 👑NO-MISS: +${noMissBonus.toLocaleString()}</span>`;
+      } else {
+        bonusText.textContent = `+${clearBonus.toLocaleString()} pts`;
+      }
+    }
+
+    if (cfg.bossDisplayName) {
+      const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
+      if (nameEl) nameEl.textContent = cfg.bossDisplayName;
+    }
+    if (cfg.defeatQuoteHtml) {
+      const quoteEl = modal.querySelector("p");
+      if (quoteEl) quoteEl.innerHTML = cfg.defeatQuoteHtml;
+    }
+
+    const relicSection = document.getElementById("relicSection");
+    const nextBtn = document.getElementById("btnClearNext");
+
+    const isStage5 = stageIdx === 5 || (window.currentStage && window.currentStage.id === "stage5");
+    if (isStage5) {
+      if (relicSection) relicSection.classList.add("hidden");
+      if (nextBtn) {
+        nextBtn.innerHTML = `⚡ 統合司令AIの緊急通信を受信 (ENDING) ▶`;
+        nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#00f5e8] via-[#34ff8a] to-[#e6ff00] active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110 animate-pulse";
+      }
+    } else {
+      if (relicSection) relicSection.classList.remove("hidden");
+      if (nextBtn) {
+        nextBtn.innerHTML = `次のステージへ進む ▶`;
+        nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110";
+      }
+    }
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    void modal.offsetWidth;
+    modal.classList.remove("opacity-0");
+    modal.classList.add("opacity-100");
+
+    this.updateHUD(state);
   }
 };

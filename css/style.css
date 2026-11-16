@@ -84,3 +84,26 @@ body {
   );
   background-size: 100% 4px;
 }
+
+#playfieldFrame {
+  aspect-ratio: 420 / 660;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+#playfieldFrame.title-screen-mode {
+  aspect-ratio: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+@supports (width: min(10px, 20px)) {
+  #playfieldArea {
+    container-type: size;
+  }
+  #playfieldFrame {
+    width: min(100cqw, calc(100cqh * 420 / 660));
+    height: min(100cqh, calc(100cqw * 660 / 420));
+  }
+}
+

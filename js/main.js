@@ -15,6 +15,11 @@ window.addEventListener("DOMContentLoaded", () => {
   // Start Animation Loop
   GameEngine.start();
 
+  // Initialize Game Flow (Title Screen & High Scores)
+  if (window.GameFlow) {
+    GameFlow.init();
+  }
+
   // Stage Clear Modal Actions
   const modal = document.getElementById("clearModal");
   if (modal) {
@@ -27,7 +32,12 @@ window.addEventListener("DOMContentLoaded", () => {
           modal.classList.add("hidden");
           modal.classList.remove("flex");
         }, 200);
-        GameEngine.resetGame();
+        const curIdx = (GameEngine.state && GameEngine.state.stageIndex) || 1;
+        if (GameEngine.state && GameEngine.state.gameMode === "practice") {
+          GameEngine.startPracticeStage(curIdx);
+        } else {
+          GameEngine.startArcadeCampaign();
+        }
       });
     }
 
@@ -40,21 +50,23 @@ window.addEventListener("DOMContentLoaded", () => {
           modal.classList.add("hidden");
           modal.classList.remove("flex");
         }, 200);
+
         const curId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
-        GameEngine.resetGame();
-        if (curId === "stage1" && window.Stage2) {
-          GameEngine.loadStage(Stage2);
-          UI.showCutin("🚀【STAGE 2 突入】<br>疾風紫電セルティ 迎撃戦開始！", 220);
-        } else if (curId === "stage2" && window.Stage3) {
-          GameEngine.loadStage(Stage3);
-          UI.showCutin("🚀【STAGE 3 突入】<br>電脳空間ノア ハッキング戦開始！", 220);
-        } else if (curId === "stage3" && window.Stage4) {
-          GameEngine.loadStage(Stage4);
-          UI.showCutin("🌸【STAGE 4 突入】<br>電脳夜桜カスミ 忍法迎撃戦開始！", 220);
-        } else if (window.Stage1) {
-          GameEngine.loadStage(Stage1);
-          UI.showCutin("🚀【STAGE 1 再出撃】<br>桃色装甲リリス 迎撃戦開始！", 200);
+        if (curId === "stage5") {
+          // Final stage clear -> Launch 3-Act Ending!
+          if (window.GameFlow && window.GameFlow.startEnding) {
+            GameFlow.startEnding(GameEngine.state);
+          }
+          return;
         }
+
+        // Selected relic
+        let chosenRelic = "radar";
+        const selectedBtn = document.querySelector(".relic-btn.border-\\[\\#e6ff00\\]");
+        if (selectedBtn && selectedBtn.dataset.relic) {
+          chosenRelic = selectedBtn.dataset.relic;
+        }
+        GameEngine.advanceToNextStage(chosenRelic);
       });
     }
 
@@ -78,7 +90,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const dbgPuruTest = document.getElementById("dbgPuruTest");
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
     const cur = GameEngine.currentStage;
-    if (cur && cur.id === "stage4" && window.Stage4) {
+    if (cur && cur.id === "stage5" && window.Stage5) {
+      Stage5.triggerDebugJiggle(GameEngine.state);
+    } else if (cur && cur.id === "stage4" && window.Stage4) {
       Stage4.triggerDebugJiggle(GameEngine.state);
     } else if (cur && cur.id === "stage3" && window.Stage3) {
       const b = GameEngine.state.boss;
@@ -129,11 +143,16 @@ window.addEventListener("DOMContentLoaded", () => {
       currentId === "stage1" ? window.Stage2 :
       currentId === "stage2" ? window.Stage3 :
       currentId === "stage3" ? (window.Stage4 || window.Stage1) :
+      currentId === "stage4" ? (window.Stage5 || window.Stage1) :
       window.Stage1;
     if (nextStage) {
-      GameEngine.resetGame();
-      GameEngine.loadStage(nextStage);
-      UI.showCutin(`⚡【STAGE SWITCH】<br>${nextStage.name} (${nextStage.bossName})`, 180);
+      if (window.GameFlow && GameFlow.hideAllModals) GameFlow.hideAllModals();
+      const sIdx =
+        nextStage.id === "stage5" ? 5 :
+        nextStage.id === "stage4" ? 4 :
+        nextStage.id === "stage3" ? 3 :
+        nextStage.id === "stage2" ? 2 : 1;
+      GameEngine.startPracticeStage(sIdx);
     }
   });
 });

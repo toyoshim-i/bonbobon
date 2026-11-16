@@ -218,7 +218,7 @@
               <div class="text-[10px] font-black text-[#e6ff00] tracking-wider uppercase flex items-center gap-1">
                 <span>🚀 SELECT STAGE (ステージ選択)</span>
               </div>
-              <div class="grid grid-cols-3 gap-1.5">
+              <div class="grid grid-cols-2 gap-1.5">
                 <button id="btnSelectStage1" class="p-2 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
                   <span class="text-[10px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
                   <span class="text-[9px] font-bold text-white leading-tight">桃色装甲リリス</span>
@@ -233,6 +233,11 @@
                   <span class="text-[10px] font-black text-[#e6ff00] group-hover:text-white">STAGE 3</span>
                   <span class="text-[9px] font-bold text-white leading-tight">電脳空間ノア</span>
                   <span class="text-[7px] text-gray-400 leading-tight">浮遊ビット・転送手</span>
+                </button>
+                <button id="btnSelectStage4" class="p-2 rounded-xl bg-[#281058]/80 hover:bg-[#b84dff]/25 border-2 border-[#b84dff] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                  <span class="text-[10px] font-black text-[#b84dff] group-hover:text-white">STAGE 4</span>
+                  <span class="text-[9px] font-bold text-white leading-tight">電脳夜桜カスミ</span>
+                  <span class="text-[7px] text-gray-400 leading-tight">立体レール・手裏剣</span>
                 </button>
               </div>
             </div>
@@ -450,7 +455,7 @@
               👁 表情切替
             </button>
             <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition">
-              ⚡ STAGE 1/2/3切替
+              ⚡ STAGE 1〜4切替
             </button>
           </div>
         </div>
@@ -462,6 +467,7 @@
   <script src="./js/stage1_assets.js?v=150"></script>
   <script src="./js/stage2_assets.js?v=150"></script>
   <script src="./js/stage3_assets.js?v=150"></script>
+  <script src="./js/stage4_assets.js?v=150"></script>
   <script src="./js/audio.js?v=150"></script>
   <script src="./js/engine/particles.js?v=150"></script>
   <script src="./js/engine/physics.js?v=150"></script>
@@ -471,6 +477,7 @@
   <script src="./js/stages/stage1.js?v=150"></script>
   <script src="./js/stages/stage2.js?v=150"></script>
   <script src="./js/stages/stage3.js?v=150"></script>
+  <script src="./js/stages/stage4.js?v=150"></script>
   <script src="./js/engine/game_engine.js?v=150"></script>
   <script src="./js/main.js?v=150"></script>
 </body>

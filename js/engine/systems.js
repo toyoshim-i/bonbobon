@@ -311,6 +311,8 @@ window.Systems = {
 
   prepareBallForLaunch(state) {
     state.balls = [];
+    state.flipperPinL = 0;
+    state.flipperPinR = 0;
     state.plunger.waitingForLaunch = true;
     state.plunger.power = 0;
     state.plunger.pulling = false;

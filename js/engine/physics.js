@@ -81,7 +81,44 @@ window.Physics = {
       const st = this.flipperState[idx];
       st.prevAngle = st.angle;
       const pressed = f.isLeft ? state.leftFlipperDown : state.rightFlipperDown;
-      const target = pressed ? f.activeAngle : f.restAngle;
+      const wasPressed = !!st.wasPressed;
+      st.wasPressed = pressed;
+
+      // Track active swing edge (for timed parry) & 5-tap shuriken shake-off!
+      if (pressed && !wasPressed) {
+        st.justPressedTimer = 12;
+        const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
+        if ((state[pinKey] || 0) > 0) {
+          state[pinKey]--;
+          st.pinShake = 8;
+          const mx = f.px + Math.cos(st.angle) * (f.len * 0.55);
+          const my = f.py + Math.sin(st.angle) * (f.len * 0.55);
+          if (state[pinKey] === 0) {
+            if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
+            if (window.Particles) {
+              Particles.add(state, mx, my, "#e6ff00", 16, 4.8);
+              Particles.addPopup(state, mx, my - 16, "⚔️拘束解除!!", "#00f5d4", 1.1);
+            }
+          } else {
+            if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+            if (window.Particles) {
+              Particles.add(state, mx, my, "#b84dff", 5, 2.4);
+              Particles.addPopup(state, mx, my - 14, `📌あと${state[pinKey]}回!`, "#e6ff00", 0.92);
+            }
+          }
+        }
+      } else if ((st.justPressedTimer || 0) > 0) {
+        st.justPressedTimer--;
+      }
+      if ((st.pinShake || 0) > 0) st.pinShake--;
+
+      // Clamp flipper lift to 1/3 range while pinned by a shuriken!
+      const pinnedCount = f.isLeft ? (state.flipperPinL || 0) : (state.flipperPinR || 0);
+      const effectiveActive = pinnedCount > 0
+        ? (f.restAngle + (f.activeAngle - f.restAngle) * 0.33)
+        : f.activeAngle;
+
+      const target = pressed ? effectiveActive : f.restAngle;
       st.angle += (target - st.angle) * 0.44;
     });
   },
@@ -101,6 +138,7 @@ window.Physics = {
     state.nudgeOffset.y = (ny * 20 + (Math.random() - 0.5) * 6) * intensity;
 
     state.balls.forEach(b => {
+      if (b._onWireRamp) return;
       b.vx += nx * 6.2 * intensity;
       b.vy += ny * 6.2 * intensity;
 
@@ -204,6 +242,9 @@ window.Physics = {
 
   // Substep ball physics iteration
   stepBallPhysics(state, ball, gravity, SUBSTEPS, s) {
+    // Elevated 3D wireform ramp bypasses ground-level walls & flippers
+    if (ball._onWireRamp) return;
+
     // Plunger resting lock
     if (ball.inShooterLane && state.plunger.waitingForLaunch) {
       ball.x = 393;

@@ -108,7 +108,7 @@ window.GameEngine = {
 
     const txtHeader = document.getElementById("txtHeaderStage");
     if (txtHeader) {
-      txtHeader.textContent = stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1");
+      txtHeader.textContent = stage.id === "stage4" ? "STAGE 4" : (stage.id === "stage3" ? "STAGE 3" : (stage.id === "stage2" ? "STAGE 2" : "STAGE 1"));
     }
   },
 
@@ -283,7 +283,7 @@ window.GameEngine = {
       const speed = Math.hypot(ball.vx, ball.vy);
       const isTrappedInWell = (state.boss && state.boss.crotch && state.boss.chestArmorBroken &&
                                Math.hypot(ball.x - state.boss.crotch.x, ball.y - state.boss.crotch.y) < 22);
-      const isStuck = !ball.inShooterLane && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
+      const isStuck = !ball.inShooterLane && !ball._onWireRamp && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
 
       if (isStuck) {
         ball.stuckTimer = (ball.stuckTimer || 0) + 1;
@@ -544,12 +544,11 @@ window.GameEngine = {
           ctx.closePath();
         };
 
-        // 2. カプセル背後のホログラム発光オーラ
+        // 2. カプセル背後のホログラム発光オーラ（高速な半透明アウトライン・ゼロGPUブラー）
         ctx.save();
-        ctx.shadowColor = cap.color;
-        ctx.shadowBlur = 12;
         ctx.strokeStyle = cap.color;
-        ctx.lineWidth = 2.0;
+        ctx.lineWidth = 4.5;
+        ctx.globalAlpha = 0.32;
         drawCapsulePath();
         ctx.stroke();
         ctx.restore();
@@ -646,8 +645,18 @@ window.GameEngine = {
       }
       ctx.restore();
 
-      // Balls
+      // Balls (ground-level; elevated wire-ramp balls cast a shadow here and render in renderForeground)
       state.balls.forEach(ball => {
+        if (ball._onWireRamp) {
+          const h = ball._onWireRamp.elev || 1.0;
+          ctx.save();
+          ctx.fillStyle = `rgba(4, 2, 18, ${0.38 + h * 0.16})`;
+          ctx.beginPath();
+          ctx.ellipse(ball.x + 5 * h, ball.y + 9 * h, ball.r * 0.92, ball.r * 0.65, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
         if (ball.trail && ball.trail.length > 1) {
           for (let i = 0; i < ball.trail.length; i++) {
             const pt = ball.trail[i];
@@ -674,6 +683,15 @@ window.GameEngine = {
         ctx.fillRect(ball.x - 2, ball.y - 2, 2, 2);
         ctx.restore();
       });
+    }
+
+    // Stage Foreground Overlays (3D Wireform Ramps, Elevated Balls, Foreground Petals)
+    if (!isPostWhiteout && this.currentStage && this.currentStage.renderForeground) {
+      try {
+        this.currentStage.renderForeground(ctx, state, this);
+      } catch (err) {
+        console.error("renderForeground error:", err);
+      }
     }
 
     // Particles, Popups, Hearts & Shockwaves

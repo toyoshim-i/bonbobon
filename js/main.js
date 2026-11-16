@@ -48,6 +48,9 @@ window.addEventListener("DOMContentLoaded", () => {
         } else if (curId === "stage2" && window.Stage3) {
           GameEngine.loadStage(Stage3);
           UI.showCutin("🚀【STAGE 3 突入】<br>電脳空間ノア ハッキング戦開始！", 220);
+        } else if (curId === "stage3" && window.Stage4) {
+          GameEngine.loadStage(Stage4);
+          UI.showCutin("🌸【STAGE 4 突入】<br>電脳夜桜カスミ 忍法迎撃戦開始！", 220);
         } else if (window.Stage1) {
           GameEngine.loadStage(Stage1);
           UI.showCutin("🚀【STAGE 1 再出撃】<br>桃色装甲リリス 迎撃戦開始！", 200);
@@ -75,7 +78,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const dbgPuruTest = document.getElementById("dbgPuruTest");
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
     const cur = GameEngine.currentStage;
-    if (cur && cur.id === "stage3" && window.Stage3) {
+    if (cur && cur.id === "stage4" && window.Stage4) {
+      Stage4.triggerDebugJiggle(GameEngine.state);
+    } else if (cur && cur.id === "stage3" && window.Stage3) {
       const b = GameEngine.state.boss;
       if (b.chestArmorBroken) {
         Stage3.impulseBust(GameEngine.state, "L", 7.2, -7.8);
@@ -120,7 +125,11 @@ window.addEventListener("DOMContentLoaded", () => {
   if (dbgStageToggle) dbgStageToggle.addEventListener("click", () => {
     if (window.sfx) window.sfx.flipperClick();
     const currentId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
-    const nextStage = currentId === "stage1" ? window.Stage2 : (currentId === "stage2" ? window.Stage3 : window.Stage1);
+    const nextStage =
+      currentId === "stage1" ? window.Stage2 :
+      currentId === "stage2" ? window.Stage3 :
+      currentId === "stage3" ? (window.Stage4 || window.Stage1) :
+      window.Stage1;
     if (nextStage) {
       GameEngine.resetGame();
       GameEngine.loadStage(nextStage);

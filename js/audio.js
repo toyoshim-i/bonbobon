@@ -126,6 +126,78 @@ class FMSoundEngine {
     setTimeout(() => this.playFM(990, 247.5, 180, 0.22, "square", 880, 0.12), 45);
   }
 
+  // Wireform ramp entry gate click & upward whoosh
+  rampEnter() {
+    this.playFM(980, 490, 140, 0.05, "triangle", 1560, 0.12);
+    setTimeout(() => this.playFM(420, 210, 180, 0.22, "sine", 1320, 0.14), 30);
+  }
+
+  // Wireform rail glide tick
+  rampRailTick(step = 0) {
+    const f = 740 + (step % 6) * 95;
+    this.playFM(f, f * 1.5, 65, 0.04, "sine", f * 1.12, 0.065);
+  }
+
+  // Japanese pentatonic cyber-lantern chime (idx = 0..4)
+  lanternBell(idx = 0, fullCombo = false) {
+    const scale = [587.33, 659.25, 783.99, 880.0, 1174.66]; // D5, E5, G5, A5, D6 (Japanese Yo/Min'yo scale)
+    const f = scale[Math.max(0, Math.min(4, idx | 0))];
+    this.playFM(f, f * 2.0, 220, 0.28, "sine", f * 0.995, 0.16);
+    setTimeout(() => this.playFM(f * 2, f, 90, 0.18, "triangle", null, 0.09), 25);
+    if (fullCombo) {
+      [587.33, 783.99, 880.0, 1174.66, 1567.98].forEach((cf, i) => {
+        setTimeout(() => this.playFM(cf, cf * 0.5, 160, 0.22, "square", cf * 1.04, 0.14), 70 + i * 42);
+      });
+    }
+  }
+
+  // High-RPM shuriken spinner metallic whirr
+  spinnerTick(rpmFactor = 1.0) {
+    const f = 1150 + Math.min(900, rpmFactor * 520);
+    this.playFM(f, f * 0.75, 120, 0.035, "triangle", f * 1.18, 0.08);
+  }
+
+  // Cyber-shuriken throw slash
+  shurikenThrow() {
+    this.playFM(1680, 840, 320, 0.09, "sawtooth", 520, 0.13);
+    setTimeout(() => this.playFM(2240, 1120, 180, 0.06, "triangle", 960, 0.09), 30);
+  }
+
+  // Crisp katana/steel clang when parrying a thrown shuriken!
+  shurikenParry() {
+    this.playFM(2480, 1240, 540, 0.16, "square", 1760, 0.20);
+    setTimeout(() => this.playFM(3120, 780, 360, 0.24, "sine", 2640, 0.16), 22);
+    setTimeout(() => this.playFM(1560, 390, 240, 0.20, "sawtooth", 2080, 0.13), 48);
+  }
+
+  // Japanese koto/shamisen electric string twang for Cyber Chakra Wires!
+  kotoWireTwang(idx = 0, snapOverload = false) {
+    const scale = [440, 493.88, 523.25, 659.25, 698.46, 880]; // Hirajoshi minor pentatonic!
+    const f = scale[idx % scale.length];
+    this.playFM(f, f * 2.0, 480, 0.26, "sawtooth", f * 0.99, 0.17);
+    setTimeout(() => this.playFM(f * 2, f, 200, 0.20, "triangle", f * 1.5, 0.11), 24);
+    if (snapOverload) {
+      [0, 2, 3, 5].forEach((s, i) => {
+        const sf = scale[s] * 1.5;
+        setTimeout(() => this.playFM(sf, sf * 0.5, 320, 0.22, "square", sf * 1.25, 0.15), 55 + i * 38);
+      });
+    }
+  }
+
+  // Dramatic ninjutsu smoke-poof + cyber synth chord for Hologram Clones!
+  bunshinSummon() {
+    this.playFM(220, 65, 520, 0.18, "sawtooth", 90, 0.19);
+    [440, 523.25, 659.25, 987.77].forEach((f, i) => {
+      setTimeout(() => this.playFM(f, f * 1.5, 220, 0.16, "square", f * 1.12, 0.14), 35 + i * 32);
+    });
+  }
+
+  // Heavy metallic spinning blade grind/clang for Giant Fuma Shuriken!
+  fumaClash() {
+    this.playFM(1320, 330, 680, 0.18, "sawtooth", 880, 0.19);
+    setTimeout(() => this.playFM(1980, 495, 420, 0.15, "square", 1540, 0.15), 26);
+  }
+
   // Elastic soft damp "Funyon" sound for rabbit ear tips
   earBoing() {
     this.playFM(260, 22, 120, 0.26, "sine", 160, 0.16);

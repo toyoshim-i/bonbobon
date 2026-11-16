@@ -342,23 +342,23 @@ window.Stage5 = {
 
     if (state.phase < 3) {
       if (!b.elleBroken && !b.noelBroken) {
-        return "光輪・髪飾り・膝を破壊！";
+        return "光輪・髪飾り・膝を破壊せよ！";
       }
       if (b.elleBroken && !b.noelBroken) {
-        return b.prismL.hp > 0 ? "エル胸核＆ノエル装備！" : "ノエル装備を破壊せよ！";
+        return b.prismL.hp > 0 ? "エル胸核＆ノエル装備を破壊せよ！" : "ノエルの装備を破壊せよ！";
       }
       if (!b.elleBroken && b.noelBroken) {
-        return b.prismR.hp > 0 ? "ノエル胸核＆エル装備！" : "エル装備を破壊せよ！";
+        return b.prismR.hp > 0 ? "ノエル胸核＆エル装備を破壊せよ！" : "エルの装備を破壊せよ！";
       }
       return "胸部ブローチを破壊せよ！";
     }
     // Phase 3
     if (!b.chestArmorBroken) {
-      return `胸部装甲を破壊！(HP:${b.chestArmorHP})`;
+      return `胸部装甲を破壊せよ！(HP:${b.chestArmorHP})`;
     }
     const orbs = b.cherubOrbs.filter(o => o.active).length;
     if (orbs > 0 || b.coreGraceTimer > 0) {
-      return `精霊オーブを倒し結界解除！`;
+      return `精霊オーブを倒し結界を解除せよ！`;
     }
     return `アーク核を撃破せよ！(HP:${b.core.hp})`;
   },

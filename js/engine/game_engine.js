@@ -150,6 +150,10 @@ window.GameEngine = {
   },
 
   startArcadeCampaign() {
+    if (window.GameFlow) {
+      if (GameFlow.stopAttractDemo) GameFlow.stopAttractDemo();
+      if (GameFlow.hideAllModals) GameFlow.hideAllModals();
+    }
     this.state = this.createInitialState();
     this.state.gameMode = "arcade";
     this.state.stageIndex = 1;
@@ -166,6 +170,10 @@ window.GameEngine = {
   },
 
   startPracticeStage(stageNum) {
+    if (window.GameFlow) {
+      if (GameFlow.stopAttractDemo) GameFlow.stopAttractDemo();
+      if (GameFlow.hideAllModals) GameFlow.hideAllModals();
+    }
     const stageMap = {
       1: window.Stage1,
       2: window.Stage2,

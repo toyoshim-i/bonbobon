@@ -137,13 +137,13 @@ window.Stage1 = {
   getTargetDesc(state) {
     if (state.stageCleared) return "✨リリス撃破！ STAGE 1 CLEAR!";
     if (!state.boss.armR_Broken || !state.boss.armL_Broken) {
-      if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return "ドローン撃破でシールド解除！";
+      if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return "ドローンを撃破しシールド解除せよ！";
       return "両腕＆胴体の装甲を破壊せよ！";
     }
     if (!state.boss.chestArmorBroken) {
-      return `胴体装甲を集中砲火！(HP:${state.boss.chestArmorHP})`;
+      return `胴体装甲を集中砲火せよ！(HP:${state.boss.chestArmorHP})`;
     }
-    return `露出コアへ集中連打！(HP:${state.boss.coreHP})`;
+    return `露出コアへ集中連打せよ！(HP:${state.boss.coreHP})`;
   },
 
   updateStatusMonitor(state) {

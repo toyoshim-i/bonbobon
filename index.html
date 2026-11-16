@@ -79,42 +79,28 @@
     <!-- SMARTPHONE VERTICAL PINBALL CABINET (FIXED FULLSCREEN, NO SCROLL) -->
     <div id="cabinetRoot" class="pinball-stage-container relative flex flex-col justify-between items-center bg-[#0b0420] cyber-border rounded-xl p-1.5 sm:p-2 w-full max-w-[430px] h-full max-h-[100dvh] overflow-hidden box-border shrink-0">
 
-    <!-- HUD: 2-ROW BALANCED STATUS & OBJECTIVE BAR (HIDDEN IN TITLE / ATTRACT MODE) -->
-    <div id="inGameHudBar" class="hidden w-full bg-[#140730] border border-[#00f5d4]/50 rounded-lg px-2.5 py-1.5 flex flex-col gap-1 my-1 shrink-0 shadow-md">
-      <!-- ROW 1: SCORE & BALLS / PHASE -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-baseline gap-2">
-          <span class="text-[9px] font-bold text-[#00f5d4]/80 tracking-wider">SCORE</span>
-          <span id="hudScore" class="text-sm sm:text-base font-black text-white tracking-wide">0</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="flex items-center gap-1.5">
-            <span id="hudShield" class="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider">🛡️SAFE</span>
-            <span id="hudMisses" class="text-[9px] font-mono text-gray-300 font-bold">MISS:0</span>
-          </div>
-          <span id="hudPhase" class="px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]">PHASE 1</span>
-          <button id="btnHudSettings" class="px-1.5 py-0.5 rounded bg-[#3d0f5a] hover:bg-[#ff1493] text-[#00f5d4] border border-[#00f5d4]/60 text-[9px] font-bold cursor-pointer transition flex items-center gap-0.5" title="SETTINGS">
-            <span>⚙️</span>
-          </button>
-        </div>
+    <!-- HUD: ULTRA-COMPACT SINGLE-ROW STATUS BAR (HIDDEN IN TITLE / ATTRACT MODE) -->
+    <div id="inGameHudBar" class="hidden w-full h-7 bg-[#140730] border border-[#00f5d4]/50 rounded-lg px-2 py-0.5 my-0.5 shrink-0 shadow-md flex items-center justify-between gap-1 overflow-hidden">
+      <span id="hudMisses" class="hidden"></span>
+      <!-- LEFT: SCORE -->
+      <div class="flex items-baseline gap-1 shrink-0">
+        <span class="text-[8px] font-bold text-[#00f5d4]/80 tracking-wider">SCORE</span>
+        <span id="hudScore" class="text-xs sm:text-sm font-black text-white tabular-nums tracking-tight whitespace-nowrap">0</span>
       </div>
 
-      <!-- ROW 2: FEVER GAUGE & TARGET OBJECTIVE -->
-      <div class="flex items-center gap-1.5 pt-1 border-t border-[#00f5d4]/20">
-        <!-- FEVER -->
-        <div class="flex items-center gap-1 shrink-0 w-[96px] sm:w-[114px]">
-          <span class="text-[9px] font-bold text-[#ff1493]">FEVER</span>
-          <div class="flex-1 h-2 bg-black/60 rounded overflow-hidden border border-[#ff1493]/50">
-            <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
-          </div>
-          <span id="hudBurstTimer" class="text-[9px] font-bold text-[#00f5d4] w-7 text-right shrink-0">0%</span>
+      <!-- CENTER-RIGHT: MERGED FEVER GAUGE -->
+      <div class="flex items-center gap-1 shrink-0">
+        <span class="text-[8px] font-extrabold text-[#ff1493] shrink-0">FEVER</span>
+        <div class="w-11 sm:w-14 h-2 bg-black/60 rounded overflow-hidden border border-[#ff1493]/50 shrink-0">
+          <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
         </div>
+        <span id="hudBurstTimer" class="whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] font-bold text-[#00f5d4]">0%</span>
+      </div>
 
-        <!-- TARGET OBJECTIVE -->
-        <div class="flex-1 min-w-0 flex items-center justify-end gap-1 text-right">
-          <span class="text-[9px] font-bold text-[#e6ff00]/70 shrink-0">目標:</span>
-          <span id="hudPhaseTarget" class="text-[9.5px] sm:text-[10px] font-bold text-[#e6ff00] truncate">ドローン＆両肩アーマー破壊</span>
-        </div>
+      <!-- RIGHT: SHIELD & PHASE -->
+      <div class="flex items-center gap-1 shrink-0">
+        <span id="hudShield" class="px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0">🛡️SAFE</span>
+        <span id="hudPhase" class="px-1 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[8px] font-extrabold text-[#ff1493] whitespace-nowrap shrink-0">PH.1</span>
       </div>
     </div>
 
@@ -123,6 +109,13 @@
       <div id="playfieldFrame" class="title-screen-mode relative aspect-[420/660] max-w-full rounded-lg overflow-hidden border border-[#ff1493]/70 bg-[#09031c] flex items-center justify-center shadow-inner touch-none select-none">
         <canvas id="pinballCanvas" width="420" height="660" class="w-full h-full block pixel-canvas object-contain touch-none select-none"></canvas>
         <div class="scanlines pointer-events-none absolute inset-0"></div>
+
+        <!-- FLOATING OVERLAID OBJECTIVE TARGET (FRAMELESS, ZERO VERTICAL SPACE EATEN) -->
+        <div id="hudObjectivePill" class="absolute top-1.5 inset-x-2 z-20 pointer-events-none justify-center hidden transition-opacity duration-200">
+          <div class="text-[10px] font-black tracking-wide text-[#e6ff00] text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.9);">
+            <span id="hudPhaseTarget">ドローン＆両肩アーマーを破壊せよ！</span>
+          </div>
+        </div>
 
         <!-- DIALOGUE / CUT-IN BANNER OVERLAY (HIGH TRANSPARENCY TO PRESERVE BACKDROP EFFECTS) -->
         <div id="cutinBanner" class="pointer-events-none absolute top-2 left-2 right-2 hidden items-center justify-center px-3 py-1.5 rounded-lg bg-[#120326]/45 border border-[#e6ff00]/80 shadow-lg text-center transition-all duration-300">
@@ -306,12 +299,12 @@
         <div id="titleModal" class="absolute inset-0 z-40 flex flex-col justify-between pt-1.5 px-2 pb-2 bg-[#070214] pointer-events-auto transition-opacity duration-500">
           <!-- BACKDROP KEY ART (100% FULL-FRAME VIEW) -->
           <div class="absolute inset-0 pointer-events-none overflow-hidden">
-            <img src="./assets/ui/title_key.jpg?v=183" class="w-full h-full object-cover" style="object-position: 50% 50%;" alt="Title Key Art" onerror="this.style.display='none'">
+            <img src="./assets/ui/title_key.jpg?v=186" class="w-full h-full object-cover" style="object-position: 50% 50%;" alt="Title Key Art" onerror="this.style.display='none'">
           </div>
 
           <!-- STANDALONE PIXEL-ART TITLE LOGO -->
           <div class="relative z-10 w-full flex justify-center pt-0.5 pointer-events-none select-none shrink-0">
-            <img src="./assets/ui/title_logo.png?v=183" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
+            <img src="./assets/ui/title_logo.png?v=186" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
           </div>
 
           <!-- OPEN CENTER (SHOWCASES ALL HEROINES & FLIPPERS AT 100% OPACITY) -->
@@ -321,7 +314,7 @@
         <!-- IDLE ATTRACT-MODE STORY DEMO MODAL (MSX GRADIUS 2 / SPACE MANBOW STYLE) -->
         <div id="attractModal" class="absolute inset-0 z-40 hidden flex-col justify-end overflow-hidden bg-black pointer-events-auto transition-opacity duration-500 opacity-0 cursor-pointer select-none">
           <!-- CUT IMAGE BACKGROUND -->
-          <img id="attractBgImg" src="./assets/ui/story_1.jpg?v=183" class="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" alt="Attract Story">
+          <img id="attractBgImg" src="./assets/ui/story_1.jpg?v=186" class="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" alt="Attract Story">
 
           <!-- RETRO 16-BIT ELECTROMAGNETIC CRACKLE FX CANVAS (CUT 3) -->
           <canvas id="attractFxCanvas" width="768" height="1376" class="absolute inset-0 w-full h-full object-cover pointer-events-none"></canvas>
@@ -429,7 +422,7 @@
             <div class="flex items-center justify-between gap-1 my-auto">
               <!-- LEFT: COMMANDER PORTRAIT -->
               <div class="w-[96px] h-[120px] rounded border-2 border-[#34ff8a] bg-black/80 overflow-hidden flex flex-col shrink-0 relative">
-                <img src="./assets/ui/commander.jpg?v=183" alt="Commander" class="w-full h-full object-cover" style="filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(320%) contrast(125%);" onerror="this.style.display='none'">
+                <img src="./assets/ui/commander.jpg?v=186" alt="Commander" class="w-full h-full object-cover" style="filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(320%) contrast(125%);" onerror="this.style.display='none'">
                 <div class="absolute bottom-0 inset-x-0 bg-black/90 text-center text-[7.5px] font-mono font-bold text-[#34ff8a] py-0.5 border-t border-[#125830]">
                   [COMMANDER]
                 </div>
@@ -567,17 +560,12 @@
     </div>
 
     <!-- STOCKED BUFF SLOTS & BURST TRIGGER BUTTON (HIDDEN IN TITLE / ATTRACT MODE) -->
-    <div id="inGameBuffBar" class="hidden w-full mt-1 bg-[#150734] border border-[#ff1493]/60 rounded-lg p-1.5 shrink-0">
-      <div class="flex items-center justify-between mb-1 px-0.5">
-        <span class="text-[10px] font-bold text-[#00f5d4]">KEEP BUFFS</span>
-        <span id="hudComboPreview" class="text-[10px] font-bold text-[#e6ff00]">同時発動ボーナス: 待機中</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
-        <button id="btnBurst" class="px-2.5 py-2 rounded-lg font-extrabold text-[11px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border-2 border-[#e6ff00] neon-glow active:scale-95 transition cursor-pointer shrink-0">
-          BURST解放
-        </button>
-      </div>
+    <div id="inGameBuffBar" class="hidden w-full mt-0.5 bg-[#150734] border border-[#ff1493]/60 rounded-lg px-1.5 py-1 shrink-0 flex items-center gap-1.5 overflow-hidden">
+      <span id="hudComboPreview" class="hidden"></span>
+      <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
+      <button id="btnBurst" class="h-7 px-2.5 rounded-md font-extrabold text-[10px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border border-[#e6ff00] neon-glow active:scale-95 transition cursor-pointer shrink-0 flex items-center justify-center">
+        BURST
+      </button>
     </div>
 
     <!-- TITLE CONTROLS DECK (SHOWN WHEN state.inTitle === true) -->
@@ -692,24 +680,24 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
-  <script src="./js/stage1_assets.js?v=183"></script>
-  <script src="./js/stage2_assets.js?v=183"></script>
-  <script src="./js/stage3_assets.js?v=183"></script>
-  <script src="./js/stage4_assets.js?v=183"></script>
-  <script src="./js/stage5_assets.js?v=183"></script>
-  <script src="./js/audio.js?v=183"></script>
-  <script src="./js/engine/particles.js?v=183"></script>
-  <script src="./js/engine/physics.js?v=183"></script>
-  <script src="./js/engine/systems.js?v=183"></script>
-  <script src="./js/engine/stage_common.js?v=183"></script>
-  <script src="./js/engine/ui.js?v=183"></script>
-  <script src="./js/stages/stage1.js?v=183"></script>
-  <script src="./js/stages/stage2.js?v=183"></script>
-  <script src="./js/stages/stage3.js?v=183"></script>
-  <script src="./js/stages/stage4.js?v=183"></script>
-  <script src="./js/stages/stage5.js?v=183"></script>
-  <script src="./js/engine/game_engine.js?v=183"></script>
-  <script src="./js/game_flow.js?v=183"></script>
-  <script src="./js/main.js?v=183"></script>
+  <script src="./js/stage1_assets.js?v=186"></script>
+  <script src="./js/stage2_assets.js?v=186"></script>
+  <script src="./js/stage3_assets.js?v=186"></script>
+  <script src="./js/stage4_assets.js?v=186"></script>
+  <script src="./js/stage5_assets.js?v=186"></script>
+  <script src="./js/audio.js?v=186"></script>
+  <script src="./js/engine/particles.js?v=186"></script>
+  <script src="./js/engine/physics.js?v=186"></script>
+  <script src="./js/engine/systems.js?v=186"></script>
+  <script src="./js/engine/stage_common.js?v=186"></script>
+  <script src="./js/engine/ui.js?v=186"></script>
+  <script src="./js/stages/stage1.js?v=186"></script>
+  <script src="./js/stages/stage2.js?v=186"></script>
+  <script src="./js/stages/stage3.js?v=186"></script>
+  <script src="./js/stages/stage4.js?v=186"></script>
+  <script src="./js/stages/stage5.js?v=186"></script>
+  <script src="./js/engine/game_engine.js?v=186"></script>
+  <script src="./js/game_flow.js?v=186"></script>
+  <script src="./js/main.js?v=186"></script>
 </body>
 </html>

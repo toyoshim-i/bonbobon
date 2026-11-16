@@ -58,18 +58,25 @@ window.UI = {
   showCutin(text, durationFrames = 130) {
     const banner = this.el("cutinBanner");
     const txt = this.el("cutinText");
+    const objectivePill = this.el("hudObjectivePill");
     if (!banner || !txt) return;
 
     txt.innerHTML = text;
     banner.classList.remove("hidden");
     banner.classList.add("flex");
     this._cutinVisible = true;
+    if (objectivePill) {
+      objectivePill.classList.add("opacity-0");
+    }
 
     clearTimeout(this._cutinTimer);
     this._cutinTimer = setTimeout(() => {
       banner.classList.remove("flex");
       banner.classList.add("hidden");
       this._cutinVisible = false;
+      if (objectivePill) {
+        objectivePill.classList.remove("opacity-0");
+      }
     }, durationFrames * 16);
   },
 
@@ -80,9 +87,14 @@ window.UI = {
     const titleControls = document.getElementById("titleControlsBar");
     const gameControls = document.getElementById("gameControlsBar");
     const playfieldFrame = document.getElementById("playfieldFrame");
+    const objectivePill = document.getElementById("hudObjectivePill");
 
     if (playfieldFrame) {
       playfieldFrame.classList.toggle("title-screen-mode", isTitle);
+    }
+    if (objectivePill) {
+      objectivePill.classList.toggle("hidden", isTitle);
+      objectivePill.classList.toggle("flex", !isTitle);
     }
 
     if (hudBar) {
@@ -117,21 +129,21 @@ window.UI = {
     this.updateScreenMode(state);
     this.setText("hudScore", state.score.toLocaleString());
 
-    let targetDesc = "ドローン＆両肩アーマー破壊";
+    let targetDesc = "ドローン＆両肩アーマーを破壊せよ！";
     if (window.currentStage && window.currentStage.getTargetDesc) {
       targetDesc = window.currentStage.getTargetDesc(state);
     }
-    const targetEl = this.el("hudTargetDesc") || this.el("hudPhaseTarget");
+    const targetEl = this.el("hudPhaseTarget") || this.el("hudTargetDesc");
     if (targetEl) this.setText(targetEl, targetDesc);
 
     const phaseEl = this.el("hudPhase");
     if (phaseEl) {
       if (state.stageCleared) {
-        this.setText(phaseEl, "STAGE CLEAR!");
-        this.setClass(phaseEl, "px-1.5 py-0.5 rounded bg-[#ff1493] text-white text-[9px] font-black tracking-wider animate-pulse shadow");
+        this.setText(phaseEl, "CLEAR!");
+        this.setClass(phaseEl, "px-1 py-0.5 rounded bg-[#ff1493] text-white text-[8px] font-black tracking-wider whitespace-nowrap shrink-0 animate-pulse shadow");
       } else {
-        this.setText(phaseEl, `PHASE ${state.phase}`);
-        this.setClass(phaseEl, "px-1.5 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[9px] font-extrabold text-[#ff1493]");
+        this.setText(phaseEl, `PH.${state.phase}`);
+        this.setClass(phaseEl, "px-1 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[8px] font-extrabold text-[#ff1493] whitespace-nowrap shrink-0");
       }
     }
 
@@ -141,15 +153,14 @@ window.UI = {
     if (fText) {
       if (state.fever.active) {
         const sec = Math.ceil(state.fever.timer / 60);
-        this.setText(fText, `×5 (${sec}s)`);
-        this.setClass(fText, "text-[9px] text-[#e6ff00] font-extrabold w-7 text-right shrink-0 leading-none animate-pulse");
+        this.setText(fText, `×5 ${sec}s`);
+        this.setClass(fText, "whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] text-[#e6ff00] font-extrabold animate-pulse");
       } else if (state.burstTimer > 0) {
-        const sec = Math.ceil(state.burstTimer / 60);
         this.setText(fText, `B×${state.burstMultiplier.toFixed(1)}`);
-        this.setClass(fText, "text-[9px] text-[#ff1493] font-bold w-7 text-right shrink-0 leading-none");
+        this.setClass(fText, "whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] text-[#ff1493] font-bold");
       } else {
         this.setText(fText, `${Math.floor(state.fever.gauge)}%`);
-        this.setClass(fText, "text-[9px] text-[#00f5d4] font-bold w-7 text-right shrink-0 leading-none");
+        this.setClass(fText, "whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] text-[#00f5d4] font-bold");
       }
     }
 
@@ -157,10 +168,10 @@ window.UI = {
     if (hudShield) {
       if (state.score > 0) {
         this.setText(hudShield, "🛡️SAFE");
-        this.setClass(hudShield, "px-1.5 py-0.5 rounded text-[9px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider");
+        this.setClass(hudShield, "px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0");
       } else {
-        this.setText(hudShield, "🚨DANGER!");
-        this.setClass(hudShield, "px-1.5 py-0.5 rounded text-[9px] font-extrabold text-[#ff0055] bg-[#ff0055]/20 border border-[#ff0055] tracking-wider animate-pulse");
+        this.setText(hudShield, "🚨DANGER");
+        this.setClass(hudShield, "px-1 py-0.5 rounded text-[8px] font-extrabold text-[#ff0055] bg-[#ff0055]/20 border border-[#ff0055] tracking-wider whitespace-nowrap shrink-0 animate-pulse");
       }
     }
     const hudMisses = this.el("hudMisses");
@@ -181,15 +192,12 @@ window.UI = {
             const def = window.Systems && Systems.BUFF_DEFS ? Systems.BUFF_DEFS[slot.id] : null;
             const color = def ? def.color : "#00f5d4";
             const label = def ? def.label : slot.id;
-            div.className = "rounded px-1 py-1 border text-center bg-[#230b4f] flex flex-col justify-center items-center h-10";
+            div.className = "h-7 rounded px-1 border bg-[#230b4f] flex items-center justify-between gap-0.5";
             div.style.borderColor = color;
-            div.innerHTML = `
-              <div class="text-[10px] font-bold leading-tight truncate w-full" style="color:${color}">${label}</div>
-              <div class="text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5">★Lv.${slot.tier}</div>
-            `;
+            div.innerHTML = `<span class="text-[8.5px] font-bold truncate leading-none" style="color:${color}">${label}</span><span class="text-[8px] text-[#e6ff00] font-black shrink-0 leading-none">★${slot.tier}</span>`;
           } else {
-            div.className = "rounded px-1 py-1 border border-dashed border-[#00f5d4]/30 text-center bg-black/30 flex flex-col justify-center items-center h-10";
-            div.innerHTML = `<div class="text-[9px] text-[#00f5d4]/40 font-mono leading-none">SLOT ${idx + 1}</div><div class="text-[9px] text-[#00f5d4]/30 leading-none mt-0.5">EMPTY</div>`;
+            div.className = "h-7 rounded px-1 border border-dashed border-[#00f5d4]/25 bg-black/30 flex items-center justify-center";
+            div.innerHTML = `<span class="text-[8px] text-[#00f5d4]/35 font-mono leading-none">SLOT ${idx + 1}</span>`;
           }
           slotsContainer.appendChild(div);
         });

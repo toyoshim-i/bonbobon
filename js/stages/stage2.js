@@ -2179,7 +2179,7 @@ window.Stage2 = {
     }
 
     if (state.phase === 3) {
-      return `リアクターコア直撃！(HP:${state.boss.core.hp})`;
+      return `リアクターコアを直撃せよ！(HP:${state.boss.core.hp})`;
     }
 
     if (state.phase === 2) {
@@ -2187,15 +2187,15 @@ window.Stage2 = {
       if (holo && holo.laserState === "charge") {
         return holo.isLocked ? "⚠️ロックオン！緊急回避せよ！" : "⚠️砲台追尾中！動き続けろ！";
       }
-      return "砲台・ノズル・胸先端を破壊！";
+      return "砲台・ノズル・胸先端を破壊せよ！";
     }
 
     // Phase 1
     const ant = state.boss.antenna;
     if (ant && ant.isActive) {
-      return "⚡放電中！停止の隙に抜けろ！";
+      return "⚡放電の隙を突いて上へ抜けろ！";
     }
-    return "左肩・両腕・アンテナを破壊！";
+    return "左肩・両腕・アンテナを破壊せよ！";
   },
 
   updateStatusMonitor(state) {

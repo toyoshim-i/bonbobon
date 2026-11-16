@@ -329,15 +329,15 @@ window.Stage4 = {
       const parts = [];
       if (!b.tekkoL.broken || !b.tekkoR.broken) parts.push("両コテ");
       if (!b.kneeL.broken || !b.kneeR.broken) parts.push("両膝");
-      return `${parts.join("・")}を破壊！(提灯${litCnt}/5)`;
+      return `${parts.join("・")}を破壊せよ！(提灯${litCnt}/5)`;
     }
     if (state.phase === 2) {
       return activeClones > 0
-        ? `忍装束を破壊！(HP:${b.chestArmorHP}/分身${activeClones})`
-        : `胸部忍装束を破壊！(HP:${b.chestArmorHP})`;
+        ? `忍装束を破壊せよ！(HP:${b.chestArmorHP}/分身${activeClones})`
+        : `胸部忍装束を破壊せよ！(HP:${b.chestArmorHP})`;
     }
     return activeClones > 0
-      ? `分身を倒し結界解除！(残${activeClones}体)`
+      ? `分身を倒し結界を解除せよ！(残${activeClones})`
       : `チャクラ核を撃破せよ！(HP:${b.core.hp})`;
   },
 

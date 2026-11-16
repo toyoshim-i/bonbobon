@@ -2738,18 +2738,18 @@ window.Stage3 = {
       return "✨ノア撃破！ STAGE 3 CLEAR!";
     }
     if (b.bitLasers && b.bitLasers.snipePhase === "locked" && !b.bitLasers.nudgedDuringLock) {
-      return "⚠️赤ロック！台揺らしで回避！";
+      return "⚠️赤ロック！台揺らしで回避せよ！";
     }
     const bitsAlive = this.getAllBits(b).filter(x => !x.broken).length;
     if (state.phase === 3) {
       return bitsAlive > 0
-        ? `首ペンダント連打！(HP:${b.core.hp}/機${bitsAlive})`
-        : `首ペンダントへ連打！(HP:${b.core.hp})`;
+        ? `首ペンダントを連打せよ！(HP:${b.core.hp}/機${bitsAlive})`
+        : `首ペンダントを連打せよ！(HP:${b.core.hp})`;
     }
     if (state.phase === 2) {
-      return `胸部ビスチェを破壊！(HP:${b.chestArmorHP})`;
+      return `胸部ビスチェを破壊せよ！(HP:${b.chestArmorHP})`;
     }
-    return `右膝アーマーを破壊！(HP:${b.kneePad.hp})`;
+    return `右膝アーマーを破壊せよ！(HP:${b.kneePad.hp})`;
   },
 
   updateStatusMonitor(state) {

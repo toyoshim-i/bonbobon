@@ -457,22 +457,30 @@ window.Stage3 = {
   onNudge(state, nx, ny, intensity) {
     if (!state.boss) return;
     const b = state.boss;
-    if (b.chestArmorBroken) {
-      this.impulseBust(state, "L", nx * 7.0 * intensity, ny * 7.0 * intensity);
-      this.impulseBust(state, "R", nx * 7.0 * intensity, ny * 7.0 * intensity);
-    } else {
-      b.bustL.vx += nx * 4.5 * intensity;
-      b.bustL.vy += ny * 4.6 * intensity;
-      b.bustR.vx += nx * 4.5 * intensity;
-      b.bustR.vy += ny * 4.6 * intensity;
+
+    if (window.Systems && Systems.isNudgeJiggleEnabled()) {
+      const mult = b.chestArmorBroken ? 3.5 : 1.8;
+      if (b.bustL && b.bustR) {
+        b.bustL.vx += nx * mult * intensity;
+        b.bustL.vy += ny * mult * intensity;
+        b.bustR.vx -= nx * mult * 0.4 * intensity;
+        b.bustR.vy += ny * mult * intensity;
+      }
+      if (b.hipButt && b.thigh) {
+        b.hipButt.vx += nx * 2.8 * intensity;
+        b.hipButt.vy += ny * 2.8 * intensity;
+        b.thigh.vx += nx * 2.0 * intensity;
+        b.thigh.vy += ny * 2.0 * intensity;
+      }
+      if (b.expression === "normal" || b.expression === "smug") {
+        b.expression = "blush";
+        b.expressionTimer = 30;
+      }
+      if (window.sfx && window.sfx.softPuru) {
+        window.sfx.softPuru();
+      }
     }
-    // 台揺らしでお尻＆太もももぷるんと連動
-    if (b.hipButt && b.thigh) {
-      b.hipButt.vx += nx * 4.6 * intensity;
-      b.hipButt.vy += ny * 4.6 * intensity;
-      b.thigh.vx += nx * 3.4 * intensity;
-      b.thigh.vy += ny * 3.4 * intensity;
-    }
+
     if (b.antenna) {
       b.antenna.angleVel += nx * 0.08 * intensity;
     }

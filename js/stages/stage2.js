@@ -292,6 +292,33 @@ window.Stage2 = {
     };
   },
 
+  onNudge(state, nx, ny, intensity) {
+    if (!state.boss) return;
+    if (window.Systems && Systems.isNudgeJiggleEnabled()) {
+      const b = state.boss;
+      const mult = intensity || 1.0;
+      if (b.tipBust) {
+        b.tipBust.vx += nx * 3.5 * mult;
+        b.tipBust.vy += ny * 3.5 * mult;
+      }
+      if (b.buttL) {
+        b.buttL.vx += nx * 3.0 * mult;
+        b.buttL.vy += ny * 3.0 * mult;
+      }
+      if (b.buttR) {
+        b.buttR.vx -= nx * 1.5 * mult;
+        b.buttR.vy += ny * 3.0 * mult;
+      }
+      if (b.expression === "normal" || b.expression === "smug") {
+        b.expression = "blush";
+        b.expressionTimer = 30;
+      }
+      if (window.sfx && window.sfx.softPuru) {
+        window.sfx.softPuru();
+      }
+    }
+  },
+
   update(state, engine) {
     if (!state.boss) return;
 

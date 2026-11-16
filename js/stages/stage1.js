@@ -258,9 +258,23 @@ window.Stage1 = {
   },
 
   onNudge(state, nx, ny, intensity) {
-    if (state.boss.chestArmorBroken) {
-      this.impulseBust(state, "L", nx * 5.5 * intensity, ny * 5.5 * intensity);
-      this.impulseBust(state, "R", nx * 5.5 * intensity, ny * 5.5 * intensity);
+    if (window.Systems && Systems.isNudgeJiggleEnabled() && state.boss) {
+      const bL = state.boss.bustL;
+      const bR = state.boss.bustR;
+      if (bL && bR) {
+        const mult = state.boss.chestArmorBroken ? 3.6 : 1.6;
+        bL.vx += nx * mult * intensity;
+        bL.vy += ny * mult * intensity;
+        bR.vx -= nx * mult * 0.4 * intensity;
+        bR.vy += ny * mult * intensity;
+        if (state.boss.chestArmorBroken && window.sfx && window.sfx.softPuru) {
+          window.sfx.softPuru();
+        }
+      }
+      if (state.boss.expression === "normal" || state.boss.expression === "smile") {
+        state.boss.expression = "blush";
+        state.boss.expressionTimer = 30;
+      }
     }
     this.impulseEar(state, "L", nx * 4.2 * intensity, ny * 4.2 * intensity);
     this.impulseEar(state, "R", nx * 4.2 * intensity, ny * 4.2 * intensity);

@@ -443,14 +443,20 @@ window.Stage4 = {
       p.vx += nx * 1.6 * intensity;
       p.vy += ny * 0.9 * intensity;
     });
-    const bImp = (b.chestArmorBroken ? 6.4 : 4.2) * intensity;
-    b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
-    b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
-    b.hipL.vx += nx * 4.0 * intensity; b.hipL.vy += ny * 3.8 * intensity;
-    b.hipR.vx += nx * 4.0 * intensity; b.hipR.vy += ny * 3.8 * intensity;
-    if (!b.faceAnim.sequence && b.expression === "normal") {
-      b.expression = b.chestArmorBroken ? "open_blush" : "shock";
-      b.expressionTimer = 24;
+
+    if (window.Systems && Systems.isNudgeJiggleEnabled()) {
+      const bImp = (b.chestArmorBroken ? 6.4 : 4.2) * intensity;
+      b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
+      b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
+      b.hipL.vx += nx * 4.0 * intensity; b.hipL.vy += ny * 3.8 * intensity;
+      b.hipR.vx += nx * 4.0 * intensity; b.hipR.vy += ny * 3.8 * intensity;
+      if (!b.faceAnim.sequence && b.expression === "normal") {
+        b.expression = b.chestArmorBroken ? "open_blush" : "shock";
+        b.expressionTimer = 24;
+      }
+      if (window.sfx && window.sfx.softPuru) {
+        window.sfx.softPuru();
+      }
     }
   },
 

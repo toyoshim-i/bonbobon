@@ -342,5 +342,43 @@ window.Systems = {
       trail: [],
       inShooterLane: false
     });
+  },
+
+  // -------------------------------------------------------------------------
+  // Persistent Settings (localStorage)
+  // -------------------------------------------------------------------------
+  settingsKey: "bonbobon_settings_v1",
+  settings: {
+    nudgeJiggle: false // デフォルトはOFF（台揺らし時の身体ぷるんっ抑制）
+  },
+
+  loadSettings() {
+    try {
+      const raw = localStorage.getItem(this.settingsKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.nudgeJiggle === "boolean") {
+          this.settings.nudgeJiggle = parsed.nudgeJiggle;
+        }
+      }
+    } catch (_) {}
+    return this.settings;
+  },
+
+  setNudgeJiggle(enabled) {
+    this.settings.nudgeJiggle = !!enabled;
+    try {
+      localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
+    } catch (_) {}
+    return this.settings.nudgeJiggle;
+  },
+
+  isNudgeJiggleEnabled() {
+    return !!(this.settings && this.settings.nudgeJiggle);
   }
 };
+
+// Immediate settings load on evaluation
+if (window.Systems && typeof window.Systems.loadSettings === "function") {
+  window.Systems.loadSettings();
+}

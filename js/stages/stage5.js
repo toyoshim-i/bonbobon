@@ -26,7 +26,7 @@ window.Stage5 = {
   },
 
   initAssets() {
-    const v = "?v=188";
+    const v = "?v=189";
     this.assets.twinLIntactImg.src = "./assets/stage5/twin_l_intact.png" + v;
     this.assets.twinLBrokenImg.src = "./assets/stage5/twin_l_broken.png" + v;
     this.assets.twinRIntactImg.src = "./assets/stage5/twin_r_intact.png" + v;
@@ -506,20 +506,30 @@ window.Stage5 = {
       b.elleSpring.vy += ny * 4.0 * intensity;
       b.noelSpring.vx += nx * 4.2 * intensity;
       b.noelSpring.vy += ny * 4.0 * intensity;
-      if (b.elleBelly) { b.elleBelly.vx += nx * 4.0 * intensity; b.elleBelly.vy += ny * 4.0 * intensity; }
-      if (b.noelBelly) { b.noelBelly.vx += nx * 4.0 * intensity; b.noelBelly.vy += ny * 4.0 * intensity; }
-      if (b.elleHip) { b.elleHip.vx += nx * 4.2 * intensity; b.elleHip.vy += ny * 4.0 * intensity; }
-      if (b.noelHip) { b.noelHip.vx += nx * 4.2 * intensity; b.noelHip.vy += ny * 4.0 * intensity; }
       b.navelBeam.pluckAmp = Math.min(15, b.navelBeam.pluckAmp + 6.0 * intensity);
+      if (window.Systems && Systems.isNudgeJiggleEnabled()) {
+        if (b.elleBelly) { b.elleBelly.vx += nx * 4.0 * intensity; b.elleBelly.vy += ny * 4.0 * intensity; }
+        if (b.noelBelly) { b.noelBelly.vx += nx * 4.0 * intensity; b.noelBelly.vy += ny * 4.0 * intensity; }
+        if (b.elleHip) { b.elleHip.vx += nx * 4.2 * intensity; b.elleHip.vy += ny * 4.0 * intensity; }
+        if (b.noelHip) { b.noelHip.vx += nx * 4.2 * intensity; b.noelHip.vy += ny * 4.0 * intensity; }
+        if (window.sfx && window.sfx.softPuru) {
+          window.sfx.softPuru();
+        }
+      }
     } else {
-      const bImp = (b.chestArmorBroken ? 7.5 : 4.5) * intensity;
-      b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
-      b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
-      b.hipL.vx += nx * 4.5 * intensity; b.hipL.vy += ny * 4.2 * intensity;
-      b.hipR.vx += nx * 4.5 * intensity; b.hipR.vy += ny * 4.2 * intensity;
-      if (!b.faceAnim.sequence && b.expression === "normal") {
-        b.expression = b.chestArmorBroken ? "open_blush" : "shock";
-        b.expressionTimer = 24;
+      if (window.Systems && Systems.isNudgeJiggleEnabled()) {
+        const bImp = (b.chestArmorBroken ? 7.5 : 4.5) * intensity;
+        b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
+        b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
+        b.hipL.vx += nx * 4.5 * intensity; b.hipL.vy += ny * 4.2 * intensity;
+        b.hipR.vx += nx * 4.5 * intensity; b.hipR.vy += ny * 4.2 * intensity;
+        if (!b.faceAnim.sequence && b.expression === "normal") {
+          b.expression = b.chestArmorBroken ? "open_blush" : "shock";
+          b.expressionTimer = 24;
+        }
+        if (window.sfx && window.sfx.softPuru) {
+          window.sfx.softPuru();
+        }
       }
     }
 

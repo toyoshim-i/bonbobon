@@ -654,6 +654,47 @@ window.UI = {
 
     const btnMenuAudio = document.getElementById("btnMenuToggleAudio");
     if (btnMenuAudio) btnMenuAudio.addEventListener("click", toggleAudio);
+
+    // Nudge Body Jiggle Setting Toggle
+    if (window.Systems && typeof Systems.loadSettings === "function") {
+      Systems.loadSettings();
+    }
+
+    const updateNudgeJiggleUI = (enabled) => {
+      const btn = document.getElementById("btnMenuToggleNudgeJiggle");
+      const icon = document.getElementById("txtMenuNudgeJiggleIcon");
+      const status = document.getElementById("txtMenuNudgeJiggleStatus");
+      if (icon) icon.textContent = enabled ? "💓" : "🔒";
+      if (status) status.textContent = enabled ? "ON" : "OFF";
+      if (btn) {
+        btn.className = enabled
+          ? "px-3 py-1.5 rounded-lg bg-[#36092f] hover:bg-[#520e47] border border-[#ff66b2]/80 text-[#ff66b2] font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0"
+          : "px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0";
+      }
+    };
+
+    const initialJiggle = window.Systems && typeof Systems.isNudgeJiggleEnabled === "function"
+      ? Systems.isNudgeJiggleEnabled()
+      : false;
+    updateNudgeJiggleUI(initialJiggle);
+
+    const btnNudgeJiggle = document.getElementById("btnMenuToggleNudgeJiggle");
+    if (btnNudgeJiggle) {
+      btnNudgeJiggle.addEventListener("click", () => {
+        if (!window.Systems) return;
+        const current = Systems.isNudgeJiggleEnabled();
+        const next = !current;
+        Systems.setNudgeJiggle(next);
+        updateNudgeJiggleUI(next);
+        if (next && window.sfx) {
+          if (typeof window.sfx.softPuru === "function") {
+            window.sfx.softPuru();
+          } else if (typeof window.sfx.capsuleCatch === "function") {
+            window.sfx.capsuleCatch();
+          }
+        }
+      });
+    }
   },
 
   presentStageClearModal(state, cfg = {}) {

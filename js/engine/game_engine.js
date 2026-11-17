@@ -14,6 +14,61 @@ window.GameEngine = {
   isSimulationRunning: false,
   rafId: null,
 
+  STAGE_REGISTRY: [
+    {
+      index: 1,
+      id: "stage1",
+      globalName: "Stage1",
+      headerLabel: "STAGE 1",
+      displayName: "リリス (STAGE 1)",
+      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『桃色装甲リリス』 IS APPROACHING FAST!!<br>シルバーボール、発進せよ！"
+    },
+    {
+      index: 2,
+      id: "stage2",
+      globalName: "Stage2",
+      headerLabel: "STAGE 2",
+      displayName: "セルティ (STAGE 2)",
+      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『疾風紫電セルティ』 IS APPROACHING FAST!!"
+    },
+    {
+      index: 3,
+      id: "stage3",
+      globalName: "Stage3",
+      headerLabel: "STAGE 3",
+      displayName: "ノア (STAGE 3)",
+      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳空間ノア』 IS APPROACHING FAST!!"
+    },
+    {
+      index: 4,
+      id: "stage4",
+      globalName: "Stage4",
+      headerLabel: "STAGE 4",
+      displayName: "カスミ (STAGE 4)",
+      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳夜桜カスミ』 IS APPROACHING FAST!!"
+    },
+    {
+      index: 5,
+      id: "stage5",
+      globalName: "Stage5",
+      headerLabel: "FINAL",
+      displayName: "エル＆ノエル (FINAL)",
+      warningHtml: "🚨 FINAL WARNING!! TWIN BATTLESHIPS<br>『双子電脳天使エル＆ノエル』 APPROACHING FAST!!"
+    }
+  ],
+
+  getStageMeta(indexOrId) {
+    if (typeof indexOrId === "number") {
+      return this.STAGE_REGISTRY.find(s => s.index === indexOrId) || this.STAGE_REGISTRY[0];
+    }
+    return this.STAGE_REGISTRY.find(s => s.id === indexOrId) || this.STAGE_REGISTRY[0];
+  },
+
+  getStageByIndex(stageNum) {
+    const meta = this.getStageMeta(stageNum);
+    return (meta && window[meta.globalName]) || window.Stage1;
+  },
+
   init(canvasId = "pinballCanvas") {
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext("2d");
@@ -135,40 +190,21 @@ window.GameEngine = {
     this.state.capsules = [];
     this.state.nudgeOffset = { x: 0, y: 0 };
 
-    if (stage.id === "stage1") this.state.stageIndex = 1;
-    else if (stage.id === "stage2") this.state.stageIndex = 2;
-    else if (stage.id === "stage3") this.state.stageIndex = 3;
-    else if (stage.id === "stage4") this.state.stageIndex = 4;
-    else if (stage.id === "stage5") this.state.stageIndex = 5;
+    const meta = this.getStageMeta(stage && stage.id);
+    if (meta) this.state.stageIndex = meta.index;
 
     Systems.prepareBallForLaunch(this.state);
     UI.updateHUD(this.state);
 
     const txtHeader = document.getElementById("txtHeaderStage");
     if (txtHeader) {
-      txtHeader.textContent =
-        stage.id === "stage5" ? "FINAL" :
-        stage.id === "stage4" ? "STAGE 4" :
-        stage.id === "stage3" ? "STAGE 3" :
-        stage.id === "stage2" ? "STAGE 2" : "STAGE 1";
+      txtHeader.textContent = meta ? meta.headerLabel : "STAGE 1";
     }
   },
 
   getStageWarningCutin(stageIndex) {
-    switch (stageIndex) {
-      case 1:
-        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『桃色装甲リリス』 IS APPROACHING FAST!!<br>シルバーボール、発進せよ！";
-      case 2:
-        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『疾風紫電セルティ』 IS APPROACHING FAST!!";
-      case 3:
-        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳空間ノア』 IS APPROACHING FAST!!";
-      case 4:
-        return "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳夜桜カスミ』 IS APPROACHING FAST!!";
-      case 5:
-        return "🚨 FINAL WARNING!! TWIN BATTLESHIPS<br>『双子電脳天使エル＆ノエル』 APPROACHING FAST!!";
-      default:
-        return "🚨 WARNING!! A HUGE BATTLESHIP IS APPROACHING FAST!!";
-    }
+    const meta = this.STAGE_REGISTRY.find(s => s.index === stageIndex);
+    return meta ? meta.warningHtml : "🚨 WARNING!! A HUGE BATTLESHIP IS APPROACHING FAST!!";
   },
 
   startArcadeCampaign() {
@@ -196,14 +232,7 @@ window.GameEngine = {
       if (GameFlow.stopAttractDemo) GameFlow.stopAttractDemo();
       if (GameFlow.hideAllModals) GameFlow.hideAllModals();
     }
-    const stageMap = {
-      1: window.Stage1,
-      2: window.Stage2,
-      3: window.Stage3,
-      4: window.Stage4,
-      5: window.Stage5
-    };
-    const targetStage = stageMap[stageNum] || window.Stage1;
+    const targetStage = this.getStageByIndex(stageNum);
     this.state = this.createInitialState();
     this.state.gameMode = "practice";
     this.state.stageIndex = stageNum;
@@ -239,14 +268,7 @@ window.GameEngine = {
     this.state.stageCleared = false;
     this.state._clearBonusAwarded = false;
 
-    const stageMap = {
-      1: window.Stage1,
-      2: window.Stage2,
-      3: window.Stage3,
-      4: window.Stage4,
-      5: window.Stage5
-    };
-    const nextStage = stageMap[nextIdx] || window.Stage1;
+    const nextStage = this.getStageByIndex(nextIdx);
     this.loadStage(nextStage);
     UI.updateHUD(this.state);
     UI.showCutin(this.getStageWarningCutin(nextIdx), 220);

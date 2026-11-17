@@ -757,9 +757,11 @@ window.GameFlow = {
     const modal = document.getElementById("gameOverModal");
     if (!modal) return;
 
-    const finalStageName = state.phase === 3 ? "熾天使セラフィア (FINAL)" : "エル＆ノエル (FINAL)";
-    const stageNames = ["リリス (STAGE 1)", "セルティ (STAGE 2)", "ノア (STAGE 3)", "カスミ (STAGE 4)", finalStageName];
-    const curStageName = stageNames[(state.stageIndex || 1) - 1] || "STAGE 1";
+    const idx = state.stageIndex || 1;
+    const meta = window.GameEngine && GameEngine.getStageMeta ? GameEngine.getStageMeta(idx) : null;
+    const curStageName = (idx === 5 && state.phase === 3)
+      ? "熾天使セラフィア (FINAL)"
+      : (meta ? meta.displayName : "STAGE 1");
 
     const stageEl = document.getElementById("gameOverStage");
     if (stageEl) stageEl.textContent = `STAGE ${state.stageIndex || 1}: ${curStageName}`;

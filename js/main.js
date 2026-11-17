@@ -155,21 +155,10 @@ window.addEventListener("DOMContentLoaded", () => {
   const dbgStageToggle = document.getElementById("dbgStageToggle");
   if (dbgStageToggle) dbgStageToggle.addEventListener("click", () => {
     if (window.sfx) window.sfx.flipperClick();
-    const currentId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
-    const nextStage =
-      currentId === "stage1" ? window.Stage2 :
-      currentId === "stage2" ? window.Stage3 :
-      currentId === "stage3" ? (window.Stage4 || window.Stage1) :
-      currentId === "stage4" ? (window.Stage5 || window.Stage1) :
-      window.Stage1;
-    if (nextStage) {
-      if (window.GameFlow && GameFlow.hideAllModals) GameFlow.hideAllModals();
-      const sIdx =
-        nextStage.id === "stage5" ? 5 :
-        nextStage.id === "stage4" ? 4 :
-        nextStage.id === "stage3" ? 3 :
-        nextStage.id === "stage2" ? 2 : 1;
-      GameEngine.startPracticeStage(sIdx);
-    }
+    const currentIdx = (GameEngine.state && GameEngine.state.stageIndex) || 1;
+    const total = GameEngine.STAGE_REGISTRY ? GameEngine.STAGE_REGISTRY.length : 5;
+    const nextIdx = (currentIdx % total) + 1;
+    if (window.GameFlow && GameFlow.hideAllModals) GameFlow.hideAllModals();
+    GameEngine.startPracticeStage(nextIdx);
   });
 });

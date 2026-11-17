@@ -217,113 +217,166 @@ window.StageCommon = {
       f.ky = shear ? (b.dy * 0.008 - b.dx * 0.005) : 0;
     }
 
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < nF; i++) {
-      const f = fields[i];
-      if (f.cx - f.rx < x0) x0 = f.cx - f.rx;
-      if (f.cx + f.rx > x1) x1 = f.cx + f.rx;
-      if (f.cy - f.ry < y0) y0 = f.cy - f.ry;
-      if (f.cy + f.ry > y1) y1 = f.cy + f.ry;
-    }
     const SW = src.w || (src.canvas && src.canvas.width) || IMG_BOX.w;
     const SH = src.h || (src.canvas && src.canvas.height) || IMG_BOX.h;
-    x0 = Math.max(0, Math.floor(x0));
-    y0 = Math.max(0, Math.floor(y0));
-    x1 = Math.min(SW, Math.ceil(x1));
-    y1 = Math.min(SH, Math.ceil(y1));
-    const rw = x1 - x0, rh = y1 - y0;
-    if (rw <= 0 || rh <= 0) {
+
+    // 重なり合うフィールドだけをグルーピングして複数の独立矩形（クラスタ）に分割し、
+    // 胸と腰の間の動いていない胴体領域のピクセル計算を丸ごとスキップする
+    const boxes = this._warpBoxesBuf || (this._warpBoxesBuf = []);
+    boxes.length = 0;
+    for (let i = 0; i < nF; i++) {
+      const f = fields[i];
+      const bx0 = Math.max(0, Math.floor(f.cx - f.rx));
+      const by0 = Math.max(0, Math.floor(f.cy - f.ry));
+      const bx1 = Math.min(SW, Math.ceil(f.cx + f.rx));
+      const by1 = Math.min(SH, Math.ceil(f.cy + f.ry));
+      if (bx1 <= bx0 || by1 <= by0) continue;
+
+      let merged = false;
+      for (let bi = 0; bi < boxes.length; bi++) {
+        const b = boxes[bi];
+        if (bx0 <= b.x1 && bx1 >= b.x0 && by0 <= b.y1 && by1 >= b.y0) {
+          if (bx0 < b.x0) b.x0 = bx0;
+          if (by0 < b.y0) b.y0 = by0;
+          if (bx1 > b.x1) b.x1 = bx1;
+          if (by1 > b.y1) b.y1 = by1;
+          b.fields.push(f);
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) {
+        boxes.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, fields: [f] });
+      }
+    }
+
+    if (boxes.length === 0) {
       if (rgba) ctx.drawImage(src.canvas, IMG_BOX.x, IMG_BOX.y);
       return;
-    }
-
-    const store = opts.slotStore || (this._defaultSlots || (this._defaultSlots = {}));
-    let slot = store[slotName];
-    const capW = Math.ceil(rw / 16) * 16;
-    const capH = Math.ceil(rh / 16) * 16;
-
-    if (!slot || slot.capW < capW || slot.capH < capH) {
-      const c = document.createElement("canvas");
-      c.width = capW;
-      c.height = capH;
-      const cctx = c.getContext("2d", { willReadFrequently: false });
-      slot = {
-        canvas: c,
-        ctx: cctx,
-        capW,
-        capH,
-        img: cctx.createImageData(capW, capH)
-      };
-      store[slotName] = slot;
-    }
-
-    const od = slot.img.data;
-    const stride = slot.capW * 4;
-    for (let v = 0; v < rh; v++) {
-      od.fill(0, v * stride, v * stride + rw * 4);
     }
 
     if (rgba) {
       ctx.save();
       ctx.beginPath();
       ctx.rect(IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
-      ctx.rect(IMG_BOX.x + x0, IMG_BOX.y + y0, rw, rh);
+      for (let bi = 0; bi < boxes.length; bi++) {
+        const b = boxes[bi];
+        ctx.rect(IMG_BOX.x + b.x0, IMG_BOX.y + b.y0, b.x1 - b.x0, b.y1 - b.y0);
+      }
       ctx.clip("evenodd");
       ctx.drawImage(src.canvas, IMG_BOX.x, IMG_BOX.y);
       ctx.restore();
     }
 
+    const store = opts.slotStore || (this._defaultSlots || (this._defaultSlots = {}));
     const sd = src.data;
-    for (let v = 0; v < rh; v++) {
-      const py = y0 + v;
-      for (let u = 0; u < rw; u++) {
-        const px = x0 + u;
-        let ox = 0, oy = 0, inside = false;
-        for (let fi = 0; fi < nF; fi++) {
-          const f = fields[fi];
-          const rxv = px - f.cx, ryv = py - f.cy;
-          const nx = rxv * f.irx, ny = ryv * f.iry;
-          const r2 = nx * nx + ny * ny;
-          if (r2 < 1.0) {
-            const t = 1.0 - r2;
-            const wgt = t * t;
-            ox += wgt * (f.dx + f.kx * rxv);
-            oy += wgt * (f.dy + f.ky * ryv);
-            inside = true;
-          }
-        }
-        if (!rgba && !inside) continue;
+    const warpScale = opts.scale ?? 0.5;
+    const invWarpScale = 1 / warpScale;
 
-        let sx = px - ox, sy = py - oy;
-        if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
-        if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
-        const ix = sx | 0, iy = sy | 0;
-        const fx = sx - ix, fy = sy - iy;
-        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
-        const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
-        const oi = (v * slot.capW + u) * 4;
+    for (let bi = 0; bi < boxes.length; bi++) {
+      const box = boxes[bi];
+      const x0 = box.x0, y0 = box.y0, x1 = box.x1, y1 = box.y1;
+      const rw = x1 - x0, rh = y1 - y0;
+      const sw = Math.max(1, Math.ceil(rw * warpScale));
+      const sh = Math.max(1, Math.ceil(rh * warpScale));
+      const bFields = box.fields;
+      const bnF = bFields.length;
 
-        if (rgba) {
-          const a00 = sd[i00 + 3], a10 = sd[i10 + 3], a01 = sd[i01 + 3], a11 = sd[i11 + 3];
-          const outA = a00 * w00 + a10 * w10 + a01 * w01 + a11 * w11;
-          if (outA > 1) {
-            const invA = 1 / outA;
-            od[oi]     = (sd[i00] * a00 * w00 + sd[i10] * a10 * w10 + sd[i01] * a01 * w01 + sd[i11] * a11 * w11) * invA;
-            od[oi + 1] = (sd[i00 + 1] * a00 * w00 + sd[i10 + 1] * a10 * w10 + sd[i01 + 1] * a01 * w01 + sd[i11 + 1] * a11 * w11) * invA;
-            od[oi + 2] = (sd[i00 + 2] * a00 * w00 + sd[i10 + 2] * a10 * w10 + sd[i01 + 2] * a01 * w01 + sd[i11 + 2] * a11 * w11) * invA;
-            od[oi + 3] = outA;
+      const sKey = bi === 0 ? slotName : `${slotName}_${bi}`;
+      let slot = store[sKey];
+      const capW = Math.ceil(sw / 16) * 16;
+      const capH = Math.ceil(sh / 16) * 16;
+
+      if (!slot || slot.capW < capW || slot.capH < capH) {
+        const c = document.createElement("canvas");
+        c.width = capW;
+        c.height = capH;
+        const cctx = c.getContext("2d", { willReadFrequently: false });
+        slot = {
+          canvas: c,
+          ctx: cctx,
+          capW,
+          capH,
+          img: cctx.createImageData(capW, capH)
+        };
+        store[sKey] = slot;
+      }
+
+      const od = slot.img.data;
+      const stride = slot.capW * 4;
+      for (let v = 0; v < sh; v++) {
+        od.fill(0, v * stride, v * stride + sw * 4);
+      }
+
+      for (let v = 0; v < sh; v++) {
+        const py = Math.min(SH - 1, Math.floor(y0 + (v + 0.5) * invWarpScale));
+        const rowOff = v * slot.capW;
+        const srcRowOff = py * SW;
+        for (let u = 0; u < sw; u++) {
+          const px = Math.min(SW - 1, Math.floor(x0 + (u + 0.5) * invWarpScale));
+          let ox = 0, oy = 0, inside = false;
+          for (let fi = 0; fi < bnF; fi++) {
+            const f = bFields[fi];
+            const rxv = px - f.cx, ryv = py - f.cy;
+            const nx = rxv * f.irx, ny = ryv * f.iry;
+            const r2 = nx * nx + ny * ny;
+            if (r2 < 1.0) {
+              const t = 1.0 - r2;
+              const wgt = t * t;
+              ox += wgt * (f.dx + f.kx * rxv);
+              oy += wgt * (f.dy + f.ky * ryv);
+              inside = true;
+            }
           }
-        } else {
-          od[oi]     = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
-          od[oi + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
-          od[oi + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
-          od[oi + 3] = 255;
+          if (!inside) {
+            if (!rgba) continue;
+            const si = (srcRowOff + px) * 4;
+            const sa = sd[si + 3];
+            if (sa > 1) {
+              const oi = (rowOff + u) * 4;
+              od[oi]     = sd[si];
+              od[oi + 1] = sd[si + 1];
+              od[oi + 2] = sd[si + 2];
+              od[oi + 3] = sa;
+            }
+            continue;
+          }
+
+          let sx = px - ox, sy = py - oy;
+          if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
+          if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
+          const ix = sx | 0, iy = sy | 0;
+          const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
+
+          if (rgba) {
+            const a00 = sd[i00 + 3], a10 = sd[i10 + 3], a01 = sd[i01 + 3], a11 = sd[i11 + 3];
+            if ((a00 | a10 | a01 | a11) === 0) continue;
+            const fx = sx - ix, fy = sy - iy;
+            const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+            const outA = a00 * w00 + a10 * w10 + a01 * w01 + a11 * w11;
+            if (outA > 1) {
+              const invA = 1 / outA;
+              const oi = (rowOff + u) * 4;
+              od[oi]     = (sd[i00] * a00 * w00 + sd[i10] * a10 * w10 + sd[i01] * a01 * w01 + sd[i11] * a11 * w11) * invA;
+              od[oi + 1] = (sd[i00 + 1] * a00 * w00 + sd[i10 + 1] * a10 * w10 + sd[i01 + 1] * a01 * w01 + sd[i11 + 1] * a11 * w11) * invA;
+              od[oi + 2] = (sd[i00 + 2] * a00 * w00 + sd[i10 + 2] * a10 * w10 + sd[i01 + 2] * a01 * w01 + sd[i11 + 2] * a11 * w11) * invA;
+              od[oi + 3] = outA;
+            }
+          } else {
+            const fx = sx - ix, fy = sy - iy;
+            const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+            const oi = (rowOff + u) * 4;
+            od[oi]     = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
+            od[oi + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+            od[oi + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+            od[oi + 3] = 255;
+          }
         }
       }
-    }
 
-    slot.ctx.putImageData(slot.img, 0, 0, 0, 0, rw, rh);
-    ctx.drawImage(slot.canvas, 0, 0, rw, rh, IMG_BOX.x + x0, IMG_BOX.y + y0, rw, rh);
+      slot.ctx.putImageData(slot.img, 0, 0, 0, 0, sw, sh);
+      ctx.drawImage(slot.canvas, 0, 0, sw, sh, IMG_BOX.x + x0, IMG_BOX.y + y0, rw, rh);
+    }
   },
 
   createClearSequenceState(active = false, walls = null) {

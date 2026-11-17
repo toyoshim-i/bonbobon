@@ -562,7 +562,7 @@ Object.assign(window.Stage4, {
           slotStore: cache.warpSlots,
           slotName: "char",
           reach: 1.32,
-          minDisp: 0.08,
+          minDisp: 0.28,
           rgba: true,
           shear: false
         });

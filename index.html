@@ -30,21 +30,21 @@
       <!-- KEYBOARD CONTROLS GUIDE -->
       <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#00f5d4]/20">
         <div class="text-[11px] font-extrabold text-[#e6ff00] flex items-center gap-1 border-b border-[#e6ff00]/20 pb-1">
-          <span>⌨️ KEY CONTROLS</span>
+          <span data-i18n="sidebar.keyControlsTitle">⌨️ KEY CONTROLS</span>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5 text-[11px] items-center pt-1">
           <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-center">Z / L-SHIFT</kbd>
-          <span class="text-gray-300">左パドル</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyLeftPaddle">左パドル</span>
           <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-center">V / R-SHIFT</kbd>
-          <span class="text-gray-300">右パドル</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyRightPaddle">右パドル</span>
           <kbd class="px-1.5 py-0.5 rounded bg-[#36092f] border border-[#ff1493]/60 text-[#ff1493] font-bold text-center">C / SPACE</kbd>
-          <span class="text-gray-300">発射(長押し)</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyPlunger">発射(長押し)</span>
           <kbd class="px-1.5 py-0.5 rounded bg-[#36092f] border border-[#e6ff00]/60 text-[#e6ff00] font-bold text-center">B</kbd>
-          <span class="text-gray-300">BURST解放</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyBurst">BURST解放</span>
           <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-[#00f5d4]/40 text-white font-bold text-center">X / ↑↓←→</kbd>
-          <span class="text-gray-300">台揺らし(全方向)</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyNudge">台揺らし(全方向)</span>
           <kbd class="px-1.5 py-0.5 rounded bg-[#210b3a] border border-white/30 text-gray-200 font-bold text-center">ESC</kbd>
-          <span class="text-gray-300">メニュー / 閉じる</span>
+          <span class="text-gray-300" data-i18n="sidebar.keyMenu">メニュー / 閉じる</span>
         </div>
       </div>
 
@@ -56,19 +56,19 @@
         <div class="text-[10px] text-gray-300 leading-tight space-y-0.5 pt-1">
           <div>ENGINE: Web Audio API</div>
           <div class="text-[#00f5d4] font-bold">SYNTHESIZED SFX</div>
-          <div class="text-[9px] text-gray-400">リアルタイム変調効果音</div>
+          <div class="text-[9px] text-gray-400" data-i18n="sidebar.soundDesc">リアルタイム変調効果音</div>
         </div>
       </div>
 
       <!-- TACTICAL TIPS -->
       <div class="space-y-1 bg-[#140730]/90 p-2.5 rounded-lg border border-[#e6ff00]/20">
         <div class="text-[11px] font-extrabold text-[#e6ff00] flex items-center gap-1 border-b border-[#e6ff00]/20 pb-1">
-          <span>💡 TACTICAL TIPS</span>
+          <span data-i18n="sidebar.tipsTitle">💡 TACTICAL TIPS</span>
         </div>
         <ul class="text-[10px] text-gray-300 leading-relaxed list-disc list-inside space-y-0.5 pt-1">
-          <li>パワー70〜85%でスキルショット！</li>
-          <li>ボールが停滞したら迷わず台揺らし！</li>
-          <li>肩アーマー破壊で胸部パージへ！</li>
+          <li data-i18n="sidebar.tip1">パワー70〜85%でスキルショット！</li>
+          <li data-i18n="sidebar.tip2">ボールが停滞したら迷わず台揺らし！</li>
+          <li data-i18n="sidebar.tip3">肩アーマー破壊で胸部パージへ！</li>
         </ul>
       </div>
 
@@ -137,10 +137,10 @@
             <!-- CHARACTER DIALOGUE BOX (CYBER ADV STYLE, PURE TRANSLUCENT OVERLAY) -->
             <div class="bg-[#0b031c]/50 border border-[#ff1493]/70 rounded p-1.5 shadow-lg">
               <div class="flex items-center justify-between mb-0.5">
-                <span class="text-[10px] font-bold text-[#ff66b2] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">リリス (LILITH)</span>
-                <span class="text-[8px] text-gray-200 font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">大破・戦闘不能</span>
+                <span class="text-[10px] font-bold text-[#ff66b2] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="stage1.bossName">リリス (LILITH)</span>
+                <span class="text-[8px] text-gray-200 font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.defeatStatus">大破・戦闘不能</span>
               </div>
-              <p class="text-[10px] sm:text-xs text-white leading-relaxed font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
+              <p class="text-[10px] sm:text-xs text-white leading-relaxed font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" data-i18n-html="clear.lilithQuote">
                 「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」
               </p>
             </div>
@@ -148,31 +148,31 @@
             <!-- RELIC SELECTION (PURE TRANSLUCENT OVERLAY) -->
             <div id="relicSection" class="bg-[#0b031c]/50 border border-[#00f5d4]/50 rounded p-1.5 shadow-md">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-[9px] font-bold text-[#00f5d4] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">⚙️ 鹵獲パーツ選択 (次ステージ持越)</span>
+                <span class="text-[9px] font-bold text-[#00f5d4] drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicTitle">⚙️ 鹵獲パーツ選択 (次ステージ持越)</span>
                 <span class="text-[8px] text-[#e6ff00] font-mono drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">SELECT 1</span>
               </div>
               <div class="grid grid-cols-3 gap-1" id="relicOptions">
                 <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
-                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">ウサミミ・レーダー</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">通過スコア2倍＆コア解錠短縮</div>
+                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicRadarName">ウサミミ・レーダー</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicRadarDesc">通過スコア2倍＆コア解錠短縮</div>
                 </button>
                 <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
-                  <div class="font-bold text-[10px] text-[#00f5d4] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">電磁スプリング</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">フリッパー反発力+25%＆弾速UP</div>
+                  <div class="font-bold text-[10px] text-[#00f5d4] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicSpringName">電磁スプリング</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicSpringDesc">フリッパー反発力+25%＆弾速UP</div>
                 </button>
                 <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="drone">
-                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">支援ドローン</div>
-                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">投入時ストッパー自動展開</div>
+                  <div class="font-bold text-[10px] text-[#ff66b2] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicDroneName">支援ドローン</div>
+                  <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicDroneDesc">投入時ストッパー自動展開</div>
                 </button>
               </div>
             </div>
 
             <!-- ACTION BUTTONS -->
             <div class="flex items-center gap-1.5 mt-0.5">
-              <button id="btnClearReplay" class="flex-1 py-1.5 rounded bg-[#200c47]/80 hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-[10px] cursor-pointer transition">
+              <button id="btnClearReplay" class="flex-1 py-1.5 rounded bg-[#200c47]/80 hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-[10px] cursor-pointer transition" data-i18n="clear.replay">
                 もう一度遊ぶ
               </button>
-              <button id="btnClearNext" class="flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110">
+              <button id="btnClearNext" class="flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110" data-i18n="clear.nextStage">
                 次のステージへ進む ▶
               </button>
             </div>
@@ -186,7 +186,7 @@
             <div class="flex items-center justify-center border-b border-[#00f5d4]/30 pb-1.5 shrink-0">
               <div class="text-xs font-black text-white tracking-widest flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-ping"></span>
-                <span>⚙️ 設定 (SETTINGS)</span>
+                <span data-i18n="menu.title">⚙️ 設定 (SETTINGS)</span>
               </div>
             </div>
 
@@ -195,14 +195,26 @@
               <!-- SECTION 1: GENERAL SETTINGS -->
               <div class="space-y-1.5">
                 <div class="text-[9.5px] font-black text-[#00f5d4] tracking-wider uppercase flex items-center gap-1">
-                  <span>🎛️ 一般設定 (GENERAL SETTINGS)</span>
+                  <span data-i18n="menu.generalTitle">🎛️ 一般設定 (GENERAL SETTINGS)</span>
+                </div>
+
+                <!-- LANGUAGE SETTINGS -->
+                <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-[11px] text-white" data-i18n="menu.languageTitle">言語 (LANGUAGE)</div>
+                    <div class="text-[8.5px] text-[#b59ce6]" data-i18n="menu.languageDesc">表示言語を日本語 / Englishで切替</div>
+                  </div>
+                  <button id="btnMenuToggleLanguage" class="px-3 py-1.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] border border-[#e6ff00]/60 text-[#e6ff00] font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
+                    <span>🌐</span>
+                    <span id="txtMenuLanguageStatus">日本語</span>
+                  </button>
                 </div>
 
                 <!-- AUDIO SETTINGS -->
                 <div class="bg-[#180838] border border-[#00f5d4]/40 rounded-xl p-2 flex items-center justify-between">
                   <div>
-                    <div class="font-bold text-[11px] text-white">効果音 (SFX AUDIO)</div>
-                    <div class="text-[8.5px] text-[#b59ce6]">シンセサイザー効果音</div>
+                    <div class="font-bold text-[11px] text-white" data-i18n="menu.audioTitle">効果音 (SFX AUDIO)</div>
+                    <div class="text-[8.5px] text-[#b59ce6]" data-i18n="menu.audioDesc">シンセサイザー効果音</div>
                   </div>
                   <button id="btnMenuToggleAudio" class="px-3 py-1.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] border border-[#00f5d4]/60 text-white font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
                     <span id="txtMenuAudioIcon">🔊</span>
@@ -213,8 +225,8 @@
                 <!-- NUDGE JIGGLE SETTINGS -->
                 <div class="bg-[#180838] border border-[#ff66b2]/40 rounded-xl p-2 flex items-center justify-between">
                   <div>
-                    <div class="font-bold text-[11px] text-white">台揺らし連動ぷるんっ (NUDGE JIGGLE)</div>
-                    <div class="text-[8.5px] text-[#b59ce6]">台揺らし時のボディ振動演出</div>
+                    <div class="font-bold text-[11px] text-white" data-i18n="menu.nudgeJiggleTitle">台揺らし連動ぷるんっ (NUDGE JIGGLE)</div>
+                    <div class="text-[8.5px] text-[#b59ce6]" data-i18n="menu.nudgeJiggleDesc">台揺らし時のボディ振動演出</div>
                   </div>
                   <button id="btnMenuToggleNudgeJiggle" class="px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
                     <span id="txtMenuNudgeJiggleIcon">🔒</span>
@@ -226,7 +238,7 @@
                 <div id="menuInGameActions" class="hidden w-full pt-0.5">
                   <button id="btnReturnToTitleFromMenu" class="w-full p-2 rounded-xl bg-[#1c083e] hover:bg-[#ff1493]/30 border border-[#ff1493]/60 text-white font-bold text-[10.5px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                     <span>🏠</span>
-                    <span>タイトル画面へ戻る (RETURN TO TITLE)</span>
+                    <span data-i18n="menu.returnToTitle">タイトル画面へ戻る (RETURN TO TITLE)</span>
                   </button>
                 </div>
               </div>
@@ -234,14 +246,14 @@
               <!-- SECTION 2: DEBUG & PRACTICE SETTINGS -->
               <div class="space-y-2 pt-1 border-t border-[#00f5d4]/20">
                 <div class="text-[9.5px] font-black text-[#e6ff00] tracking-wider uppercase flex items-center gap-1">
-                  <span>🛠️ デバッグ＆検証設定 (DEBUG & PRACTICE)</span>
+                  <span data-i18n="menu.debugTitle">🛠️ デバッグ＆検証設定 (DEBUG & PRACTICE)</span>
                 </div>
 
                 <!-- 1) IN-GAME DEBUG HUD ICON TOGGLE -->
                 <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 flex items-center justify-between">
                   <div>
-                    <div class="font-bold text-[11px] text-white">プレイ中の設定ボタン表示</div>
-                    <div class="text-[8.5px] text-[#b59ce6]">画面右上に⚙️ボタンを常時表示（検証用）</div>
+                    <div class="font-bold text-[11px] text-white" data-i18n="menu.debugHudTitle">プレイ中の設定ボタン表示</div>
+                    <div class="text-[8.5px] text-[#b59ce6]" data-i18n="menu.debugHudDesc">画面右上に⚙️ボタンを常時表示（検証用）</div>
                   </div>
                   <button id="btnMenuToggleDebugHud" class="px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
                     <span id="txtMenuDebugHudIcon">🔒</span>
@@ -251,36 +263,36 @@
 
                 <!-- 2) STAGE SELECT SECTION -->
                 <div class="space-y-1">
-                  <div class="text-[9px] font-bold text-gray-300">開始ステージ選択 (STAGE SELECT)</div>
+                  <div class="text-[9px] font-bold text-gray-300" data-i18n="menu.stageSelectTitle">開始ステージ選択 (STAGE SELECT)</div>
                   <div class="grid grid-cols-2 gap-1.5">
                     <button id="btnSelectStage1" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
                       <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">桃色装甲リリス</span>
-                      <span class="text-[7px] text-gray-400 leading-tight">正面装甲・重力罠</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage1Name">桃色装甲リリス</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage1Desc">正面装甲・重力罠</span>
                     </button>
                     <button id="btnSelectStage2" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
                       <span class="text-[9.5px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">疾風紫電セルティ</span>
-                      <span class="text-[7px] text-gray-400 leading-tight">見返り・電撃＆砲</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage2Name">疾風紫電セルティ</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage2Desc">見返り・電撃＆砲</span>
                     </button>
                     <button id="btnSelectStage3" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#e6ff00]/20 border-2 border-[#e6ff00] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
                       <span class="text-[9.5px] font-black text-[#e6ff00] group-hover:text-white">STAGE 3</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">電脳空間ノア</span>
-                      <span class="text-[7px] text-gray-400 leading-tight">浮遊ビット・転送手</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage3Name">電脳空間ノア</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage3Desc">浮遊ビット・転送手</span>
                     </button>
                     <button id="btnSelectStage4" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#b84dff]/25 border-2 border-[#b84dff] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
                       <span class="text-[9.5px] font-black text-[#b84dff] group-hover:text-white">STAGE 4</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">電脳夜桜カスミ</span>
-                      <span class="text-[7px] text-gray-400 leading-tight">立体レール・手裏剣</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage4Name">電脳夜桜カスミ</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage4Desc">立体レール・手裏剣</span>
                     </button>
                     <button id="btnSelectStage5" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
                       <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">FINAL STAGE</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">双子電脳天使 エル＆ノエル</span>
-                      <span class="text-[7px] text-gray-400 leading-tight">へそシンクロ光線・クロスランプ・ツインビット</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage5Name">双子電脳天使 エル＆ノエル</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage5Desc">へそシンクロ光線・クロスランプ・ツインビット</span>
                     </button>
                     <button id="btnSelectEnding" class="p-1.5 rounded-xl bg-[#041f12]/90 hover:bg-[#34ff8a]/20 border-2 border-[#34ff8a] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
                       <span class="text-[9.5px] font-black text-[#34ff8a] group-hover:text-white">ENDING (DIRECT)</span>
-                      <span class="text-[9px] font-bold text-white leading-tight">エンディング直通（大佐通信〜出撃）</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.endingDirectName">エンディング直通（大佐通信〜出撃）</span>
                     </button>
                   </div>
                 </div>
@@ -289,8 +301,8 @@
                 <div class="bg-[#180838] border border-[#00f5d4]/40 rounded-xl p-2 space-y-1.5">
                   <div class="flex items-center justify-between border-b border-[#00f5d4]/20 pb-1">
                     <div>
-                      <div class="font-bold text-[10.5px] text-[#00f5d4]">常設ビルド設定 (INITIAL UPGRADES)</div>
-                      <div class="text-[7.5px] text-[#b59ce6]">開始時およびプレイ中の強化レベル</div>
+                      <div class="font-bold text-[10.5px] text-[#00f5d4]" data-i18n="menu.permTitle">常設ビルド設定 (INITIAL UPGRADES)</div>
+                      <div class="text-[7.5px] text-[#b59ce6]" data-i18n="menu.permDesc">開始時およびプレイ中の強化レベル</div>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
                       <button id="btnPermAllReset" class="px-1.5 py-0.5 rounded bg-black/40 hover:bg-red-900/60 border border-gray-600 text-gray-300 text-[8px] font-bold cursor-pointer transition">
@@ -307,26 +319,26 @@
                 <!-- 4) LIVE DEBUG SHORTCUTS -->
                 <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 space-y-1">
                   <div class="flex items-baseline justify-between">
-                    <span class="font-bold text-[10px] text-[#e6ff00]">プロトタイプ検証用ショートカット</span>
-                    <span class="text-[7.5px] text-gray-400">※即時反映</span>
+                    <span class="font-bold text-[10px] text-[#e6ff00]" data-i18n="menu.shortcutsTitle">プロトタイプ検証用ショートカット</span>
+                    <span class="text-[7.5px] text-gray-400" data-i18n="menu.shortcutsNote">※即時反映</span>
                   </div>
                   <div class="grid grid-cols-2 gap-1 text-[10px]">
-                    <button id="dbgDropPerm" class="p-1.5 rounded bg-[#00f5d4]/15 hover:bg-[#00f5d4]/30 text-[#00f5d4] border border-[#00f5d4]/50 font-bold cursor-pointer transition">
+                    <button id="dbgDropPerm" class="p-1.5 rounded bg-[#00f5d4]/15 hover:bg-[#00f5d4]/30 text-[#00f5d4] border border-[#00f5d4]/50 font-bold cursor-pointer transition" data-i18n="menu.dbgDropPerm">
                       ＋常設カプセル
                     </button>
-                    <button id="dbgDropBuff" class="p-1.5 rounded bg-[#ff1493]/15 hover:bg-[#ff1493]/30 text-[#ff1493] border border-[#ff1493]/50 font-bold cursor-pointer transition">
+                    <button id="dbgDropBuff" class="p-1.5 rounded bg-[#ff1493]/15 hover:bg-[#ff1493]/30 text-[#ff1493] border border-[#ff1493]/50 font-bold cursor-pointer transition" data-i18n="menu.dbgDropBuff">
                       ＋バフカプセル
                     </button>
-                    <button id="dbgPuruTest" class="p-1.5 rounded bg-[#ff66b2]/15 hover:bg-[#ff66b2]/30 text-[#ff66b2] border border-[#ff66b2]/50 font-bold cursor-pointer transition">
+                    <button id="dbgPuruTest" class="p-1.5 rounded bg-[#ff66b2]/15 hover:bg-[#ff66b2]/30 text-[#ff66b2] border border-[#ff66b2]/50 font-bold cursor-pointer transition" data-i18n="menu.dbgPuruTest">
                       ♥ ぷるぷるテスト
                     </button>
-                    <button id="dbgMultiball" class="p-1.5 rounded bg-[#e6ff00]/15 hover:bg-[#e6ff00]/30 text-[#e6ff00] border border-[#e6ff00]/50 font-bold cursor-pointer transition">
+                    <button id="dbgMultiball" class="p-1.5 rounded bg-[#e6ff00]/15 hover:bg-[#e6ff00]/30 text-[#e6ff00] border border-[#e6ff00]/50 font-bold cursor-pointer transition" data-i18n="menu.dbgMultiball">
                       ★ FEVER突入
                     </button>
-                    <button id="dbgFaceAnim" class="p-1.5 rounded bg-[#b84dff]/20 hover:bg-[#b84dff]/35 text-[#e6ff00] border border-[#b84dff]/60 font-bold cursor-pointer transition">
+                    <button id="dbgFaceAnim" class="p-1.5 rounded bg-[#b84dff]/20 hover:bg-[#b84dff]/35 text-[#e6ff00] border border-[#b84dff]/60 font-bold cursor-pointer transition" data-i18n="menu.dbgFaceAnim">
                       👁 表情切替
                     </button>
-                    <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition">
+                    <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition" data-i18n="menu.dbgStageToggle">
                       ⚡ 次ステージ
                     </button>
                   </div>
@@ -345,7 +357,7 @@
 
           <!-- STANDALONE PIXEL-ART TITLE LOGO -->
           <div class="relative z-10 w-full flex justify-center pt-0.5 pointer-events-none select-none shrink-0">
-            <img src="./assets/ui/title_logo.png?v=190" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
+            <img src="./assets/ui/title_logo.png?v=190" data-i18n-src-ja="./assets/ui/title_logo.png?v=190" data-i18n-src-en="./assets/ui/title_logo_en.png?v=190" data-i18n-alt="app.titleLogoAlt" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
           </div>
 
           <!-- OPEN CENTER (SHOWCASES ALL HEROINES & FLIPPERS AT 100% OPACITY) -->
@@ -381,7 +393,7 @@
             <div class="flex items-center justify-between border-b border-[#e6ff00]/30 pb-2">
               <div class="text-sm font-black text-[#e6ff00] tracking-widest flex items-center gap-1.5">
                 <span>🏆</span>
-                <span>HALL OF FAME (ランキング)</span>
+                <span data-i18n="ranking.title">HALL OF FAME (ランキング)</span>
               </div>
               <button id="btnRankingClose" class="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-[#ff1493] text-white font-bold text-xs cursor-pointer transition">
                 ✕
@@ -391,7 +403,7 @@
               1-LOOP SCORE ATTACK TOP 5 PILOTS
             </div>
             <div id="rankingHighScoresTable" class="space-y-1.5 overflow-y-auto max-h-[280px]"></div>
-            <button id="btnRankingBack" class="w-full py-2 rounded-xl bg-gradient-to-r from-[#e6ff00]/90 to-[#00f5d4]/90 text-black font-black text-xs cursor-pointer shadow hover:brightness-110 active:scale-95 transition mt-1">
+            <button id="btnRankingBack" class="w-full py-2 rounded-xl bg-gradient-to-r from-[#e6ff00]/90 to-[#00f5d4]/90 text-black font-black text-xs cursor-pointer shadow hover:brightness-110 active:scale-95 transition mt-1" data-i18n="ranking.close">
               閉じる (CLOSE)
             </button>
           </div>
@@ -412,28 +424,28 @@
             <!-- TELEMETRY STATS -->
             <div class="bg-black/50 border border-[#ff1493]/40 rounded-xl p-3 text-left space-y-1.5 text-[10px]">
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">最終到達ステージ:</span>
+                <span class="text-gray-400" data-i18n="gameover.reachedStage">最終到達ステージ:</span>
                 <span id="gameOverStage" class="font-bold text-white">STAGE 1</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">最高到達スコア:</span>
+                <span class="text-gray-400" data-i18n="gameover.peakScore">最高到達スコア:</span>
                 <span class="font-black text-[#e6ff00]"><span id="gameOverPeakScore">0</span> pts</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">総ミス回数:</span>
+                <span class="text-gray-400" data-i18n="gameover.totalMisses">総ミス回数:</span>
                 <span id="gameOverMisses" class="font-mono font-bold text-[#ff0055]">0</span>
               </div>
             </div>
 
             <!-- ACTIONS -->
             <div class="flex flex-col gap-1.5">
-              <button id="btnGameOverRetry" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#ff1493] to-[#e6ff00] text-black font-black text-xs cursor-pointer shadow hover:brightness-110 active:scale-95 transition">
+              <button id="btnGameOverRetry" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#ff1493] to-[#e6ff00] text-black font-black text-xs cursor-pointer shadow hover:brightness-110 active:scale-95 transition" data-i18n="gameover.retryLoop">
                 🔄 1-LOOP 再挑戦 (START)
               </button>
-              <button id="btnGameOverPracticeRetry" class="hidden w-full py-2 rounded-xl bg-[#281058] hover:bg-[#3d1885] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-[10.5px] cursor-pointer transition">
+              <button id="btnGameOverPracticeRetry" class="hidden w-full py-2 rounded-xl bg-[#281058] hover:bg-[#3d1885] border border-[#00f5d4]/60 text-[#00f5d4] font-bold text-[10.5px] cursor-pointer transition" data-i18n="gameover.retryStage">
                 🎯 このステージを再挑戦
               </button>
-              <button id="btnGameOverTitle" class="w-full py-2 rounded-xl bg-black/40 hover:bg-white/10 border border-white/20 text-gray-300 hover:text-white font-bold text-[10px] cursor-pointer transition">
+              <button id="btnGameOverTitle" class="w-full py-2 rounded-xl bg-black/40 hover:bg-white/10 border border-white/20 text-gray-300 hover:text-white font-bold text-[10px] cursor-pointer transition" data-i18n="gameover.returnTitle">
                 🏠 タイトルへ戻る
               </button>
             </div>
@@ -513,33 +525,33 @@
             <!-- FLEET STRIP -->
             <div class="bg-black/75 border border-[#ff1493]/50 rounded-lg p-1.5 shrink-0">
               <div class="text-[9px] font-black text-[#ff66b2] mb-1 flex items-center justify-between">
-                <span>🛸 桃色装甲艦隊・覚醒率100%達成</span>
+                <span data-i18n="ending.fleetTitle">🛸 桃色装甲艦隊・覚醒率100%達成</span>
                 <span class="text-[#00f5e8] font-mono">ALL 5 AWAKENED</span>
               </div>
               <div class="grid grid-cols-5 gap-1">
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
                   <img src="./assets/ui/portrait_1.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Lilith">
-                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate">01:リリス</span>
+                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate" data-i18n="ending.pilot01">01:リリス</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
                   <img src="./assets/ui/portrait_2.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Celty">
-                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate">02:セルティ</span>
+                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate" data-i18n="ending.pilot02">02:セルティ</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
                   <img src="./assets/ui/portrait_3.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Noah">
-                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate">03:ノア</span>
+                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate" data-i18n="ending.pilot03">03:ノア</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/ui/portrait_4.jpg?v=196" class="w-full aspect-square object-cover rounded-xs" alt="Kasumi">
-                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate">04:カスミ</span>
+                  <img src="./assets/ui/portrait_4.jpg?v=197" class="w-full aspect-square object-cover rounded-xs" alt="Kasumi">
+                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate" data-i18n="ending.pilot04">04:カスミ</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
                   <img src="./assets/ui/portrait_5.jpg?v=196" class="w-full aspect-square object-cover rounded-xs" alt="Seraphia">
-                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate">05:セラフィア</span>
+                  <span class="text-[7.5px] font-black text-white mt-0.5 truncate" data-i18n="ending.pilot05">05:セラフィア</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
               </div>
@@ -561,7 +573,7 @@
                 </div>
               </div>
               <div class="flex items-center justify-between text-[9px] border-t border-white/10 pt-1 text-gray-300">
-                <span>総ミス回数: <span id="endingTotalMiss" class="font-bold text-[#ff1493]">0</span> 回</span>
+                <span><span data-i18n="ending.totalMissesPrefix">総ミス回数:</span> <span id="endingTotalMiss" class="font-bold text-[#ff1493]">0</span> <span data-i18n="ending.totalMissesSuffix">回</span></span>
                 <span class="text-[8px] text-[#00f5e8]">CAMPAIGN COMPLETE</span>
               </div>
             </div>
@@ -573,7 +585,7 @@
                 <div id="endingCallsignDisplay" class="flex-1 px-2 py-1 rounded bg-black/80 border border-[#00f5d4] text-[#00f5d4] font-mono font-black text-sm tracking-[0.2em] uppercase text-center select-none min-h-[28px] flex items-center justify-center">
                   ADMIRAL
                 </div>
-                <button id="btnEndingRegister" class="px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0">
+                <button id="btnEndingRegister" class="px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0" data-i18n="ending.register">
                   登録
                 </button>
               </div>
@@ -598,7 +610,7 @@
     <!-- TITLE CONTROLS DECK (SHOWN WHEN state.inTitle === true) -->
     <div id="titleControlsBar" class="w-full grid grid-cols-4 gap-1 mt-1 shrink-0">
       <button id="btnTitleSettings" class="h-12 col-span-1 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4]/70 transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight">⚙️ 設定</span>
+        <span class="text-xs font-bold leading-tight" data-i18n="controls.settings">⚙️ 設定</span>
         <span class="text-[8.5px] text-[#00f5d4]/70 leading-none mt-0.5">SETTINGS</span>
       </button>
       <button id="btnTitleStart" class="h-12 col-span-2 rounded-lg bg-gradient-to-r from-[#ff1493] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
@@ -614,19 +626,19 @@
     <!-- GAMEPLAY TOUCH CONTROLS DECK (SHOWN WHEN state.inTitle === false) -->
     <div id="gameControlsBar" class="hidden w-full grid grid-cols-4 gap-1 mt-1 shrink-0">
       <button id="btnLeftFlip" class="h-12 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight">◀ 左パドル</span>
+        <span class="text-xs font-bold leading-tight" data-i18n="controls.leftPaddle">◀ 左パドル</span>
         <span class="text-[9px] text-[#00f5d4]/70 leading-none mt-0.5">L-FLIP</span>
       </button>
       <button id="btnNudge" class="h-12 rounded-lg bg-[#210b3a] hover:bg-[#34115c] active:bg-[#e6ff00] active:text-black text-[#e6ff00] border border-[#e6ff00]/70 transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight">台揺らし</span>
-        <span class="text-[9px] text-[#e6ff00]/80 leading-none mt-0.5">スワイプ方向</span>
+        <span class="text-xs font-bold leading-tight" data-i18n="controls.nudge">台揺らし</span>
+        <span class="text-[9px] text-[#e6ff00]/80 leading-none mt-0.5" data-i18n="controls.nudgeHint">スワイプ方向</span>
       </button>
       <button id="btnPlunger" class="h-12 rounded-lg bg-[#36092f] hover:bg-[#520e47] active:bg-[#ff1493] active:text-white text-[#ff1493] border-2 border-[#ff1493] transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight">発射</span>
-        <span id="plungerBtnHint" class="text-[9px] text-[#e6ff00] leading-none mt-0.5">引いて離す</span>
+        <span class="text-xs font-bold leading-tight" data-i18n="controls.launch">発射</span>
+        <span id="plungerBtnHint" class="text-[9px] text-[#e6ff00] leading-none mt-0.5" data-i18n="controls.plungerReady">引いて離す</span>
       </button>
       <button id="btnRightFlip" class="h-12 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4] transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight">右パドル ▶</span>
+        <span class="text-xs font-bold leading-tight" data-i18n="controls.rightPaddle">右パドル ▶</span>
         <span class="text-[9px] text-[#00f5d4]/70 leading-none mt-0.5">R-FLIP</span>
       </button>
     </div>
@@ -634,14 +646,14 @@
     <!-- SETTINGS CLOSE DECK (SHOWN WHENEVER #menuModal IS OPEN) -->
     <div id="menuControlsBar" class="hidden w-full mt-1 shrink-0">
       <button id="btnBottomMenuClose" class="h-12 w-full rounded-lg bg-gradient-to-r from-[#00f5d4] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
-        <span class="text-sm font-black leading-tight tracking-wider">✕ 閉じる</span>
+        <span class="text-sm font-black leading-tight tracking-wider" data-i18n="controls.close">✕ 閉じる</span>
         <span class="text-[8.5px] text-black/80 font-bold leading-none mt-0.5">CLOSE SETTINGS</span>
       </button>
     </div>
 
     <!-- ENDING NAVIGATION DECK (SHOWN WHEN state.inEnding === true) -->
     <div id="endingControlsBar" class="hidden w-full mt-1 shrink-0">
-      <button id="btnBottomEndingAction" class="h-12 w-full rounded-lg bg-[#125830] hover:bg-[#1f8f4f] text-[#34ff8a] font-black font-mono text-sm border-2 border-[#34ff8a] active:scale-95 transition cursor-pointer select-none flex items-center justify-center shadow-[0_0_12px_rgba(52,255,138,0.3)]">
+      <button id="btnBottomEndingAction" class="h-12 w-full rounded-lg bg-[#125830] hover:bg-[#1f8f4f] text-[#34ff8a] font-black font-mono text-sm border-2 border-[#34ff8a] active:scale-95 transition cursor-pointer select-none flex items-center justify-center shadow-[0_0_12px_rgba(52,255,138,0.3)]" data-i18n="controls.advanceCodec">
         通信を進める ▶
       </button>
     </div>
@@ -661,7 +673,7 @@
     <!-- ARMOR DESTRUCTION GUIDE -->
     <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#ff1493]/20">
       <div class="text-[11px] font-extrabold text-[#ff1493] flex items-center gap-1 border-b border-[#ff1493]/20 pb-1">
-        <span>🎯 装甲部位ステータス</span>
+        <span data-i18n="sidebar.armorStatusTitle">🎯 装甲部位ステータス</span>
       </div>
       <div class="space-y-1.5 text-[10px] pt-1">
         <div class="flex items-center justify-between">
@@ -686,19 +698,19 @@
     <!-- FEVER & BURST TELEMETRY -->
     <div class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#00f5d4]/20">
       <div class="text-[11px] font-extrabold text-[#00f5d4] flex items-center gap-1 border-b border-[#00f5d4]/20 pb-1">
-        <span>⚡ リアルタイム解析</span>
+        <span data-i18n="sidebar.realtimeTitle">⚡ リアルタイム解析</span>
       </div>
       <div class="space-y-1 text-[10px] pt-1">
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">シールド:</span>
+          <span class="text-gray-300" data-i18n="sidebar.shield">シールド:</span>
           <span id="dtBallCount" class="font-black text-[#00f5d4]">🛡️SAFE</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">バースト倍率:</span>
+          <span class="text-gray-300" data-i18n="sidebar.burstMult">バースト倍率:</span>
           <span id="dtMultiplier" class="font-black text-[#ff1493]">B×1.0</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-300">フィーバー蓄積:</span>
+          <span class="text-gray-300" data-i18n="sidebar.feverGauge">フィーバー蓄積:</span>
           <span id="dtFeverGauge" class="font-black text-[#e6ff00]">0%</span>
         </div>
       </div>
@@ -722,6 +734,9 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
+  <script src="./js/i18n/i18n.js?v=190"></script>
+  <script src="./js/i18n/ja.js?v=190"></script>
+  <script src="./js/i18n/en.js?v=190"></script>
   <script src="./js/stage1_assets.js?v=190"></script>
   <script src="./js/stage2_assets.js?v=190"></script>
   <script src="./js/stage3_assets.js?v=190"></script>

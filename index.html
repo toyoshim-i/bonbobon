@@ -167,13 +167,10 @@
               </div>
             </div>
 
-            <!-- ACTION BUTTONS -->
-            <div class="flex items-center gap-1.5 mt-0.5">
-              <button id="btnClearReplay" class="flex-1 py-1.5 rounded bg-[#200c47]/80 hover:bg-[#3d1885] active:bg-[#ff1493] text-white border border-[#ff1493]/60 font-bold text-[10px] cursor-pointer transition" data-i18n="clear.replay">
-                もう一度遊ぶ
-              </button>
-              <button id="btnClearNext" class="flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110" data-i18n="clear.nextStage">
-                次のステージへ進む ▶
+            <!-- ACTION BUTTON (STAGE 5 ENDING TRIGGER ONLY) -->
+            <div id="clearEndingAction" class="hidden items-center mt-0.5">
+              <button id="btnClearNext" class="w-full py-1.5 rounded bg-gradient-to-r from-[#00f5e8] via-[#34ff8a] to-[#e6ff00] active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110 animate-pulse" data-i18n="clear.toEnding">
+                ⚡ 統合司令AIの緊急通信を受信 (ENDING) ▶
               </button>
             </div>
           </div>

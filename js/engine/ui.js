@@ -902,7 +902,7 @@ window.UI = {
           const nextBtn = document.getElementById("btnClearNext");
           if (nameEl) nameEl.textContent = idx === 5 ? t("engine.stage5.finalDisplayName") : t(`stage${idx}.bossName`);
           if (quoteEl) quoteEl.innerHTML = t(`stage${idx}.defeatQuote`);
-          if (nextBtn) nextBtn.innerHTML = idx === 5 ? t("clear.toEnding") : t("clear.nextStage");
+          if (nextBtn && idx === 5) nextBtn.innerHTML = t("clear.toEnding");
         }
         if (window.GameFlow && typeof GameFlow.refreshLanguage === "function") {
           GameFlow.refreshLanguage();
@@ -1049,47 +1049,23 @@ window.UI = {
     const modal = document.getElementById("clearModal");
     if (!modal) return;
 
-    const replayBtn = document.getElementById("btnClearReplay");
-    if (replayBtn) {
-      replayBtn.addEventListener("click", () => {
-        this.closeModal(modal);
-        const curIdx = (engine.state && engine.state.stageIndex) || 1;
-        if (engine.state && engine.state.gameMode === "practice") {
-          engine.startPracticeStage(curIdx);
-        } else {
-          engine.startArcadeCampaign();
-        }
-      });
-    }
-
     const nextBtn = document.getElementById("btnClearNext");
     if (nextBtn) {
       nextBtn.addEventListener("click", () => {
         this.closeModal(modal);
-
-        const curId = engine.currentStage ? engine.currentStage.id : "stage1";
-        if (curId === "stage5") {
-          if (window.GameFlow && window.GameFlow.startEnding) {
-            GameFlow.startEnding(engine.state);
-          }
-          return;
+        if (window.GameFlow && window.GameFlow.startEnding) {
+          GameFlow.startEnding(engine.state);
         }
-
-        let chosenRelic = "radar";
-        const selectedBtn = document.querySelector(".relic-btn.border-\\[\\#e6ff00\\]");
-        if (selectedBtn && selectedBtn.dataset.relic) {
-          chosenRelic = selectedBtn.dataset.relic;
-        }
-        engine.advanceToNextStage(chosenRelic);
       });
     }
 
     document.querySelectorAll(".relic-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".relic-btn").forEach(b => b.classList.remove("border-[#e6ff00]", "bg-[#ff1493]/40"));
-        btn.classList.add("border-[#e6ff00]", "bg-[#ff1493]/40");
+        const chosenRelic = btn.dataset.relic || "radar";
         const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : t("ui.relicPart");
+        this.closeModal(modal);
         this.showCutin(t("ui.relicEquip", { title }), 160);
+        engine.advanceToNextStage(chosenRelic);
       });
     });
   },
@@ -1193,20 +1169,22 @@ window.UI = {
     }
 
     const relicSection = document.getElementById("relicSection");
+    const endingAction = document.getElementById("clearEndingAction");
     const nextBtn = document.getElementById("btnClearNext");
 
     const isStage5 = stageIdx === 5 || (window.currentStage && window.currentStage.id === "stage5");
     if (isStage5) {
       if (relicSection) relicSection.classList.add("hidden");
-      if (nextBtn) {
-        nextBtn.innerHTML = t("clear.toEnding");
-        nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#00f5e8] via-[#34ff8a] to-[#e6ff00] active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110 animate-pulse";
+      if (endingAction) {
+        endingAction.classList.remove("hidden");
+        endingAction.classList.add("flex");
       }
+      if (nextBtn) nextBtn.innerHTML = t("clear.toEnding");
     } else {
       if (relicSection) relicSection.classList.remove("hidden");
-      if (nextBtn) {
-        nextBtn.innerHTML = t("clear.nextStage");
-        nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110";
+      if (endingAction) {
+        endingAction.classList.add("hidden");
+        endingAction.classList.remove("flex");
       }
     }
 

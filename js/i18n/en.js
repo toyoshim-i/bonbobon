@@ -86,8 +86,6 @@ I18N.register("en", {
   "clear.relicSpringDesc": "Flipper Power +25% & Faster Ball",
   "clear.relicDroneName": "Support Drone",
   "clear.relicDroneDesc": "Auto-deploy Center Post on Launch",
-  "clear.replay": "REPLAY STAGE",
-  "clear.nextStage": "NEXT STAGE ▶",
   "clear.toEnding": "⚡ RECEIVE URGENT COMMS (ENDING) ▶",
 
   // Ranking Modal

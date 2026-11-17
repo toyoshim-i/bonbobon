@@ -86,8 +86,6 @@ I18N.register("ja", {
   "clear.relicSpringDesc": "フリッパー反発力+25%＆弾速UP",
   "clear.relicDroneName": "支援ドローン",
   "clear.relicDroneDesc": "投入時ストッパー自動展開",
-  "clear.replay": "もう一度遊ぶ",
-  "clear.nextStage": "次のステージへ進む ▶",
   "clear.toEnding": "⚡ 統合司令AIの緊急通信を受信 (ENDING) ▶",
 
   // Ranking Modal

@@ -248,13 +248,6 @@ window.GameFlow = {
       });
     }
 
-    const btnEndingSkip = document.getElementById("btnEndingSkip");
-    if (btnEndingSkip) {
-      btnEndingSkip.addEventListener("click", () => {
-        this.skipEnding();
-      });
-    }
-
     const codecDialogueText = document.getElementById("codecDialogueText");
     if (codecDialogueText) {
       codecDialogueText.addEventListener("click", () => {
@@ -820,9 +813,6 @@ window.GameFlow = {
     this.hideAllModals();
     if (window.UI && UI.updateScreenMode) UI.updateScreenMode(state);
 
-    const skipBtn = document.getElementById("btnEndingSkip");
-    if (skipBtn) skipBtn.classList.remove("hidden");
-
     if (window.UI && UI.openModal) UI.openModal("endingModal");
 
     this.ending.act = 1;
@@ -859,13 +849,6 @@ window.GameFlow = {
         this.showEndingAct2();
       }
     }
-  },
-
-  skipEnding() {
-    clearTimeout(this.ending.typeTimer);
-    this.ending.isTyping = false;
-    if (window.sfx && window.sfx.codecClose) window.sfx.codecClose();
-    this.showEndingAct3();
   },
 
   setCodecSpeakerVisual(speaker) {
@@ -1273,9 +1256,6 @@ window.GameFlow = {
     if (act1Box) act1Box.classList.add("hidden");
     if (act2Box) act2Box.classList.add("hidden");
     if (act3Box) act3Box.classList.remove("hidden");
-
-    const skipBtn = document.getElementById("btnEndingSkip");
-    if (skipBtn) skipBtn.classList.add("hidden");
 
     this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
 

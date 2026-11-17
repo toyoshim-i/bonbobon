@@ -26,7 +26,9 @@ window.Stage5 = {
   },
 
   initAssets() {
-    const v = "?v=190";
+    if (this.assets._initialized) return;
+    this.assets._initialized = true;
+    const v = (window.StageCommon && StageCommon.ASSET_QUERY) || "?v=190";
     this.assets.twinLIntactImg.src = "./assets/stage5/twin_l_intact.png" + v;
     this.assets.twinLBrokenImg.src = "./assets/stage5/twin_l_broken.png" + v;
     this.assets.twinRIntactImg.src = "./assets/stage5/twin_r_intact.png" + v;
@@ -47,10 +49,6 @@ window.Stage5 = {
     );
 
     this.assets.loaded = true;
-    this._srcCache = null;
-    this._rampStaticCanvas = null;
-    this._rampUpperCanvas = null;
-    this._rampMetrics = null;
   },
 
   // 3D立体ワイヤーランプ軌道定義 (Pinball Cross-Over Twin Skyway: NOEL RAMP & ELLE RAMP)
@@ -98,13 +96,7 @@ window.Stage5 = {
   },
 
   sampleRamp(rampKey, dist) {
-    if (!this._rampMetrics) {
-      this._rampMetrics = {
-        left: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.left.points),
-        right: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.right.points)
-      };
-    }
-    return StageCommon.samplePolylineRamp(this._rampMetrics[rampKey], dist);
+    return StageCommon.sampleStageRamp(this, rampKey, dist);
   },
 
   createBossState() {

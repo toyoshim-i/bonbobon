@@ -28,7 +28,9 @@ window.Stage3 = {
   ANTENNA_BOUNCE: { restitution: 0.76, kick: 2.8, maxSpeed: 13.2 },
 
   initAssets() {
-    const v = "?v=136";
+    if (this.assets._initialized) return;
+    this.assets._initialized = true;
+    const v = (window.StageCommon && StageCommon.ASSET_QUERY) || "?v=190";
     this.assets.bareImg.src = "./assets/stage3/centerpiece.jpg" + v;
     this.assets.defeatCgImg.src = "./assets/stage3/defeat_cg.jpg" + v;
     this.assets.bitOrbImg.src = "./assets/stage3/bit_orb.png" + v;

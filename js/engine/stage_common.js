@@ -672,6 +672,95 @@ window.StageCommon = {
     return false;
   },
 
+  sampleStageRamp(stage, rampKey, dist, opts = {}) {
+    if (!stage._rampMetrics) {
+      stage._rampMetrics = {
+        left: this.buildPolylineMetrics(stage.WIRE_RAMPS.left.points),
+        right: this.buildPolylineMetrics(stage.WIRE_RAMPS.right.points)
+      };
+    }
+    return this.samplePolylineRamp(stage._rampMetrics[rampKey], dist, opts);
+  },
+
+  ensureWireRampCanvases(stage, W = 420, H = 660, gauge = 7.6) {
+    if (stage._rampStaticCanvas && stage._rampUpperCanvas) return;
+    stage.sampleRamp("left", 0);
+
+    const staticC = document.createElement("canvas");
+    staticC.width = W;
+    staticC.height = H;
+    const sctx = staticC.getContext("2d");
+
+    const upperC = document.createElement("canvas");
+    upperC.width = W;
+    upperC.height = H;
+    const uctx = upperC.getContext("2d");
+
+    for (const rampKey of ["left", "right"]) {
+      const rd = stage.WIRE_RAMPS[rampKey];
+      const pts = stage._rampMetrics[rampKey].smoothPts;
+      const totalLen = stage._rampMetrics[rampKey].totalLen;
+
+      sctx.strokeStyle = "rgba(4, 2, 16, 0.55)";
+      sctx.lineWidth = gauge * 2 + 4;
+      sctx.lineCap = "round";
+      sctx.lineJoin = "round";
+      sctx.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        const sx = p.x + p.elev * 5;
+        const sy = p.y + p.elev * 8;
+        if (i === 0) sctx.moveTo(sx, sy);
+        else sctx.lineTo(sx, sy);
+      }
+      sctx.stroke();
+
+      for (const side of [-1, 1]) {
+        const strokeSide = (alpha, lineW) => {
+          sctx.strokeStyle = rd.color;
+          sctx.globalAlpha = alpha;
+          sctx.lineWidth = lineW;
+          sctx.beginPath();
+          for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            const pNext = pts[Math.min(pts.length - 1, i + 1)];
+            const pPrev = pts[Math.max(0, i - 1)];
+            const dx = pNext.x - pPrev.x;
+            const dy = pNext.y - pPrev.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const nx = -dy / len;
+            const ny = dx / len;
+            const rx = p.x + nx * side * gauge;
+            const ry = p.y + ny * side * gauge;
+            if (i === 0) sctx.moveTo(rx, ry);
+            else sctx.lineTo(rx, ry);
+          }
+          sctx.stroke();
+        };
+        strokeSide(0.28, 5.2);
+        strokeSide(0.90, 2.3);
+      }
+
+      for (let d = 24; d < totalLen - 16; d += 32) {
+        const s = stage.sampleRamp(rampKey, d);
+        const ang = Math.atan2(s.ty, s.tx);
+        uctx.save();
+        uctx.translate(s.x, s.y);
+        uctx.rotate(ang);
+        uctx.strokeStyle = rd.accent;
+        uctx.globalAlpha = 0.78;
+        uctx.lineWidth = 1.7;
+        uctx.beginPath();
+        uctx.ellipse(0, 0, 3.4, gauge + 1.8, 0, -Math.PI * 0.5, Math.PI * 0.5);
+        uctx.stroke();
+        uctx.restore();
+      }
+    }
+
+    stage._rampStaticCanvas = staticC;
+    stage._rampUpperCanvas = upperC;
+  },
+
   renderWireRampChasers(ctx, stage, rampKey, totalLen, animTick) {
     const chaseOffset = (animTick * 3.2) % 44;
     for (let d = chaseOffset; d < totalLen - 12; d += 44) {

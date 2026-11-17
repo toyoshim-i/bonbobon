@@ -18,11 +18,14 @@ window.Stage1 = {
   },
 
   initAssets() {
-    this.assets.armoredImg.src = "./assets/stage1/centerpiece_armored.jpg";
-    this.assets.bareImg.src = "./assets/stage1/centerpiece.jpg";
-    this.assets.defeatCgImg.src = "./assets/stage1/defeat_cg.jpg";
-    this.assets.earTipLImg.src = "./assets/stage1/ear_tip_L.png";
-    this.assets.earTipRImg.src = "./assets/stage1/ear_tip_R.png";
+    if (this.assets._initialized) return;
+    this.assets._initialized = true;
+    const v = (window.StageCommon && StageCommon.ASSET_QUERY) || "?v=190";
+    this.assets.armoredImg.src = "./assets/stage1/centerpiece_armored.jpg" + v;
+    this.assets.bareImg.src = "./assets/stage1/centerpiece.jpg" + v;
+    this.assets.defeatCgImg.src = "./assets/stage1/defeat_cg.jpg" + v;
+    this.assets.earTipLImg.src = "./assets/stage1/ear_tip_L.png" + v;
+    this.assets.earTipRImg.src = "./assets/stage1/ear_tip_R.png" + v;
 
     // 表情差分パッチ初期化（assets/stage1/faces/ ＋ STAGE1_FACE_PATCHES）
     this.assets.facePatchImgs = Systems.loadFacePatches("stage1", window.STAGE1_FACE_PATCHES,

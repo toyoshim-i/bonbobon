@@ -21,7 +21,9 @@ window.Stage4 = {
   },
 
   initAssets() {
-    const v = "?v=144";
+    if (this.assets._initialized) return;
+    this.assets._initialized = true;
+    const v = (window.StageCommon && StageCommon.ASSET_QUERY) || "?v=190";
     this.assets.bgAlleyImg.src = "./assets/stage4/bg_alley.jpg" + v;
     this.assets.charBodyImg.src = "./assets/stage4/char_body.png" + v;
     this.assets.charSealBrokenImg.src = "./assets/stage4/char_seal_broken.png" + v;
@@ -36,10 +38,6 @@ window.Stage4 = {
       ["blink_half", "blink", "wink", "shout", "shock", "wince", "open_blush", "talk", "talk_sm"]
     );
     this.assets.loaded = true;
-    this._srcCache = null;
-    this._rampStaticCanvas = null;
-    this._rampUpperCanvas = null;
-    this._shurikenCache = {};
   },
 
   LANTERN_DEFS: [
@@ -96,13 +94,7 @@ window.Stage4 = {
   },
 
   sampleRamp(rampKey, dist) {
-    if (!this._rampMetrics) {
-      this._rampMetrics = {
-        left: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.left.points),
-        right: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.right.points)
-      };
-    }
-    return StageCommon.samplePolylineRamp(this._rampMetrics[rampKey], dist, { withLanterns: true });
+    return StageCommon.sampleStageRamp(this, rampKey, dist, { withLanterns: true });
   },
 
   createBossState() {

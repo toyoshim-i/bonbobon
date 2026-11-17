@@ -2,17 +2,16 @@
 // STAGE 2: CELTY (疾風紫電セルティ)
 // =========================================================================
 
-// 左足付け根装甲のお尻揺れ追従率。装甲は太もも（揺れない部位）に付いているので 0 で固定。
-// 0 以外にすると、スプライトの移動で下地の原画に残る装甲輪郭がはみ出し、黒い隙間として見える。
-const HIP_FOLLOW = 0;
-
 window.Stage2 = {
   id: "stage2",
   name: "疾風紫電セルティ",
   bossName: "セルティ (CELTY)",
+  // 左足付け根装甲のお尻揺れ追従率。装甲は太もも（揺れない部位）に付いているので 0 で固定。
+  // 0 以外にすると、スプライトの移動で下地の原画に残る装甲輪郭がはみ出し、黒い隙間として見える。
+  HIP_FOLLOW: 0,
 
   assets: {
-    armoredImg: new Image(),
+    armoredImg: null,
     bareImg: new Image(),
     defeatCgImg: new Image(),
     hologramImg: new Image(),
@@ -29,17 +28,20 @@ window.Stage2 = {
   },
 
   initAssets() {
-    this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg";
-    this.assets.armoredImg.src = "./assets/stage2/centerpiece.jpg";
-    this.assets.defeatCgImg.src = "./assets/stage2/defeat_cg.jpg?v=122";
-    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png?v=109";
-    this.assets.gauntletLBrokenImg.src = "./assets/stage2/gauntlet_l_broken.png?v=109";
-    this.assets.gauntletRBrokenImg.src = "./assets/stage2/gauntlet_r_broken.png?v=109";
-    this.assets.nozzlesBrokenImg.src = "./assets/stage2/nozzles_broken.png?v=109";
-    this.assets.shoulderLBrokenImg.src = "./assets/stage2/shoulder_l_broken.png?v=122";
-    this.assets.antennaBrokenImg.src = "./assets/stage2/antenna_broken.png?v=122";
-    this.assets.bustBrokenImg.src = "./assets/stage2/bust_broken.png?v=122";
-    this.assets.bodyDamageImg.src = "./assets/stage2/body_damage.png?v=122";
+    if (this.assets._initialized) return;
+    this.assets._initialized = true;
+    const v = (window.StageCommon && StageCommon.ASSET_QUERY) || "?v=190";
+    this.assets.bareImg.src = "./assets/stage2/centerpiece.jpg" + v;
+    this.assets.armoredImg = this.assets.bareImg;
+    this.assets.defeatCgImg.src = "./assets/stage2/defeat_cg.jpg" + v;
+    this.assets.hipJointImg.src = "./assets/stage2/hip_joint.png" + v;
+    this.assets.gauntletLBrokenImg.src = "./assets/stage2/gauntlet_l_broken.png" + v;
+    this.assets.gauntletRBrokenImg.src = "./assets/stage2/gauntlet_r_broken.png" + v;
+    this.assets.nozzlesBrokenImg.src = "./assets/stage2/nozzles_broken.png" + v;
+    this.assets.shoulderLBrokenImg.src = "./assets/stage2/shoulder_l_broken.png" + v;
+    this.assets.antennaBrokenImg.src = "./assets/stage2/antenna_broken.png" + v;
+    this.assets.bustBrokenImg.src = "./assets/stage2/bust_broken.png" + v;
+    this.assets.bodyDamageImg.src = "./assets/stage2/body_damage.png" + v;
 
     if (window.STAGE2_HOLOGRAM_DATA) {
       this.assets.hologramImg.src = window.STAGE2_HOLOGRAM_DATA;
@@ -61,7 +63,7 @@ window.Stage2 = {
 
   // 表情アニメーションシーケンス開始ヘルパー
   createBossState() {
-    return {
+    const boss = {
       name: "セルティ",
       expression: "normal",
       expressionTimer: 0,
@@ -206,18 +208,7 @@ window.Stage2 = {
       jet: {
         active: false,
         timer: 0,
-        get nozzles() {
-          const arr = [];
-          if (window.state && window.state.boss) {
-            const b = window.state.boss;
-            if (b.nozzleL) arr.push(b.nozzleL);
-            if (b.nozzleR) arr.push(b.nozzleR);
-          }
-          return arr.length > 0 ? arr : [
-            { x: 240, y: 379, angle: Math.PI * 0.46, r: 16 },
-            { x: 272, y: 376, angle: Math.PI * 0.46, r: 16 }
-          ];
-        },
+        nozzles: null,
         get x() { return 240; },
         get y() { return 379; },
         get angle() { return Math.PI * 0.46; }
@@ -278,6 +269,8 @@ window.Stage2 = {
 
       defeatTriggered: false
     };
+    boss.jet.nozzles = [boss.nozzleL, boss.nozzleR];
+    return boss;
   },
 
   triggerDebugJiggle(state) {

@@ -83,8 +83,8 @@ Object.assign(window.Stage2, {
       if (this.assets.hipJointImg && this.assets.hipJointImg.complete) {
         ctx.save();
         const bL = state.boss.buttL;
-        const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
-        const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
+        const jDx = (bL ? bL.dx : 0) * this.HIP_FOLLOW;
+        const jDy = (bL ? bL.dy : 0) * this.HIP_FOLLOW;
         const jw = (140 / 768) * IMG_BOX.w;
         const jh = (140 / 1376) * IMG_BOX.h;
         const jx = IMG_BOX.x + (298 / 768) * IMG_BOX.w + jDx;
@@ -596,8 +596,8 @@ Object.assign(window.Stage2, {
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
-      const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
-      const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
+      const jDx = (bL ? bL.dx : 0) * this.HIP_FOLLOW;
+      const jDy = (bL ? bL.dy : 0) * this.HIP_FOLLOW;
       Particles.drawBounceBumperGuide(ctx, animTick, hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, "HIP JOINT", "CYBER BUMP");
     }
 

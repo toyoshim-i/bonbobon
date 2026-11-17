@@ -30,36 +30,11 @@ Object.assign(window.Stage2, {
     });
 
     // 2. 胸のバネ物理（ぷるぷる振動）
-    const bust = state.boss.tipBust;
-    if (bust) {
-      const stiffness = 0.12;
-      const damping = 0.88;
-      const ax = -stiffness * bust.dx;
-      const ay = -stiffness * bust.dy;
-      bust.vx = (bust.vx + ax) * damping;
-      bust.vy = (bust.vy + ay) * damping;
-      bust.dx += bust.vx;
-      bust.dy += bust.vy;
-      bust.dx = Math.max(-14, Math.min(14, bust.dx));
-      bust.dy = Math.max(-14, Math.min(14, bust.dy));
-    }
+    StageCommon.stepSoftSpring(state.boss.tipBust, 0.12, 0.88, 14);
 
     // 3. お尻のバネ物理（左右2つの円で自然に揺れる）
-    const updateButtSpring = (b) => {
-      if (!b) return;
-      const stiffness = 0.13;
-      const damping = 0.86;
-      const ax = -stiffness * b.dx;
-      const ay = -stiffness * b.dy;
-      b.vx = (b.vx + ax) * damping;
-      b.vy = (b.vy + ay) * damping;
-      b.dx += b.vx;
-      b.dy += b.vy;
-      b.dx = Math.max(-14, Math.min(14, b.dx));
-      b.dy = Math.max(-14, Math.min(14, b.dy));
-    };
-    updateButtSpring(state.boss.buttL);
-    updateButtSpring(state.boss.buttR);
+    StageCommon.stepSoftSpring(state.boss.buttL, 0.13, 0.86, 14);
+    StageCommon.stepSoftSpring(state.boss.buttR, 0.13, 0.86, 14);
 
     // 4. カチューシャのアンテナ先端の周期放電サイクル
     const ant = state.boss.antenna;
@@ -696,8 +671,8 @@ Object.assign(window.Stage2, {
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
-      const jDx = (bL ? bL.dx : 0) * HIP_FOLLOW;
-      const jDy = (bL ? bL.dy : 0) * HIP_FOLLOW;
+      const jDx = (bL ? bL.dx : 0) * this.HIP_FOLLOW;
+      const jDy = (bL ? bL.dy : 0) * this.HIP_FOLLOW;
       const dynamicHip = {
         x: hip.x + jDx,
         y: hip.y + jDy,

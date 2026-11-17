@@ -61,9 +61,17 @@ window.Stage3 = {
     }
   },
 
+  _emptyArr: [],
   getAllBits(b) {
-    if (!b) return [];
-    return [b.bitTopL, b.bitTopR, b.bitMidL, b.bitMidR].filter(Boolean);
+    if (!b) return this._emptyArr;
+    if (b._allBits) return b._allBits;
+    const arr = [];
+    if (b.bitTopL) arr.push(b.bitTopL);
+    if (b.bitTopR) arr.push(b.bitTopR);
+    if (b.bitMidL) arr.push(b.bitMidL);
+    if (b.bitMidR) arr.push(b.bitMidR);
+    b._allBits = arr;
+    return arr;
   },
 
   createBossState() {

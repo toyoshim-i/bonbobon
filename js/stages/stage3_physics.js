@@ -125,41 +125,57 @@ Object.assign(window.Stage3, {
     return aliveBits.filter(bit => bit.id !== excluded.id).slice(0, 3).map(bit => bit.id);
   },
 
+  _deltaEdgesBuf: [],
+  _deltaBitsBuf: [null, null, null],
+  _aliveBitsBuf: [],
+  _activeBallsBuf: [],
+  _candBallsBuf: [],
+
   // 選抜された3機のビット外縁同士を結ぶデルタビーム線分配列を取得（ビット本体の被弾判定は妨げない）
   getDeltaBeamEdges(b) {
     const bl = b && b.bitLasers;
-    if (!bl || !bl.deltaBitIds || bl.deltaBitIds.length !== 3) return [];
+    if (!bl || !bl.deltaBitIds || bl.deltaBitIds.length !== 3) return this._emptyArr;
     const allBits = this.getAllBits(b);
-    const bits = bl.deltaBitIds.map(id => allBits.find(bit => bit.id === id && !bit.broken));
-    if (bits.some(bit => !bit)) return [];
+    const bits = this._deltaBitsBuf;
+    for (let k = 0; k < 3; k++) {
+      const id = bl.deltaBitIds[k];
+      let found = null;
+      for (let i = 0; i < allBits.length; i++) {
+        if (allBits[i].id === id && !allBits[i].broken) {
+          found = allBits[i];
+          break;
+        }
+      }
+      if (!found) return this._emptyArr;
+      bits[k] = found;
+    }
 
-    const pts = bits.map(bit => ({
-      x: bit.x,
-      y: bit.y + (bit.bobY || 0),
-      r: bit.r
-    }));
-    const pairs = [[0, 1], [1, 2], [2, 0]];
-    const edges = [];
-    for (const [i, j] of pairs) {
-      const p1 = pts[i];
-      const p2 = pts[j];
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
+    const edges = this._deltaEdgesBuf;
+    edges.length = 0;
+    for (let p = 0; p < 3; p++) {
+      const b1 = bits[p];
+      const b2 = bits[(p + 1) % 3];
+      const p1x = b1.x;
+      const p1y = b1.y + (b1.bobY || 0);
+      const p2x = b2.x;
+      const p2y = b2.y + (b2.bobY || 0);
+      const dx = p2x - p1x;
+      const dy = p2y - p1y;
       const len = Math.hypot(dx, dy);
-      const pad1 = p1.r + 2;
-      const pad2 = p2.r + 2;
+      const pad1 = b1.r + 2;
+      const pad2 = b2.r + 2;
       if (len > pad1 + pad2 + 4) {
         const ux = dx / len;
         const uy = dy / len;
         edges.push({
-          ax: p1.x + ux * pad1,
-          ay: p1.y + uy * pad1,
-          bx: p2.x - ux * pad2,
-          by: p2.y - uy * pad2,
-          rawAx: p1.x,
-          rawAy: p1.y,
-          rawBx: p2.x,
-          rawBy: p2.y
+          ax: p1x + ux * pad1,
+          ay: p1y + uy * pad1,
+          bx: p2x - ux * pad2,
+          by: p2y - uy * pad2,
+          rawAx: p1x,
+          rawAy: p1y,
+          rawBx: p2x,
+          rawBy: p2y
         });
       }
     }
@@ -290,8 +306,18 @@ Object.assign(window.Stage3, {
       }
     }
 
-    const aliveBits = this.getAllBits(b).filter(bit => !bit.broken);
-    const activeBalls = state.balls.filter(ball => !ball.inShooterLane && !ball._capturedByHand && !ball._shattered);
+    const allBits = this.getAllBits(b);
+    const aliveBits = this._aliveBitsBuf;
+    aliveBits.length = 0;
+    for (let i = 0; i < allBits.length; i++) {
+      if (!allBits[i].broken) aliveBits.push(allBits[i]);
+    }
+    const activeBalls = this._activeBallsBuf;
+    activeBalls.length = 0;
+    for (let i = 0; i < state.balls.length; i++) {
+      const ball = state.balls[i];
+      if (!ball.inShooterLane && !ball._capturedByHand && !ball._shattered) activeBalls.push(ball);
+    }
 
     if (aliveBits.length >= 3) {
       // === 3機以上健在時：そのうち3機が選ばれてデルタビーム！ ===
@@ -365,7 +391,12 @@ Object.assign(window.Stage3, {
 
       const handsBusy = b.hands && b.hands.mode === "transfer";
       // フリッパー直上(y>=470)の球は新規ロックオン対象外にして理不尽ハメを防ぐ
-      const candidateBalls = activeBalls.filter(ball => ball.y > 46 && ball.y < 470);
+      const candidateBalls = this._candBallsBuf;
+      candidateBalls.length = 0;
+      for (let i = 0; i < activeBalls.length; i++) {
+        const ball = activeBalls[i];
+        if (ball.y > 46 && ball.y < 470) candidateBalls.push(ball);
+      }
       const nextCooldown = () => (aliveBits.length === 2 ? 185 : 225) + Math.floor(Math.random() * 45);
 
       if (bl.snipePhase === "idle") {

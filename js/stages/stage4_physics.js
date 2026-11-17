@@ -3,6 +3,14 @@
 // =========================================================================
 
 Object.assign(window.Stage4, {
+  _hitCircle(ball, key, target, bounceSpd, cooldown, onHit) {
+    if ((ball.hitCooldowns[key] || 0) > 0) return false;
+    return Physics.checkCircleBumper(ball, target, bounceSpd, () => {
+      ball.hitCooldowns[key] = cooldown;
+      onHit();
+    });
+  },
+
   update(state, engine) {
     const b = state.boss;
     if (!b) return;
@@ -397,11 +405,7 @@ Object.assign(window.Stage4, {
     }
 
     const hitCircle = (key, target, bounceSpd, cooldown, onHit) => {
-      if ((ball.hitCooldowns[key] || 0) > 0) return false;
-      return Physics.checkCircleBumper(ball, target, bounceSpd, () => {
-        ball.hitCooldowns[key] = cooldown;
-        onHit();
-      });
+      return this._hitCircle(ball, key, target, bounceSpd, cooldown, onHit);
     };
 
     // 1. 幻影分身ホログラム撃破判定

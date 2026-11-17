@@ -382,7 +382,9 @@ Object.assign(window.Stage4, {
       return;
     }
 
-    if (substep === 0 && ball.y > 170 && ball.y < 460 && (ball.x < 145 || ball.x > 255)) {
+    if (substep !== 0) return;
+
+    if (ball.y > 170 && ball.y < 460 && (ball.x < 145 || ball.x > 255)) {
       const spd = Math.hypot(ball.vx, ball.vy);
       if (spd > 4.5) b.stoleWind = Math.min(1.6, b.stoleWind + spd * 0.04);
     }

@@ -794,11 +794,11 @@ Object.assign(window.Stage5, {
       return;
     }
 
+    if (substep !== 0) return;
+
     if (!ball.hitCooldowns) ball.hitCooldowns = {};
-    if (substep === 0) {
-      for (const k in ball.hitCooldowns) {
-        if (ball.hitCooldowns[k] > 0) ball.hitCooldowns[k]--;
-      }
+    for (const k in ball.hitCooldowns) {
+      if (ball.hitCooldowns[k] > 0) ball.hitCooldowns[k]--;
     }
 
     const hitCircle = (key, target, bounceSpd, cooldown, onHit) => {

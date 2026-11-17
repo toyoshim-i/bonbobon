@@ -36,6 +36,55 @@ Object.assign(window.Stage2, {
     StageCommon.stepSoftSpring(state.boss.buttL, 0.13, 0.86, 14);
     StageCommon.stepSoftSpring(state.boss.buttR, 0.13, 0.86, 14);
 
+    // 3.5. 破損部位の火花・黒煙エフェクト（描画フェーズから物理フェーズへ分離）
+    const b = state.boss;
+    if (b.hologram && b.hologram.broken) {
+      if (Math.random() < 0.20) {
+        Particles.add(state, b.hologram.x + (Math.random() - 0.5) * 16, b.hologram.y + (Math.random() - 0.5) * 16, "#00f5d4", 2, 2.5);
+      }
+      if (Math.random() < 0.15 && state.particles.length < Particles.MAX_PARTICLES) {
+        state.particles.push({
+          x: b.hologram.x + (Math.random() - 0.5) * 10,
+          y: b.hologram.y + (Math.random() - 0.5) * 8,
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: -1.2 - Math.random() * 1.5,
+          color: "#333333",
+          life: 20,
+          scale: 1.5
+        });
+      }
+    }
+    if (b.antenna && b.antenna.broken && Math.random() < 0.25) {
+      Particles.add(state, b.antenna.x + (Math.random() - 0.5) * 12, b.antenna.y + (Math.random() - 0.5) * 12, "#e6ff00", 2, 2.5);
+    }
+    if (b.shoulderL && b.shoulderL.broken && Math.random() < 0.15) {
+      Particles.add(state, b.shoulderL.x + (Math.random() - 0.5) * 16, b.shoulderL.y + (Math.random() - 0.5) * 16, "#ff1493", 2, 2.0);
+    }
+    if (b.elbowL && b.elbowL.broken && Math.random() < 0.15) {
+      Particles.add(state, b.elbowL.x + (Math.random() - 0.5) * 16, b.elbowL.y + (Math.random() - 0.5) * 16, "#e6ff00", 2, 2.0);
+    }
+    if (b.elbowR && b.elbowR.broken && Math.random() < 0.15) {
+      Particles.add(state, b.elbowR.x + (Math.random() - 0.5) * 18, b.elbowR.y + (Math.random() - 0.5) * 18, "#e6ff00", 2, 2.0);
+    }
+    if (b.tipBust && b.tipBust.broken && Math.random() < 0.15) {
+      Particles.add(state, b.tipBust.x + (Math.random() - 0.5) * 10, b.tipBust.y + (Math.random() - 0.5) * 10, "#e6ff00", 2, 2.0);
+    }
+    if (((b.nozzleL && b.nozzleL.broken) || (b.nozzleR && b.nozzleR.broken)) && Math.random() < 0.25 && state.particles.length < Particles.MAX_PARTICLES) {
+      const nozPos = (b.nozzleL && b.nozzleL.broken) ? b.nozzleL : b.nozzleR;
+      state.particles.push({
+        x: nozPos.x + (Math.random() - 0.5) * 14,
+        y: nozPos.y + (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -1.5 - Math.random() * 2.0,
+        color: Math.random() < 0.5 ? "#333333" : "#552244",
+        life: 20,
+        scale: 1.8
+      });
+    }
+    if ((state.phase >= 3 || b.allArmorsPurged) && b.core && Math.random() < 0.25) {
+      Particles.add(state, b.core.x + (Math.random() - 0.5) * 20, b.core.y + (Math.random() - 0.5) * 20, "#00f5d4", 2, 2.5);
+    }
+
     // 4. カチューシャのアンテナ先端の周期放電サイクル
     const ant = state.boss.antenna;
     if (ant) {

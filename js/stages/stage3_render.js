@@ -67,15 +67,24 @@ Object.assign(window.Stage3, {
     };
 
     ctx.save();
-    // 1. ベース原画（撃破時は敗北ご褒美CG）
-    ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
-
-    if (!isDefeat && b) {
-      // 2. 原画に描き込まれている固定ビット3機と固定アンテナを背景パッチで消去
+    // 1. ベース原画（撃破時は敗北ご褒美CG、通常時は事前合成キャッシュを使用）
+    const cachedSrc = (!isDefeat && b) ? this._getSrcPixels(IMG_BOX, b.chestArmorBroken, b.kneeBroken) : null;
+    if (cachedSrc && cachedSrc.canvas) {
+      ctx.drawImage(cachedSrc.canvas, IMG_BOX.x, IMG_BOX.y);
       drawSrcPatch(this.assets.bgAntennaImg, 172, 108, 94, 186);
       drawSrcPatch(this.assets.bgBitTopImg, 612, 248, 92, 90);
-      drawSrcPatch(this.assets.bgBitMidLImg, 128, 704, 80, 80);
       drawSrcPatch(this.assets.bgBitMidRImg, 568, 698, 82, 84);
+    } else {
+      ctx.drawImage(baseImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+      if (!isDefeat && b) {
+        drawSrcPatch(this.assets.bgAntennaImg, 172, 108, 94, 186);
+        drawSrcPatch(this.assets.bgBitTopImg, 612, 248, 92, 90);
+        drawSrcPatch(this.assets.bgBitMidLImg, 128, 704, 80, 80);
+        drawSrcPatch(this.assets.bgBitMidRImg, 568, 698, 82, 84);
+      }
+    }
+
+    if (!isDefeat && b) {
 
       // 3. 左右の手の握り込み差分（吸引キャッチ＆転送チャージ中）
       if (b.hands && b.hands.handLClosedTimer > 0) {

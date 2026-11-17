@@ -128,132 +128,30 @@ Object.assign(window.Stage2, {
             ctx.restore();
           }
         }
-      } else if (holo && holo.broken) {
-        // ホログラム砲台破壊時：手首デバイスから火花と黒煙
-        if (Math.random() < 0.20) {
-          Particles.add(state, holo.x + (Math.random() - 0.5) * 16, holo.y + (Math.random() - 0.5) * 16, "#00f5d4", 2, 2.5);
-        }
-        if (Math.random() < 0.15) {
-          state.particles.push({
-            x: holo.x + (Math.random() - 0.5) * 10,
-            y: holo.y + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 1.2,
-            vy: -1.2 - Math.random() * 1.5,
-            color: "#333333",
-            life: 20,
-            scale: 1.5
-          });
-        }
       }
 
       // 4.5. パーツブレイク破損差分描画（アンテナ・左肩・肘・胸部・ノズル・Phase 3 大破）
-      // A. アンテナ破損差分（折損・電撃ショート火花）
       if (state.boss.antenna && state.boss.antenna.broken && this.assets.antennaBrokenImg && this.assets.antennaBrokenImg.complete) {
-        ctx.save();
-        const ax = IMG_BOX.x + (550 / 768) * IMG_BOX.w;
-        const ay = IMG_BOX.y + (20 / 1376) * IMG_BOX.h;
-        const aw = (200 / 768) * IMG_BOX.w;
-        const ah = (220 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.antennaBrokenImg, ax, ay, aw, ah);
-        if (Math.random() < 0.25) {
-          Particles.add(state, state.boss.antenna.x + (Math.random() - 0.5) * 12, state.boss.antenna.y + (Math.random() - 0.5) * 12, "#e6ff00", 2, 2.5);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.antennaBrokenImg, IMG_BOX.x + (550 / 768) * IMG_BOX.w, IMG_BOX.y + (20 / 1376) * IMG_BOX.h, (200 / 768) * IMG_BOX.w, (220 / 1376) * IMG_BOX.h);
       }
-
-      // B. 左肩装甲大破パージ（ピンク装甲吹き飛び・素肌露出）
       if (state.boss.shoulderL && state.boss.shoulderL.broken && this.assets.shoulderLBrokenImg && this.assets.shoulderLBrokenImg.complete) {
-        ctx.save();
-        const sx = IMG_BOX.x + (260 / 768) * IMG_BOX.w;
-        const sy = IMG_BOX.y + (490 / 1376) * IMG_BOX.h;
-        const sw = (160 / 768) * IMG_BOX.w;
-        const sh = (180 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.shoulderLBrokenImg, sx, sy, sw, sh);
-        if (Math.random() < 0.15) {
-          Particles.add(state, state.boss.shoulderL.x + (Math.random() - 0.5) * 16, state.boss.shoulderL.y + (Math.random() - 0.5) * 16, "#ff1493", 2, 2.0);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.shoulderLBrokenImg, IMG_BOX.x + (260 / 768) * IMG_BOX.w, IMG_BOX.y + (490 / 1376) * IMG_BOX.h, (160 / 768) * IMG_BOX.w, (180 / 1376) * IMG_BOX.h);
       }
-
-      // C. 左腕関節装甲（大破時：装甲欠損・火花・内部フレーム露出差分）
       if (state.boss.elbowL && state.boss.elbowL.broken && this.assets.gauntletLBrokenImg && this.assets.gauntletLBrokenImg.complete) {
-        ctx.save();
-        const gx = IMG_BOX.x + (40 / 768) * IMG_BOX.w;
-        const gy = IMG_BOX.y + (360 / 1376) * IMG_BOX.h;
-        const gw = (180 / 768) * IMG_BOX.w;
-        const gh = (160 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.gauntletLBrokenImg, gx, gy, gw, gh);
-        if (Math.random() < 0.15) {
-          Particles.add(state, state.boss.elbowL.x + (Math.random() - 0.5) * 16, state.boss.elbowL.y + (Math.random() - 0.5) * 16, "#e6ff00", 2, 2.0);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.gauntletLBrokenImg, IMG_BOX.x + (40 / 768) * IMG_BOX.w, IMG_BOX.y + (360 / 1376) * IMG_BOX.h, (180 / 768) * IMG_BOX.w, (160 / 1376) * IMG_BOX.h);
       }
-
-      // D. 右腕関節装甲（大破時：装甲欠損・火花差分）
       if (state.boss.elbowR && state.boss.elbowR.broken && this.assets.gauntletRBrokenImg && this.assets.gauntletRBrokenImg.complete) {
-        ctx.save();
-        const gx = IMG_BOX.x + (580 / 768) * IMG_BOX.w;
-        const gy = IMG_BOX.y + (650 / 1376) * IMG_BOX.h;
-        const gw = (188 / 768) * IMG_BOX.w;
-        const gh = (200 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.gauntletRBrokenImg, gx, gy, gw, gh);
-        if (Math.random() < 0.15) {
-          Particles.add(state, state.boss.elbowR.x + (Math.random() - 0.5) * 18, state.boss.elbowR.y + (Math.random() - 0.5) * 18, "#e6ff00", 2, 2.0);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.gauntletRBrokenImg, IMG_BOX.x + (580 / 768) * IMG_BOX.w, IMG_BOX.y + (650 / 1376) * IMG_BOX.h, (188 / 768) * IMG_BOX.w, (200 / 1376) * IMG_BOX.h);
       }
-
-      // E. 胸部センサー破損差分
       if (state.boss.tipBust && state.boss.tipBust.broken && this.assets.bustBrokenImg && this.assets.bustBrokenImg.complete) {
-        ctx.save();
-        const bx = IMG_BOX.x + (140 / 768) * IMG_BOX.w;
-        const by = IMG_BOX.y + (580 / 1376) * IMG_BOX.h;
-        const bw = (120 / 768) * IMG_BOX.w;
-        const bh = (140 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.bustBrokenImg, bx, by, bw, bh);
-        if (Math.random() < 0.15) {
-          Particles.add(state, state.boss.tipBust.x + (Math.random() - 0.5) * 10, state.boss.tipBust.y + (Math.random() - 0.5) * 10, "#e6ff00", 2, 2.0);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.bustBrokenImg, IMG_BOX.x + (140 / 768) * IMG_BOX.w, IMG_BOX.y + (580 / 1376) * IMG_BOX.h, (120 / 768) * IMG_BOX.w, (140 / 1376) * IMG_BOX.h);
       }
-
-      // F. 背中ブースターノズル（大破時：破損ノズル・黒煙差分）
       const isThrustersBroken = (state.boss.nozzleL && state.boss.nozzleL.broken) || (state.boss.nozzleR && state.boss.nozzleR.broken);
       if (isThrustersBroken && this.assets.nozzlesBrokenImg && this.assets.nozzlesBrokenImg.complete) {
-        ctx.save();
-        const nx = IMG_BOX.x + (440 / 768) * IMG_BOX.w;
-        const ny = IMG_BOX.y + (720 / 1376) * IMG_BOX.h;
-        const nw = (140 / 768) * IMG_BOX.w;
-        const nh = (110 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.nozzlesBrokenImg, nx, ny, nw, nh);
-        if (Math.random() < 0.25) {
-          const nozPos = (state.boss.nozzleL && state.boss.nozzleL.broken) ? state.boss.nozzleL : state.boss.nozzleR;
-          state.particles.push({
-            x: nozPos.x + (Math.random() - 0.5) * 14,
-            y: nozPos.y + (Math.random() - 0.5) * 10,
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: -1.5 - Math.random() * 2.0,
-            color: Math.random() < 0.5 ? "#333333" : "#552244",
-            life: 20,
-            scale: 1.8
-          });
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.nozzlesBrokenImg, IMG_BOX.x + (440 / 768) * IMG_BOX.w, IMG_BOX.y + (720 / 1376) * IMG_BOX.h, (140 / 768) * IMG_BOX.w, (110 / 1376) * IMG_BOX.h);
       }
-
-      // G. 大ブレイク！ Phase 2 突破 / Phase 3 全装甲パージ躯体損壊差分（背中・ヒップ・太ももの大破露出）
       if ((state.phase >= 3 || (state.boss && state.boss.allArmorsPurged)) && this.assets.bodyDamageImg && this.assets.bodyDamageImg.complete) {
-        ctx.save();
-        const bx = IMG_BOX.x + (200 / 768) * IMG_BOX.w;
-        const by = IMG_BOX.y + (680 / 1376) * IMG_BOX.h;
-        const bw = (400 / 768) * IMG_BOX.w;
-        const bh = (670 / 1376) * IMG_BOX.h;
-        ctx.drawImage(this.assets.bodyDamageImg, bx, by, bw, bh);
-        if (Math.random() < 0.25) {
-          const core = state.boss.core;
-          Particles.add(state, core.x + (Math.random() - 0.5) * 20, core.y + (Math.random() - 0.5) * 20, "#00f5d4", 2, 2.5);
-        }
-        ctx.restore();
+        ctx.drawImage(this.assets.bodyDamageImg, IMG_BOX.x + (200 / 768) * IMG_BOX.w, IMG_BOX.y + (680 / 1376) * IMG_BOX.h, (400 / 768) * IMG_BOX.w, (670 / 1376) * IMG_BOX.h);
       }
 
       // 5. Dynamic Face Expression Patch (透過アルファスプライトによる自然な瞬き・ウインク・感情遷移)

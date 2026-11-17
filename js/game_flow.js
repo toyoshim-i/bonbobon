@@ -525,9 +525,15 @@ window.GameFlow = {
       return;
     }
 
-    const curtain = document.getElementById("attractBlackCurtain");
-    const bgImg = document.getElementById("attractBgImg");
-    const track = document.getElementById("attractScrollTrack");
+    const elCache = this._attractEls || (this._attractEls = {
+      curtain: document.getElementById("attractBlackCurtain"),
+      bgImg: document.getElementById("attractBgImg"),
+      track: document.getElementById("attractScrollTrack"),
+      fxCanvas: document.getElementById("attractFxCanvas")
+    });
+    const curtain = elCache.curtain;
+    const bgImg = elCache.bgImg;
+    const track = elCache.track;
 
     // 1. Black curtain fade:
     // Fade in from black over 48 frames (0.8s)
@@ -565,16 +571,22 @@ window.GameFlow = {
   },
 
   renderAttractFx(cutIdx, progress, f) {
-    const canvas = document.getElementById("attractFxCanvas");
+    const elCache = this._attractEls;
+    const canvas = (elCache && elCache.fxCanvas) || document.getElementById("attractFxCanvas");
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = this._attractFxCtx || (this._attractFxCtx = canvas.getContext("2d"));
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (cutIdx !== 3) {
-      canvas.style.transform = "scale(1)";
+      if (!this._attractFxCleared) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.transform = "scale(1)";
+        this._attractFxCleared = true;
+      }
       return;
     }
+    this._attractFxCleared = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Apply the same subtle zoom as Cut 3 bgImg so lightning arcs stay locked to the Silver-Ball
     const zoomStr = (1.0 + 0.045 * progress).toFixed(4);

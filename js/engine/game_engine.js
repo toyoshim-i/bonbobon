@@ -352,6 +352,20 @@ window.GameEngine = {
     }
     if (state.inEnding || state.gameOver) return;
 
+    this._inStepPhysics = true;
+    try {
+      this._stepPhysicsInner(state);
+    } finally {
+      this._inStepPhysics = false;
+      if (state._hudDirty) {
+        state._hudDirty = false;
+        if (window.UI) UI.updateHUD(state);
+      }
+    }
+  },
+
+  _stepPhysicsInner(state) {
+
     // Post-clear freeze bypass & debris animation
     if (state.stageCleared) {
       if (this.currentStage) this.currentStage.update(state, this);

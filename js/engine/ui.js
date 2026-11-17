@@ -211,6 +211,10 @@ window.UI = {
   },
 
   updateHUD(state) {
+    if (window.GameEngine && GameEngine._inStepPhysics && state) {
+      state._hudDirty = true;
+      return;
+    }
     this.updateScreenMode(state);
     this.setText("hudScore", state.score.toLocaleString());
 
@@ -510,12 +514,23 @@ window.UI = {
     // Direct Playfield Multi-Touch Tap & Swipe
     const activeTouches = new Map();
     const playfieldEl = document.getElementById("playfieldArea") || engine.canvas;
+    let cachedCanvasRect = null;
+    let cachedAreaRect = null;
+    const refreshPlayfieldRects = () => {
+      cachedCanvasRect = engine.canvas.getBoundingClientRect();
+      cachedAreaRect = playfieldEl.getBoundingClientRect();
+    };
+    window.addEventListener("resize", () => {
+      cachedCanvasRect = null;
+      cachedAreaRect = null;
+    }, { passive: true });
 
     playfieldEl.addEventListener("pointerdown", e => {
       e.preventDefault();
       try { playfieldEl.setPointerCapture(e.pointerId); } catch (_) {}
 
-      const canvasRect = engine.canvas.getBoundingClientRect();
+      refreshPlayfieldRects();
+      const canvasRect = cachedCanvasRect;
       const canvasX = (e.clientX - canvasRect.left) * (engine.W / canvasRect.width);
       const canvasY = (e.clientY - canvasRect.top) * (engine.H / canvasRect.height);
 
@@ -525,7 +540,7 @@ window.UI = {
         return;
       }
 
-      const areaRect = playfieldEl.getBoundingClientRect();
+      const areaRect = cachedAreaRect;
       const isLeft = e.clientX < (areaRect.left + areaRect.width / 2);
       const side = isLeft ? "L" : "R";
 
@@ -544,14 +559,16 @@ window.UI = {
       const t = activeTouches.get(e.pointerId);
       if (!t) return;
 
+      if (!cachedCanvasRect || !cachedAreaRect) refreshPlayfieldRects();
+
       if (t.type === "plunger") {
-        const canvasRect = engine.canvas.getBoundingClientRect();
+        const canvasRect = cachedCanvasRect;
         const y = (e.clientY - canvasRect.top) * (engine.H / canvasRect.height);
         const dragDist = Math.max(0, y - t.startY);
         engine.state.plunger.power = Math.min(100, (dragDist / 38) * 100);
         t.lastY = y;
       } else {
-        const areaRect = playfieldEl.getBoundingClientRect();
+        const areaRect = cachedAreaRect;
         const currentSide = e.clientX < (areaRect.left + areaRect.width / 2) ? "L" : "R";
         if (currentSide !== t.type) {
           t.type = currentSide;

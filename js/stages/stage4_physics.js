@@ -302,6 +302,7 @@ Object.assign(window.Stage4, {
           const cp = Physics.closestPointOnSeg(sh.x, sh.y, f.px, f.py, tipX, tipY);
           const dist = Math.hypot(sh.x - cp.x, sh.y - cp.y);
           if (dist < sh.r + 7.0) {
+            fst.swingHit = true;
             const omega = Math.abs(fst.angle - fst.prevAngle) * 60;
             const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
             const alreadyPinned = (state[pinKey] || 0) > 0;

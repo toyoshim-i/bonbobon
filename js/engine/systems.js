@@ -91,6 +91,17 @@ window.Systems = {
     if (window.UI) window.UI.updateHUD(state);
   },
 
+  deductScore(state, amount, x, y, label = "") {
+    if (!state || state.stageCleared || state.inTitle || state.inEnding || state.gameOver) return;
+    if (state.balls && state.balls.length > 0 && state.balls.every(b => b.inShooterLane)) return;
+    const loss = Math.min(state.score || 0, Math.max(0, Math.round(amount)));
+    if (loss <= 0) return;
+    state.score = Math.max(0, state.score - loss);
+    const txt = label ? `${label} -${loss.toLocaleString()}` : `-${loss.toLocaleString()}`;
+    Particles.addPopup(state, x, y, txt, "#ff5588", 0.88);
+    if (window.UI) window.UI.updateHUD(state);
+  },
+
   addFever(state, amount) {
     if (state.fever.active) return;
     state.fever.gauge = Math.min(100, state.fever.gauge + amount);

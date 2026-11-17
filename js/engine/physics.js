@@ -19,6 +19,8 @@ window.Physics = {
     SLINGSHOT_SCORE: 200,
     SLINGSHOT_FEVER: 2,
     FLIPPER_HIT_SCORE: 50,
+    FLIPPER_WHIFF_PENALTY: 100,
+    NUDGE_PENALTY: 2000,
     KICKBACK_SAVE_SCORE: 3000
   },
 
@@ -143,11 +145,13 @@ window.Physics = {
       const wasPressed = !!st.wasPressed;
       st.wasPressed = pressed;
 
-      // Track active swing edge (for timed parry) & 5-tap shuriken shake-off!
+      // Track active swing edge (for timed parry, whiff penalty) & 5-tap shuriken shake-off!
+      const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
+      const isPinnedNow = (state[pinKey] || 0) > 0;
       if (pressed && !wasPressed) {
         st.justPressedTimer = 12;
-        const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
-        if ((state[pinKey] || 0) > 0) {
+        if (isPinnedNow) {
+          st.swingActive = false;
           state[pinKey]--;
           st.pinShake = 8;
           const mx = f.px + Math.cos(st.angle) * (f.len * 0.55);
@@ -165,9 +169,24 @@ window.Physics = {
               Particles.addPopup(state, mx, my - 14, t("physics.pinRemain", { count: state[pinKey] }), "#e6ff00", 0.92);
             }
           }
+        } else {
+          st.swingActive = true;
+          st.swingHit = false;
         }
-      } else if ((st.justPressedTimer || 0) > 0) {
-        st.justPressedTimer--;
+      } else {
+        if ((st.justPressedTimer || 0) > 0) st.justPressedTimer--;
+        if (!pressed && wasPressed) {
+          if (st.swingActive && !st.swingHit && !isPinnedNow && window.Systems && Systems.deductScore) {
+            Systems.deductScore(
+              state,
+              this.BALANCE.FLIPPER_WHIFF_PENALTY,
+              f.px + (f.isLeft ? 22 : -22),
+              f.py - 16,
+              "WHIFF"
+            );
+          }
+          st.swingActive = false;
+        }
       }
       if ((st.pinShake || 0) > 0) st.pinShake--;
 
@@ -233,6 +252,9 @@ window.Physics = {
 
     Particles.addPopup(state, 210, 530, `${dirLabel} NUDGE!`, "#e6ff00", 1.15);
     Particles.add(state, 210, 530, "#e6ff00", 14, 4.2);
+    if (window.Systems && Systems.deductScore) {
+      Systems.deductScore(state, this.BALANCE.NUDGE_PENALTY, 210, 555, "NUDGE");
+    }
   },
 
   triggerNudge(state) {
@@ -467,6 +489,7 @@ window.Physics = {
       }
 
       if ((dist < minDist && dist > 0.0001) || sweptHit) {
+        st.swingHit = true;
         ball._crotchSpitActive = false;
         let nx, ny;
         if (sweptHit && (dx * upNx + dy * upNy < 0 || dist >= minDist)) {

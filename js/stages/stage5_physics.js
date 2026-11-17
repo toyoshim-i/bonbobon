@@ -517,6 +517,7 @@ Object.assign(window.Stage5, {
                 const cp = Physics.closestPointOnSeg(sw.x, sw.y, f.px, f.py, tipX, tipY);
                 if (Math.hypot(sw.x - cp.x, sw.y - cp.y) < sw.r + 7.0) {
                   hitFlipper = true;
+                  fst.swingHit = true;
                   const omega = Math.abs(fst.angle - fst.prevAngle) * 60;
                   if (omega > 0.12 || (fst.justPressedTimer || 0) > 0) {
                     parriedNow = true;
@@ -730,6 +731,7 @@ Object.assign(window.Stage5, {
           const dist = Math.hypot(ring.x - cp.x, ring.y - cp.y);
           if (dist < ring.r + 7.0) {
             hitFlipper = true;
+            fst.swingHit = true;
             cpX = cp.x;
             cpY = cp.y;
             const omega = Math.abs(fst.angle - fst.prevAngle) * 60;

@@ -3,9 +3,16 @@
 // =========================================================================
 
 window.Particles = {
+  MAX_PARTICLES: 280,
+  MAX_POPUPS: 40,
+  MAX_HEARTS: 45,
+
   add(state, x, y, color, count = 8, speed = 3.5) {
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+    const room = this.MAX_PARTICLES - state.particles.length;
+    if (room <= 0) return;
+    const n = Math.min(count, room);
+    for (let i = 0; i < n; i++) {
+      const angle = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.4;
       const spd = speed * (0.6 + Math.random() * 0.8);
       state.particles.push({
         x,
@@ -19,6 +26,9 @@ window.Particles = {
   },
 
   addPopup(state, x, y, text, color = "#e6ff00", scale = 1.0) {
+    if (state.popups.length >= this.MAX_POPUPS) {
+      state.popups.shift();
+    }
     state.popups.push({
       x,
       y,
@@ -30,6 +40,7 @@ window.Particles = {
   },
 
   spawnHeart(state, x, y, isSmall = false) {
+    if (state.hearts.length >= this.MAX_HEARTS) return;
     state.hearts.push({
       x: x + (Math.random() - 0.5) * (isSmall ? 10 : 24),
       y: y + (Math.random() - 0.5) * (isSmall ? 8 : 16),
@@ -134,6 +145,12 @@ window.Particles = {
     return shards;
   },
 
+  _swapRemove(arr, i) {
+    const last = arr.length - 1;
+    if (i !== last) arr[i] = arr[last];
+    arr.pop();
+  },
+
   update(state) {
     // Armor plate shards physics
     for (let i = state.armorDebris.length - 1; i >= 0; i--) {
@@ -144,7 +161,7 @@ window.Particles = {
       d.vx *= 0.985;
       d.angle += d.vAngle;
       d.life--;
-      if (d.life <= 0) state.armorDebris.splice(i, 1);
+      if (d.life <= 0) this._swapRemove(state.armorDebris, i);
     }
 
     // Optical shockwave rings
@@ -152,7 +169,7 @@ window.Particles = {
       const sw = state.shockwaves[i];
       sw.r += sw.speed;
       sw.alpha = Math.max(0, 1.0 - sw.r / sw.maxR);
-      if (sw.alpha <= 0 || sw.r >= sw.maxR) state.shockwaves.splice(i, 1);
+      if (sw.alpha <= 0 || sw.r >= sw.maxR) this._swapRemove(state.shockwaves, i);
     }
 
     // Floating Hearts
@@ -165,7 +182,7 @@ window.Particles = {
       h.scale = Math.min(h.maxScale, h.scale + 0.08);
       h.life--;
       h.alpha = Math.min(1.0, h.life / (h.maxLife * 0.45));
-      if (h.life <= 0) state.hearts.splice(i, 1);
+      if (h.life <= 0) this._swapRemove(state.hearts, i);
     }
 
     // Floating Particles & Popups
@@ -174,13 +191,13 @@ window.Particles = {
       p.x += p.vx;
       p.y += p.vy;
       p.life--;
-      if (p.life <= 0) state.particles.splice(i, 1);
+      if (p.life <= 0) this._swapRemove(state.particles, i);
     }
     for (let i = state.popups.length - 1; i >= 0; i--) {
       const pop = state.popups[i];
       pop.y -= 0.65;
       pop.life--;
-      if (pop.life <= 0) state.popups.splice(i, 1);
+      if (pop.life <= 0) this._swapRemove(state.popups, i);
     }
   },
 

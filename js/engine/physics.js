@@ -65,33 +65,56 @@ window.Physics = {
     { angle: Math.PI - 0.44, prevAngle: Math.PI - 0.44 }
   ],
 
-  closestPointOnSeg(px, py, x1, y1, x2, y2) {
+  _flippersCache: [
+    { px: 110, py: 602, len: 56, restAngle: 0.44, activeAngle: -0.44, isLeft: true },
+    { px: 286, py: 602, len: 56, restAngle: Math.PI - 0.44, activeAngle: Math.PI + 0.44, isLeft: false }
+  ],
+  _cpWall: { x: 0, y: 0, t: 0 },
+  _cpFlipper: { x: 0, y: 0, t: 0 },
+  KICKBACK_DEFS: [
+    { permKey: "kickbackL", chargeKey: "kickbackL_charges", minX: 14, maxX: 52, vx: 4.2, fxX: 33, checkLane: false, label: "⚡L-LASER SAVE!", cutin: "🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！" },
+    { permKey: "kickbackR", chargeKey: "kickbackR_charges", minX: 344, maxX: 382, vx: -4.2, fxX: 363, checkLane: true, label: "⚡R-LASER SAVE!", cutin: "🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！" }
+  ],
+
+  closestPointOnSeg(px, py, x1, y1, x2, y2, out = null) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) return { x: x1, y: y1, t: 0 };
+    const res = out || { x: 0, y: 0, t: 0 };
+    if (lenSq === 0) {
+      res.x = x1;
+      res.y = y1;
+      res.t = 0;
+      return res;
+    }
     let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
-    t = Math.max(0, Math.min(1, t));
-    return { x: x1 + t * dx, y: y1 + t * dy, t };
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+    res.x = x1 + t * dx;
+    res.y = y1 + t * dy;
+    res.t = t;
+    return res;
   },
 
   getFlippers(state) {
     const ext = (state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 10 : 0;
-    const mainL = {
-      px: 110, py: 602,
-      len: 56 + ext,
-      restAngle: 0.44,
-      activeAngle: -0.44,
-      isLeft: true
-    };
-    const mainR = {
-      px: 286, py: 602,
-      len: 56 + ext,
-      restAngle: Math.PI - 0.44,
-      activeAngle: Math.PI + 0.44,
-      isLeft: false
-    };
-    return [mainL, mainR];
+    this._flippersCache[0].len = 56 + ext;
+    this._flippersCache[1].len = 56 + ext;
+    return this._flippersCache;
+  },
+
+  pushTrailPoint(trail, x, y, maxLen = 9) {
+    if (trail.length < maxLen) {
+      trail.push({ x, y });
+      return;
+    }
+    const recycled = trail[0];
+    for (let i = 0; i < maxLen - 1; i++) {
+      trail[i] = trail[i + 1];
+    }
+    recycled.x = x;
+    recycled.y = y;
+    trail[maxLen - 1] = recycled;
   },
 
   updateFlippers(state) {
@@ -333,8 +356,11 @@ window.Physics = {
     }
 
     // Static Walls & Slingshots collision
-    for (const w of this.TABLE_WALLS) {
-      const cp = this.closestPointOnSeg(ball.x, ball.y, w.x1, w.y1, w.x2, w.y2);
+    const cpWall = this._cpWall;
+    const walls = this.TABLE_WALLS;
+    for (let wi = 0; wi < walls.length; wi++) {
+      const w = walls[wi];
+      const cp = this.closestPointOnSeg(ball.x, ball.y, w.x1, w.y1, w.x2, w.y2, cpWall);
       const dx = ball.x - cp.x;
       const dy = ball.y - cp.y;
       const dist = Math.hypot(dx, dy);
@@ -387,11 +413,13 @@ window.Physics = {
 
     // Flippers collision
     const flippers = this.getFlippers(state);
-    flippers.forEach((f, idx) => {
+    const cpFlip = this._cpFlipper;
+    for (let idx = 0; idx < flippers.length; idx++) {
+      const f = flippers[idx];
       const st = this.flipperState[idx];
       const tipX = f.px + Math.cos(st.angle) * f.len;
       const tipY = f.py + Math.sin(st.angle) * f.len;
-      const cp = this.closestPointOnSeg(ball.x, ball.y, f.px, f.py, tipX, tipY);
+      const cp = this.closestPointOnSeg(ball.x, ball.y, f.px, f.py, tipX, tipY, cpFlip);
       const dx = ball.x - cp.x;
       const dy = ball.y - cp.y;
       const dist = Math.hypot(dx, dy);
@@ -438,7 +466,7 @@ window.Physics = {
           }
         }
       }
-    });
+    }
 
     // Permanent Installed Defenses (Center Post, Kickbacks)
     if (s === 0) {
@@ -470,11 +498,9 @@ window.Physics = {
       }
 
       // Kickbacks (In the Outlanes)
-      const kickbacks = [
-        { permKey: "kickbackL", chargeKey: "kickbackL_charges", minX: 14, maxX: 52, vx: 4.2, fxX: 33, checkLane: false, label: "⚡L-LASER SAVE!", cutin: "🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！" },
-        { permKey: "kickbackR", chargeKey: "kickbackR_charges", minX: 344, maxX: 382, vx: -4.2, fxX: 363, checkLane: true, label: "⚡R-LASER SAVE!", cutin: "🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！" }
-      ];
-      kickbacks.forEach(kb => {
+      const kickbacks = this.KICKBACK_DEFS;
+      for (let ki = 0; ki < kickbacks.length; ki++) {
+        const kb = kickbacks[ki];
         if (state.perm[kb.permKey] > 0 && state.perm[kb.chargeKey] > 0 && (!kb.checkLane || !ball.inShooterLane) &&
             ball.x >= kb.minX && ball.x <= kb.maxX && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
           ball.vy = -15.2;
@@ -486,7 +512,7 @@ window.Physics = {
           if (window.Systems) window.Systems.addScore(state, this.BALANCE.KICKBACK_SAVE_SCORE, kb.fxX, 540, kb.label);
           if (window.UI) window.UI.showCutin(kb.cutin, 90);
         }
-      });
+      }
     }
 
     // Velocity clamp

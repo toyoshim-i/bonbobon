@@ -358,14 +358,15 @@ window.GameEngine = {
       Particles.update(state);
 
       if (state.clearSequence.frame < 105) {
-        state.balls.forEach(ball => {
+        for (let bi = 0; bi < state.balls.length; bi++) {
+          const ball = state.balls[bi];
           ball.x += ball.vx;
           ball.y += ball.vy;
           ball.vy += 0.22;
           ball.vx *= 0.99;
-          ball.trail.push({ x: ball.x, y: ball.y });
-          if (ball.trail.length > 9) ball.trail.shift();
-        });
+          if (!ball.trail) ball.trail = [];
+          Physics.pushTrailPoint(ball.trail, ball.x, ball.y, 9);
+        }
 
         Physics.updateFlippers(state);
       }
@@ -449,8 +450,7 @@ window.GameEngine = {
     for (let bi = state.balls.length - 1; bi >= 0; bi--) {
       const ball = state.balls[bi];
       if (!ball.trail) ball.trail = [];
-      ball.trail.push({ x: ball.x, y: ball.y });
-      if (ball.trail.length > 9) ball.trail.shift();
+      Physics.pushTrailPoint(ball.trail, ball.x, ball.y, 9);
       if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
 
       // Ball Stagnation / Stuck Detection (Universal pinball feature)

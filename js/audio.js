@@ -2,6 +2,24 @@
 // FM SYNTHESIS SOUND ENGINE (Web Audio API)
 // =========================================================================
 (() => {
+const pushDebugLog = (msg) => {
+  if (typeof window === "undefined") return;
+  window._debugLogs = window._debugLogs || [];
+  const ts = new Date().toTimeString().slice(0, 8);
+  window._debugLogs.push(`[${ts}] ${msg}`);
+  if (window._debugLogs.length > 14) window._debugLogs.shift();
+};
+
+if (typeof window !== "undefined" && !window._debugErrorHooked) {
+  window._debugErrorHooked = true;
+  window.addEventListener("error", (e) => {
+    pushDebugLog(`ERR: ${e.message || e.type}`);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    pushDebugLog(`REJ: ${(e.reason && e.reason.message) || e.reason || "unknown"}`);
+  });
+}
+
 class FMSoundEngine {
   constructor() {
     this.ctx = null;
@@ -41,8 +59,13 @@ class FMSoundEngine {
     if (this.ctx && this.ctx.state !== "running") {
       try {
         const p = this.ctx.resume();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch (_) {}
+        if (p && typeof p.then === "function") {
+          p.then(() => pushDebugLog(`resume ok: ${this.ctx.state}`))
+           .catch((err) => pushDebugLog(`resume err: ${err && err.message ? err.message : err}`));
+        }
+      } catch (err) {
+        pushDebugLog(`resume throw: ${err && err.message ? err.message : err}`);
+      }
     }
     if (this.ctx && !this._bufUnlocked) {
       try {
@@ -52,7 +75,9 @@ class FMSoundEngine {
         src.connect(this.ctx.destination);
         src.start(0);
         this._bufUnlocked = true;
-      } catch (_) {}
+      } catch (err) {
+        pushDebugLog(`buf err: ${err && err.message ? err.message : err}`);
+      }
     }
     if (!this._htmlAudioUnlocked && typeof Audio !== "undefined") {
       try {
@@ -63,12 +88,31 @@ class FMSoundEngine {
         }
         const ap = this._silentAudio.play();
         if (ap && typeof ap.then === "function") {
-          ap.then(() => { this._htmlAudioUnlocked = true; }).catch(() => {});
+          ap.then(() => {
+            this._htmlAudioUnlocked = true;
+            pushDebugLog("htmlAudio ok");
+          }).catch((err) => {
+            pushDebugLog(`htmlAudio rej: ${err && err.name ? err.name : err}`);
+          });
         } else {
           this._htmlAudioUnlocked = true;
         }
-      } catch (_) {}
+      } catch (err) {
+        pushDebugLog(`htmlAudio err: ${err && err.message ? err.message : err}`);
+      }
     }
+  }
+
+  getDebugInfo() {
+    return {
+      enabled: this._enabled,
+      state: this.ctx ? this.ctx.state : "no-ctx",
+      time: this.ctx ? this.ctx.currentTime.toFixed(2) : "0.00",
+      bufUnlocked: !!this._bufUnlocked,
+      htmlUnlocked: !!this._htmlAudioUnlocked,
+      session: (typeof navigator !== "undefined" && navigator.audioSession) ? navigator.audioSession.type : "n/a",
+      logs: (typeof window !== "undefined" && window._debugLogs) ? window._debugLogs.slice() : []
+    };
   }
 
   playFM(carrierFreq, modFreq, modDepth, duration, type = "square", slideTo = null, gainVal = 0.14, delaySec = 0) {

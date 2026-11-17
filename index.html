@@ -343,6 +343,18 @@
                     </button>
                   </div>
                 </div>
+
+                <!-- 5) AUDIO & ERROR DIAGNOSTIC LOG -->
+                <div class="bg-[#100426] border border-[#34ff8a]/40 rounded-xl p-2 space-y-1">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="font-bold text-[10px] text-[#34ff8a]">AUDIO / ERROR LOG</span>
+                    <button id="btnDbgTestBeep" class="px-2 py-0.5 rounded bg-[#125830] hover:bg-[#1f8f4f] text-[#34ff8a] border border-[#34ff8a] text-[9px] font-bold cursor-pointer">
+                      🔊 TEST BEEP
+                    </button>
+                  </div>
+                  <div id="dbgAudioStatus" class="text-[8.5px] font-mono text-[#00f5d4] break-all"></div>
+                  <pre id="dbgAudioLogs" class="text-[8px] font-mono text-gray-300 bg-black/60 rounded p-1.5 max-h-24 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                </div>
               </div>
             </div>
           </div>

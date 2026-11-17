@@ -765,6 +765,7 @@ window.UI = {
       updateDebugHudUI(window.Systems && Systems.isDebugMenuEnabled());
       updateNudgeJiggleUI(window.Systems && Systems.isNudgeJiggleEnabled());
       updateAudioUI(window.Systems ? Systems.isSfxEnabled() : true);
+      if (typeof renderDebugAudioLog === "function") renderDebugAudioLog();
 
       UI.openModal(menuModal);
     };
@@ -942,6 +943,28 @@ window.UI = {
     if (btnMenuAudio) btnMenuAudio.addEventListener("click", toggleAudio);
 
     updateAudioUI(window.Systems ? Systems.isSfxEnabled() : true);
+
+    const renderDebugAudioLog = () => {
+      const statusEl = document.getElementById("dbgAudioStatus");
+      const logsEl = document.getElementById("dbgAudioLogs");
+      if (!window.sfx || typeof window.sfx.getDebugInfo !== "function") return;
+      const info = window.sfx.getDebugInfo();
+      if (statusEl) {
+        statusEl.textContent = `state=${info.state} en=${info.enabled} t=${info.time} buf=${info.bufUnlocked} html=${info.htmlUnlocked} sess=${info.session}`;
+      }
+      if (logsEl) {
+        logsEl.textContent = info.logs.length > 0 ? info.logs.join("\n") : "(no errors)";
+      }
+    };
+    const btnDbgTestBeep = document.getElementById("btnDbgTestBeep");
+    if (btnDbgTestBeep) {
+      btnDbgTestBeep.addEventListener("click", () => {
+        if (window.sfx && window.sfx.init) window.sfx.init();
+        if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+        renderDebugAudioLog();
+        setTimeout(renderDebugAudioLog, 150);
+      });
+    }
 
     // Nudge Body Jiggle Setting Toggle
     const updateNudgeJiggleUI = (enabled) => {

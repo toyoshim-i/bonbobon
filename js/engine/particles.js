@@ -328,25 +328,52 @@ window.Particles = {
       ctx.fillText(subInfo, 0, rMain + 10);
 
       // HP セグメントバー（subInfo が "HP:x" または "HP:x/y" の場合、視覚的なHPブロックを描画）
-      const hpMatch = subInfo.match(/HP:(\d+)(?:\/(\d+))?/);
-      if (hpMatch) {
-        const curHP = parseInt(hpMatch[1], 10);
-        const maxHP = hpMatch[2] ? parseInt(hpMatch[2], 10) : Math.max(curHP, 5);
-        const barW = Math.max(20, r * 1.2);
-        const barH = 3;
-        const startX = -barW / 2;
-        const startY = rMain + 13;
+      const hpIdx = subInfo.indexOf("HP:");
+      if (hpIdx !== -1) {
+        let pos = hpIdx + 3;
+        let curHP = 0;
+        let hasCur = false;
+        while (pos < subInfo.length) {
+          const ch = subInfo.charCodeAt(pos);
+          if (ch >= 48 && ch <= 57) {
+            curHP = curHP * 10 + (ch - 48);
+            hasCur = true;
+            pos++;
+          } else {
+            break;
+          }
+        }
+        if (hasCur) {
+          let maxHP = 0;
+          let hasMax = false;
+          if (pos < subInfo.length && subInfo.charCodeAt(pos) === 47) { // '/'
+            pos++;
+            while (pos < subInfo.length) {
+              const ch = subInfo.charCodeAt(pos);
+              if (ch >= 48 && ch <= 57) {
+                maxHP = maxHP * 10 + (ch - 48);
+                hasMax = true;
+                pos++;
+              } else {
+                break;
+              }
+            }
+          }
+          if (!hasMax) maxHP = Math.max(curHP, 5);
+          const barW = Math.max(20, r * 1.2);
+          const barH = 3;
+          const startX = -barW / 2;
+          const startY = rMain + 13;
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-        ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(startX - 1, startY - 1, barW + 2, barH + 2);
+          ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+          ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 0.8;
+          ctx.strokeRect(startX - 1, startY - 1, barW + 2, barH + 2);
 
-        const segW = barW / maxHP;
-        for (let seg = 0; seg < maxHP; seg++) {
-          if (seg < curHP) {
-            ctx.fillStyle = curHP <= 1 ? "#ff0055" : (curHP <= 2 ? "#e6ff00" : "#00f5d4");
+          const segW = barW / maxHP;
+          ctx.fillStyle = curHP <= 1 ? "#ff0055" : (curHP <= 2 ? "#e6ff00" : "#00f5d4");
+          for (let seg = 0; seg < curHP && seg < maxHP; seg++) {
             ctx.fillRect(startX + seg * segW + 0.5, startY + 0.5, segW - 1, barH - 1);
           }
         }

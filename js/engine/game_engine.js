@@ -757,89 +757,89 @@ window.GameEngine = {
         ctx.restore();
       }
 
-      // Floating Hologram Pill Capsules (本格的な薬型カプセルスプライト)
-      state.capsules.forEach(cap => {
+      // Floating Hologram Pill Capsules (オフスクリーンスプライトキャッシュで高速描画)
+      if (!this._capsuleSpriteCache) this._capsuleSpriteCache = {};
+      for (let ci = 0; ci < state.capsules.length; ci++) {
+        const cap = state.capsules[ci];
+        const key = `${cap.color}|${cap.label}`;
+        let sprite = this._capsuleSpriteCache[key];
+        if (!sprite) {
+          const sw = 60;
+          const sh = 32;
+          const c = document.createElement("canvas");
+          c.width = sw;
+          c.height = sh;
+          const cx = c.getContext("2d");
+          cx.translate(sw / 2, sh / 2);
+
+          const capW = 44;
+          const capH = 18;
+          const halfW = capW / 2;
+          const halfH = capH / 2;
+          const radius = halfH;
+
+          const drawCapsulePath = () => {
+            cx.beginPath();
+            cx.arc(-halfW + radius, 0, radius, Math.PI * 0.5, Math.PI * 1.5);
+            cx.lineTo(halfW - radius, -radius);
+            cx.arc(halfW - radius, 0, radius, -Math.PI * 0.5, Math.PI * 0.5);
+            cx.closePath();
+          };
+
+          cx.save();
+          cx.strokeStyle = cap.color;
+          cx.lineWidth = 4.5;
+          cx.globalAlpha = 0.32;
+          drawCapsulePath();
+          cx.stroke();
+          cx.restore();
+
+          cx.save();
+          drawCapsulePath();
+          cx.clip();
+          cx.fillStyle = "rgba(240, 248, 255, 0.88)";
+          cx.fillRect(-halfW, -halfH, halfW, capH);
+          cx.fillStyle = cap.color;
+          cx.globalAlpha = 0.90;
+          cx.fillRect(0, -halfH, halfW, capH);
+          cx.strokeStyle = "#ffffff";
+          cx.lineWidth = 1.6;
+          cx.beginPath();
+          cx.moveTo(0, -halfH);
+          cx.lineTo(0, halfH);
+          cx.stroke();
+          cx.fillStyle = "rgba(255, 255, 255, 0.70)";
+          cx.beginPath();
+          cx.ellipse(0, -halfH + 3.2, halfW - 5, 2.0, 0, 0, Math.PI * 2);
+          cx.fill();
+          cx.restore();
+
+          cx.strokeStyle = "#ffffff";
+          cx.lineWidth = 1.6;
+          drawCapsulePath();
+          cx.stroke();
+
+          cx.font = "bold 8.5px monospace";
+          cx.textAlign = "center";
+          cx.textBaseline = "middle";
+          cx.fillStyle = "rgba(0, 0, 0, 0.85)";
+          cx.fillText(cap.label, 1, 1);
+          cx.fillStyle = "#ffffff";
+          cx.fillText(cap.label, 0, 0);
+
+          sprite = c;
+          this._capsuleSpriteCache[key] = sprite;
+        }
+
         ctx.save();
         ctx.translate(cap.x, cap.y);
-
-        // 浮遊の緩やかな傾き・呼吸パルス
         const tilt = Math.sin(cap.phase) * 0.14;
         const pulse = 1 + Math.sin(cap.phase * 2) * 0.08;
         ctx.rotate(tilt);
         ctx.scale(pulse, pulse);
-
-        const capW = 44;
-        const capH = 18;
-        const halfW = capW / 2;
-        const halfH = capH / 2;
-        const radius = halfH; // 9px (完全な半円キャップ)
-
-        // 1. カプセル外形パスの生成
-        const drawCapsulePath = () => {
-          ctx.beginPath();
-          ctx.arc(-halfW + radius, 0, radius, Math.PI * 0.5, Math.PI * 1.5);
-          ctx.lineTo(halfW - radius, -radius);
-          ctx.arc(halfW - radius, 0, radius, -Math.PI * 0.5, Math.PI * 0.5);
-          ctx.closePath();
-        };
-
-        // 2. カプセル背後のホログラム発光オーラ（高速な半透明アウトライン・ゼロGPUブラー）
-        ctx.save();
-        ctx.strokeStyle = cap.color;
-        ctx.lineWidth = 4.5;
-        ctx.globalAlpha = 0.32;
-        drawCapsulePath();
-        ctx.stroke();
+        ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
         ctx.restore();
-
-        // 3. カプセル本体の塗り分け（左半分：半透明ホワイトシェル / 右半分：ネオンカラーシェル）
-        ctx.save();
-        drawCapsulePath();
-        ctx.clip();
-
-        // 左半身（ホワイトシェル）
-        ctx.fillStyle = "rgba(240, 248, 255, 0.88)";
-        ctx.fillRect(-halfW, -halfH, halfW, capH);
-
-        // 右半身（カラーシェル）
-        ctx.fillStyle = cap.color;
-        ctx.globalAlpha = 0.90;
-        ctx.fillRect(0, -halfH, halfW, capH);
-
-        // カプセル中央の分割リング（金属接合部）
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.moveTo(0, -halfH);
-        ctx.lineTo(0, halfH);
-        ctx.stroke();
-
-        // 上部ガラス光沢ハイライト（ツヤ）
-        ctx.fillStyle = "rgba(255, 255, 255, 0.70)";
-        ctx.beginPath();
-        ctx.ellipse(0, -halfH + 3.2, halfW - 5, 2.0, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-
-        // 4. カプセルのシャープな外周輪郭線
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.6;
-        drawCapsulePath();
-        ctx.stroke();
-
-        // 5. テキストラベル
-        ctx.font = "bold 8.5px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        // ドロップシャドウ
-        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-        ctx.fillText(cap.label, 1, 1);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(cap.label, 0, 0);
-
-        ctx.restore();
-      });
+      }
 
       // Plunger Coil Spring & Striker Plate (Always visible in shooter lane)
       ctx.save();
@@ -897,16 +897,16 @@ window.GameEngine = {
           return;
         }
         if (ball.trail && ball.trail.length > 1) {
+          ctx.fillStyle = state.fever.active ? "#e6ff00" : "#00f5d4";
           for (let i = 0; i < ball.trail.length; i++) {
             const pt = ball.trail[i];
             const alpha = (i / ball.trail.length) * 0.45;
-            ctx.save();
-            ctx.fillStyle = state.fever.active ? `rgba(230, 255, 0, ${alpha})` : `rgba(0, 245, 212, ${alpha})`;
+            ctx.globalAlpha = alpha;
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, ball.r * (0.4 + alpha * 0.5), 0, Math.PI * 2);
             ctx.fill();
-            ctx.restore();
           }
+          ctx.globalAlpha = 1.0;
         }
 
         ctx.save();

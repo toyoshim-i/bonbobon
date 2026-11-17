@@ -171,6 +171,9 @@ window.StageCommon = {
     }
   },
 
+  _warpActiveBuf: [],
+  _warpFieldsBuf: [],
+
   renderSoftWarp(ctx, IMG_BOX, src, bodies, opts = {}) {
     if (!src || !src.data) return;
     const slotName = opts.slotName || "default";
@@ -179,29 +182,39 @@ window.StageCommon = {
     const rgba = !!opts.rgba;
     const shear = opts.shear !== false;
 
-    const active = bodies.filter(b => b && (Math.abs(b.dx) >= minDisp || Math.abs(b.dy) >= minDisp));
+    const active = this._warpActiveBuf;
+    active.length = 0;
+    for (let i = 0; i < bodies.length; i++) {
+      const b = bodies[i];
+      if (b && (Math.abs(b.dx) >= minDisp || Math.abs(b.dy) >= minDisp)) {
+        active.push(b);
+      }
+    }
     if (active.length === 0) {
       if (rgba) ctx.drawImage(src.canvas, IMG_BOX.x, IMG_BOX.y);
       return;
     }
 
     const nF = active.length;
-    const fields = new Array(nF);
+    const fields = this._warpFieldsBuf;
     for (let i = 0; i < nF; i++) {
       const b = active[i];
       const rx = (b.rx || b.r || 24) * reach, ry = (b.ry || b.r || 24) * reach;
-      fields[i] = {
-        cx: b.x - IMG_BOX.x,
-        cy: b.y - IMG_BOX.y,
-        rx,
-        ry,
-        irx: 1 / rx,
-        iry: 1 / ry,
-        dx: b.dx,
-        dy: b.dy,
-        kx: shear ? (b.dx * 0.008 - b.dy * 0.005) : 0,
-        ky: shear ? (b.dy * 0.008 - b.dx * 0.005) : 0
-      };
+      let f = fields[i];
+      if (!f) {
+        f = { cx: 0, cy: 0, rx: 0, ry: 0, irx: 0, iry: 0, dx: 0, dy: 0, kx: 0, ky: 0 };
+        fields[i] = f;
+      }
+      f.cx = b.x - IMG_BOX.x;
+      f.cy = b.y - IMG_BOX.y;
+      f.rx = rx;
+      f.ry = ry;
+      f.irx = 1 / rx;
+      f.iry = 1 / ry;
+      f.dx = b.dx;
+      f.dy = b.dy;
+      f.kx = shear ? (b.dx * 0.008 - b.dy * 0.005) : 0;
+      f.ky = shear ? (b.dy * 0.008 - b.dx * 0.005) : 0;
     }
 
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -463,6 +476,28 @@ window.StageCommon = {
     }
   },
 
+  _smokeSpriteCache: {},
+
+  _getSmokeSprite(color) {
+    if (this._smokeSpriteCache[color]) return this._smokeSpriteCache[color];
+    const size = 128;
+    const half = size / 2;
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const cx = c.getContext("2d");
+    const grad = cx.createRadialGradient(half, half, half * 0.15, half, half, half);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.65, color);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    cx.fillStyle = grad;
+    cx.beginPath();
+    cx.arc(half, half, half, 0, Math.PI * 2);
+    cx.fill();
+    this._smokeSpriteCache[color] = c;
+    return c;
+  },
+
   renderSmokeClouds(ctx, state) {
     if (!state || !state.clearSequence || !state.clearSequence.active || !state.clearSequence.smokeClouds || state.clearSequence.smokeClouds.length === 0) return;
     const clouds = state.clearSequence.smokeClouds;
@@ -470,17 +505,9 @@ window.StageCommon = {
     for (let i = 0; i < clouds.length; i++) {
       const smk = clouds[i];
       if (smk.alpha <= 0.01) continue;
-      ctx.save();
+      const sprite = this._getSmokeSprite(smk.color);
       ctx.globalAlpha = smk.alpha;
-      const grad = ctx.createRadialGradient(smk.x, smk.y, smk.r * 0.15, smk.x, smk.y, smk.r);
-      grad.addColorStop(0, smk.color);
-      grad.addColorStop(0.65, smk.color);
-      grad.addColorStop(1, "transparent");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(smk.x, smk.y, smk.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      ctx.drawImage(sprite, smk.x - smk.r, smk.y - smk.r, smk.r * 2, smk.r * 2);
     }
     ctx.restore();
   },

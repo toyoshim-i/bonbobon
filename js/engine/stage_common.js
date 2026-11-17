@@ -556,23 +556,22 @@ window.StageCommon = {
     return { segs, totalLen, smoothPts };
   },
 
-  samplePolylineRamp(metrics, dist, opts = {}) {
+  samplePolylineRamp(metrics, dist, opts = {}, out = null) {
     const withLanterns = !!opts.withLanterns;
     const clamped = Math.max(0, Math.min(metrics.totalLen, dist));
+    const res = out || {};
     for (let i = 0; i < metrics.segs.length; i++) {
       const s = metrics.segs[i];
       if (clamped <= s.endDist || i === metrics.segs.length - 1) {
         const t = Math.max(0, Math.min(1, (clamped - s.startDist) / s.len));
         const dx = (s.b.x - s.a.x) / s.len;
         const dy = (s.b.y - s.a.y) / s.len;
-        const res = {
-          x: s.a.x + (s.b.x - s.a.x) * t,
-          y: s.a.y + (s.b.y - s.a.y) * t,
-          elev: s.a.elev + (s.b.elev - s.a.elev) * t,
-          tx: dx,
-          ty: dy,
-          totalLen: metrics.totalLen
-        };
+        res.x = s.a.x + (s.b.x - s.a.x) * t;
+        res.y = s.a.y + (s.b.y - s.a.y) * t;
+        res.elev = s.a.elev + (s.b.elev - s.a.elev) * t;
+        res.tx = dx;
+        res.ty = dy;
+        res.totalLen = metrics.totalLen;
         if (withLanterns) {
           res.nearLanternId = t > 0.65 ? s.b.lanternId : (t < 0.35 ? s.a.lanternId : null);
         }
@@ -580,9 +579,14 @@ window.StageCommon = {
       }
     }
     const last = metrics.segs[metrics.segs.length - 1];
-    const fallback = { x: last.b.x, y: last.b.y, elev: last.b.elev, tx: 0, ty: 1, totalLen: metrics.totalLen };
-    if (withLanterns) fallback.nearLanternId = null;
-    return fallback;
+    res.x = last.b.x;
+    res.y = last.b.y;
+    res.elev = last.b.elev;
+    res.tx = 0;
+    res.ty = 1;
+    res.totalLen = metrics.totalLen;
+    if (withLanterns) res.nearLanternId = null;
+    return res;
   },
 
   createPixelBuffer(w, h, drawFn, key = "") {
@@ -672,14 +676,98 @@ window.StageCommon = {
     return false;
   },
 
-  sampleStageRamp(stage, rampKey, dist, opts = {}) {
+  _chaserSampleOut: {},
+
+  sampleStageRamp(stage, rampKey, dist, opts = {}, out = null) {
     if (!stage._rampMetrics) {
       stage._rampMetrics = {
         left: this.buildPolylineMetrics(stage.WIRE_RAMPS.left.points),
         right: this.buildPolylineMetrics(stage.WIRE_RAMPS.right.points)
       };
     }
-    return this.samplePolylineRamp(stage._rampMetrics[rampKey], dist, opts);
+    return this.samplePolylineRamp(stage._rampMetrics[rampKey], dist, opts, out);
+  },
+
+  renderWireRampRails(ctx, stage, animTick, upperPass, opts = {}) {
+    stage.ensureRampCanvases();
+    if (upperPass) {
+      if (stage._rampUpperCanvas) {
+        ctx.drawImage(stage._rampUpperCanvas, 0, 0);
+      }
+      return;
+    }
+    if (stage._rampStaticCanvas) {
+      ctx.drawImage(stage._rampStaticCanvas, 0, 0);
+    }
+
+    const orientedGate = !!opts.orientedGate;
+    const drawExitRing = !!opts.drawExitRing;
+    const gateLabelOffsetY = opts.gateLabelOffsetY ?? 19;
+
+    for (const rampKey of ["left", "right"]) {
+      const rd = stage.WIRE_RAMPS[rampKey];
+      const metrics = stage._rampMetrics[rampKey];
+      const totalLen = metrics.totalLen;
+
+      this.renderWireRampChasers(ctx, stage, rampKey, totalLen, animTick);
+
+      let startAng = Math.PI * 1.05;
+      let endAng = Math.PI * 1.95;
+      if (orientedGate && metrics.segs.length > 0) {
+        const seg0 = metrics.segs[0];
+        const inAng = Math.atan2(seg0.b.y - seg0.a.y, seg0.b.x - seg0.a.x);
+        startAng = inAng - Math.PI * 0.45;
+        endAng = inAng + Math.PI * 0.45;
+      }
+
+      const pulse = 0.65 + 0.35 * Math.sin(animTick * 0.16 + (rampKey === "left" ? 0 : 2));
+      ctx.save();
+      ctx.globalAlpha = pulse * 0.35;
+      ctx.strokeStyle = rd.color;
+      ctx.lineWidth = 6.0;
+      ctx.beginPath();
+      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, startAng, endAng);
+      ctx.stroke();
+
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = "#e6ff00";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, startAng, endAng);
+      ctx.stroke();
+
+      ctx.fillStyle = "#e6ff00";
+      ctx.font = "bold 8.5px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(opts.useRampName ? ("▲" + rd.name) : "▲SKYWAY", rd.entryX, rd.entryY + gateLabelOffsetY);
+      ctx.restore();
+
+      if (drawExitRing && metrics.smoothPts.length > 0) {
+        const sLast = metrics.smoothPts[metrics.smoothPts.length - 1];
+        const exitPulse = 0.6 + 0.4 * Math.sin(animTick * 0.18 + (rampKey === "left" ? 1 : 3));
+        ctx.save();
+        ctx.translate(sLast.x, sLast.y);
+        ctx.strokeStyle = rd.color;
+        ctx.lineWidth = 2.2;
+        ctx.globalAlpha = exitPulse;
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = "#e6ff00";
+        ctx.font = "bold 7.5px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("▼DROP", 0, 11);
+        ctx.restore();
+      }
+    }
   },
 
   ensureWireRampCanvases(stage, W = 420, H = 660, gauge = 7.6) {
@@ -763,8 +851,9 @@ window.StageCommon = {
 
   renderWireRampChasers(ctx, stage, rampKey, totalLen, animTick) {
     const chaseOffset = (animTick * 3.2) % 44;
+    const out = this._chaserSampleOut;
     for (let d = chaseOffset; d < totalLen - 12; d += 44) {
-      const s = stage.sampleRamp(rampKey, d);
+      const s = stage.sampleRamp(rampKey, d, out);
       const ang = Math.atan2(s.ty, s.tx);
       ctx.save();
       ctx.translate(s.x, s.y);

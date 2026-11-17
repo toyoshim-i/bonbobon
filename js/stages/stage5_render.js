@@ -1568,82 +1568,16 @@ Object.assign(window.Stage5, {
       if (rampAlpha <= 0.01) return;
     }
 
-    this.ensureRampCanvases();
-
     ctx.save();
     if (rampAlpha < 1.0) {
       ctx.globalAlpha = rampAlpha;
     }
-
-    if (upperPass) {
-      if (this._rampUpperCanvas) {
-        ctx.drawImage(this._rampUpperCanvas, 0, 0);
-      }
-      ctx.restore();
-      return;
-    }
-
-    if (this._rampStaticCanvas) {
-      ctx.drawImage(this._rampStaticCanvas, 0, 0);
-    }
-
-    // Animated chaser arrows on ramps & oriented entrance gates + exit drop rings
-    for (const rampKey of ["left", "right"]) {
-      const rd = this.WIRE_RAMPS[rampKey];
-      const totalLen = this._rampMetrics[rampKey].totalLen;
-
-      StageCommon.renderWireRampChasers(ctx, this, rampKey, totalLen, b.animTick);
-
-      // Oriented entrance gate hood (⌢ over top/forward mouth, open toward flippers)
-      const s0 = this.sampleRamp(rampKey, 0);
-      const inAng = Math.atan2(s0.ty, s0.tx);
-      const pulse = 0.65 + 0.35 * Math.sin(b.animTick * 0.16 + (rampKey === "left" ? 0 : 2));
-      ctx.save();
-      ctx.globalAlpha = pulse * 0.35;
-      ctx.strokeStyle = rd.color;
-      ctx.lineWidth = 6.0;
-      ctx.beginPath();
-      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, inAng - Math.PI * 0.45, inAng + Math.PI * 0.45);
-      ctx.stroke();
-
-      ctx.globalAlpha = pulse;
-      ctx.strokeStyle = "#e6ff00";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, inAng - Math.PI * 0.45, inAng + Math.PI * 0.45);
-      ctx.stroke();
-
-      ctx.fillStyle = "#e6ff00";
-      ctx.font = "bold 8.5px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("▲" + rd.name, rd.entryX, rd.entryY + 20);
-      ctx.restore();
-
-      // Subtle pulsing exit drop ring (r = 9) at the final point of each ramp
-      const sLast = this.sampleRamp(rampKey, totalLen);
-      const exitPulse = 0.6 + 0.4 * Math.sin(b.animTick * 0.18 + (rampKey === "left" ? 1 : 3));
-      ctx.save();
-      ctx.translate(sLast.x, sLast.y);
-      ctx.strokeStyle = rd.color;
-      ctx.lineWidth = 2.2;
-      ctx.globalAlpha = exitPulse;
-      ctx.beginPath();
-      ctx.arc(0, 0, 9, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#e6ff00";
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 5, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = "#e6ff00";
-      ctx.font = "bold 7.5px monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText("▼DROP", 0, 11);
-      ctx.restore();
-    }
+    StageCommon.renderWireRampRails(ctx, this, b.animTick, upperPass, {
+      orientedGate: true,
+      useRampName: true,
+      gateLabelOffsetY: 20,
+      drawExitRing: true
+    });
     ctx.restore();
   },
 

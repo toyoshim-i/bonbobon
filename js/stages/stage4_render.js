@@ -728,49 +728,12 @@ Object.assign(window.Stage4, {
   },
 
   renderWireRampRails(ctx, b, upperPass) {
-    this.ensureRampCanvases();
-    if (upperPass) {
-      if (this._rampUpperCanvas) {
-        ctx.drawImage(this._rampUpperCanvas, 0, 0);
-      }
-      return;
-    }
-
-    if (this._rampStaticCanvas) {
-      ctx.drawImage(this._rampStaticCanvas, 0, 0);
-    }
-
-    // アニメーション付きチェイサー矢印 ＆ エントリーゲート
-    for (const rampKey of ["left", "right"]) {
-      const rd = this.WIRE_RAMPS[rampKey];
-      const totalLen = this._rampMetrics[rampKey].totalLen;
-
-      StageCommon.renderWireRampChasers(ctx, this, rampKey, totalLen, b.animTick);
-
-      const pulse = 0.65 + 0.35 * Math.sin(b.animTick * 0.16 + (rampKey === "left" ? 0 : 2));
-      ctx.save();
-      // 外枠グロー
-      ctx.globalAlpha = pulse * 0.35;
-      ctx.strokeStyle = rd.color;
-      ctx.lineWidth = 6.0;
-      ctx.beginPath();
-      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.stroke();
-
-      // 内側シャープ線
-      ctx.globalAlpha = pulse;
-      ctx.strokeStyle = "#e6ff00";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(rd.entryX, rd.entryY, rd.entryR - 2, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.stroke();
-
-      ctx.fillStyle = "#e6ff00";
-      ctx.font = "bold 8.5px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("▲SKYWAY", rd.entryX, rd.entryY + 19);
-      ctx.restore();
-    }
+    StageCommon.renderWireRampRails(ctx, this, b.animTick, upperPass, {
+      orientedGate: false,
+      useRampName: false,
+      gateLabelOffsetY: 19,
+      drawExitRing: false
+    });
   },
 
   renderForeground(ctx, state, engine) {

@@ -93,8 +93,8 @@ window.Stage4 = {
     }
   },
 
-  sampleRamp(rampKey, dist) {
-    return StageCommon.sampleStageRamp(this, rampKey, dist, { withLanterns: true });
+  sampleRamp(rampKey, dist, out = null) {
+    return StageCommon.sampleStageRamp(this, rampKey, dist, { withLanterns: true }, out);
   },
 
   createBossState() {

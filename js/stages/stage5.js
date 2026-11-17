@@ -95,8 +95,8 @@ window.Stage5 = {
     }
   },
 
-  sampleRamp(rampKey, dist) {
-    return StageCommon.sampleStageRamp(this, rampKey, dist);
+  sampleRamp(rampKey, dist, out = null) {
+    return StageCommon.sampleStageRamp(this, rampKey, dist, {}, out);
   },
 
   createBossState() {

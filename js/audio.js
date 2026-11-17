@@ -4,28 +4,55 @@
 class FMSoundEngine {
   constructor() {
     this.ctx = null;
-    this.enabled = true;
+    this.masterGain = null;
+    this.compressor = null;
+    this._enabled = true;
+  }
+
+  get enabled() {
+    return this._enabled;
+  }
+
+  set enabled(val) {
+    this._enabled = !!val;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this._enabled ? 0.9 : 0, this.ctx.currentTime);
+    }
   }
 
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+        this.compressor.knee.setValueAtTime(18, this.ctx.currentTime);
+        this.compressor.ratio.setValueAtTime(6, this.ctx.currentTime);
+        this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+        this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(this._enabled ? 0.9 : 0, this.ctx.currentTime);
+
+        this.compressor.connect(this.masterGain);
+        this.masterGain.connect(this.ctx.destination);
+      }
     }
     if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume();
     }
   }
 
-  playFM(carrierFreq, modFreq, modDepth, duration, type = "square", slideTo = null, gainVal = 0.14) {
-    if (!this.enabled) return;
+  playFM(carrierFreq, modFreq, modDepth, duration, type = "square", slideTo = null, gainVal = 0.14, delaySec = 0) {
+    if (!this._enabled) return;
     this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
+    if (!this.ctx || !this.compressor) return;
+    const now = this.ctx.currentTime + delaySec;
     const osc = this.ctx.createOscillator();
     const mod = this.ctx.createOscillator();
     const modGain = this.ctx.createGain();
-    const masterGain = this.ctx.createGain();
+    const envGain = this.ctx.createGain();
 
     osc.type = type;
     mod.type = "sine";
@@ -37,18 +64,23 @@ class FMSoundEngine {
     modGain.gain.setValueAtTime(modDepth, now);
     modGain.gain.exponentialRampToValueAtTime(1, now + duration);
 
-    masterGain.gain.setValueAtTime(gainVal, now);
-    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    envGain.gain.setValueAtTime(0.0001, now);
+    envGain.gain.linearRampToValueAtTime(gainVal, now + 0.003);
+    envGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     mod.connect(modGain);
     modGain.connect(osc.frequency);
-    osc.connect(masterGain);
-    masterGain.connect(this.ctx.destination);
+    osc.connect(envGain);
+    envGain.connect(this.compressor);
 
     osc.start(now);
     mod.start(now);
-    osc.stop(now + duration);
-    mod.stop(now + duration);
+    osc.stop(now + duration + 0.01);
+    mod.stop(now + duration + 0.01);
+  }
+
+  flipperClick() {
+    this.playFM(920, 460, 70, 0.035, "triangle", 1320, 0.09);
   }
 
   flip() {
@@ -65,7 +97,7 @@ class FMSoundEngine {
 
   softPuru() {
     this.playFM(190, 12, 85, 0.22, "sine", 390, 0.18);
-    setTimeout(() => this.playFM(320, 18, 60, 0.15, "sine", 240, 0.12), 55);
+    this.playFM(320, 18, 60, 0.15, "sine", 240, 0.12, 0.055);
   }
 
   capsuleDrop() {
@@ -74,13 +106,13 @@ class FMSoundEngine {
 
   capsuleCatch() {
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 0.5, 80, 0.09, "square", null, 0.12), i * 45);
+      this.playFM(f, f * 0.5, 80, 0.09, "square", null, 0.12, i * 0.045);
     });
   }
 
   burstTrigger() {
     [440, 554.37, 659.25, 880, 1108.73, 1318.5].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, 220, 180, 0.14, "sawtooth", f * 1.15, 0.15), i * 50);
+      this.playFM(f, 220, 180, 0.14, "sawtooth", f * 1.15, 0.15, i * 0.05);
     });
   }
 
@@ -91,13 +123,13 @@ class FMSoundEngine {
   // High-energy Overheat Generator Spark bounce
   exSpark() {
     this.playFM(1200, 800, 300, 0.12, "sawtooth", 2400, 0.18);
-    setTimeout(() => this.playFM(440, 220, 200, 0.15, "square", 880, 0.14), 30);
+    this.playFM(440, 220, 200, 0.15, "square", 880, 0.14, 0.03);
   }
 
   // Sharp predictive short laser "Pi-t!" shot
   laserPew() {
     this.playFM(1920, 640, 260, 0.12, "sawtooth", 420, 0.15);
-    setTimeout(() => this.playFM(1280, 320, 180, 0.09, "square", 300, 0.11), 28);
+    this.playFM(1280, 320, 180, 0.09, "square", 300, 0.11, 0.028);
   }
 
   // Rhythmic target tracking beep (step = 1, 2, 3 ascending pitch)
@@ -110,26 +142,26 @@ class FMSoundEngine {
   // Urgent double-chirp alarm when lock-on finishes (NUDGE NOW!)
   lockComplete() {
     this.playFM(2150, 1075, 140, 0.085, "square", 2480, 0.14);
-    setTimeout(() => this.playFM(2560, 1280, 160, 0.11, "sawtooth", 2880, 0.15), 70);
+    this.playFM(2560, 1280, 160, 0.11, "sawtooth", 2880, 0.15, 0.07);
   }
 
   // Pinball shattered into fragments by sniper laser
   ballShatter() {
     this.playFM(1850, 430, 520, 0.16, "sawtooth", 340, 0.18);
-    setTimeout(() => this.playFM(920, 195, 420, 0.22, "square", 120, 0.17), 35);
-    setTimeout(() => this.playFM(165, 58, 360, 0.30, "sawtooth", 45, 0.20), 70);
+    this.playFM(920, 195, 420, 0.22, "square", 120, 0.17, 0.035);
+    this.playFM(165, 58, 360, 0.30, "sawtooth", 45, 0.20, 0.07);
   }
 
   // Delta beam formation hum & activation
   triangleLaser() {
     this.playFM(660, 330, 260, 0.18, "sawtooth", 1320, 0.14);
-    setTimeout(() => this.playFM(990, 247.5, 180, 0.22, "square", 880, 0.12), 45);
+    this.playFM(990, 247.5, 180, 0.22, "square", 880, 0.12, 0.045);
   }
 
   // Wireform ramp entry gate click & upward whoosh
   rampEnter() {
     this.playFM(980, 490, 140, 0.05, "triangle", 1560, 0.12);
-    setTimeout(() => this.playFM(420, 210, 180, 0.22, "sine", 1320, 0.14), 30);
+    this.playFM(420, 210, 180, 0.22, "sine", 1320, 0.14, 0.03);
   }
 
   // Wireform rail glide tick
@@ -143,10 +175,10 @@ class FMSoundEngine {
     const scale = [587.33, 659.25, 783.99, 880.0, 1174.66]; // D5, E5, G5, A5, D6 (Japanese Yo/Min'yo scale)
     const f = scale[Math.max(0, Math.min(4, idx | 0))];
     this.playFM(f, f * 2.0, 220, 0.28, "sine", f * 0.995, 0.16);
-    setTimeout(() => this.playFM(f * 2, f, 90, 0.18, "triangle", null, 0.09), 25);
+    this.playFM(f * 2, f, 90, 0.18, "triangle", null, 0.09, 0.025);
     if (fullCombo) {
       [587.33, 783.99, 880.0, 1174.66, 1567.98].forEach((cf, i) => {
-        setTimeout(() => this.playFM(cf, cf * 0.5, 160, 0.22, "square", cf * 1.04, 0.14), 70 + i * 42);
+        this.playFM(cf, cf * 0.5, 160, 0.22, "square", cf * 1.04, 0.14, 0.07 + i * 0.042);
       });
     }
   }
@@ -160,14 +192,14 @@ class FMSoundEngine {
   // Cyber-shuriken throw slash
   shurikenThrow() {
     this.playFM(1680, 840, 320, 0.09, "sawtooth", 520, 0.13);
-    setTimeout(() => this.playFM(2240, 1120, 180, 0.06, "triangle", 960, 0.09), 30);
+    this.playFM(2240, 1120, 180, 0.06, "triangle", 960, 0.09, 0.03);
   }
 
   // Crisp katana/steel clang when parrying a thrown shuriken!
   shurikenParry() {
     this.playFM(2480, 1240, 540, 0.16, "square", 1760, 0.20);
-    setTimeout(() => this.playFM(3120, 780, 360, 0.24, "sine", 2640, 0.16), 22);
-    setTimeout(() => this.playFM(1560, 390, 240, 0.20, "sawtooth", 2080, 0.13), 48);
+    this.playFM(3120, 780, 360, 0.24, "sine", 2640, 0.16, 0.022);
+    this.playFM(1560, 390, 240, 0.20, "sawtooth", 2080, 0.13, 0.048);
   }
 
   // Japanese koto/shamisen electric string twang for Cyber Chakra Wires!
@@ -175,11 +207,11 @@ class FMSoundEngine {
     const scale = [440, 493.88, 523.25, 659.25, 698.46, 880]; // Hirajoshi minor pentatonic!
     const f = scale[idx % scale.length];
     this.playFM(f, f * 2.0, 480, 0.26, "sawtooth", f * 0.99, 0.17);
-    setTimeout(() => this.playFM(f * 2, f, 200, 0.20, "triangle", f * 1.5, 0.11), 24);
+    this.playFM(f * 2, f, 200, 0.20, "triangle", f * 1.5, 0.11, 0.024);
     if (snapOverload) {
       [0, 2, 3, 5].forEach((s, i) => {
         const sf = scale[s] * 1.5;
-        setTimeout(() => this.playFM(sf, sf * 0.5, 320, 0.22, "square", sf * 1.25, 0.15), 55 + i * 38);
+        this.playFM(sf, sf * 0.5, 320, 0.22, "square", sf * 1.25, 0.15, 0.055 + i * 0.038);
       });
     }
   }
@@ -188,40 +220,40 @@ class FMSoundEngine {
   bunshinSummon() {
     this.playFM(220, 65, 520, 0.18, "sawtooth", 90, 0.19);
     [440, 523.25, 659.25, 987.77].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 1.5, 220, 0.16, "square", f * 1.12, 0.14), 35 + i * 32);
+      this.playFM(f, f * 1.5, 220, 0.16, "square", f * 1.12, 0.14, 0.035 + i * 0.032);
     });
   }
 
   // Heavy metallic spinning blade grind/clang for Giant Fuma Shuriken!
   fumaClash() {
     this.playFM(1320, 330, 680, 0.18, "sawtooth", 880, 0.19);
-    setTimeout(() => this.playFM(1980, 495, 420, 0.15, "square", 1540, 0.15), 26);
+    this.playFM(1980, 495, 420, 0.15, "square", 1540, 0.15, 0.026);
   }
 
   // Stage 5: Cosmic Gamma-Ray Burst plasma roar!
   gammaBurst() {
     this.playFM(180, 45, 720, 0.34, "sawtooth", 70, 0.22);
     [880, 1320, 1760].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 0.5, 480, 0.18, "square", f * 0.72, 0.14), i * 28);
+      this.playFM(f, f * 0.5, 480, 0.18, "square", f * 0.72, 0.14, i * 0.028);
     });
   }
 
   // Stage 5: Micro Black Hole gravitational warble / slingshot!
   blackHolePulse() {
     this.playFM(115, 29, 340, 0.32, "sine", 58, 0.22);
-    setTimeout(() => this.playFM(240, 60, 260, 0.24, "triangle", 480, 0.14), 60);
+    this.playFM(240, 60, 260, 0.24, "triangle", 480, 0.14, 0.06);
   }
 
   // Stage 5: Elastic electric prism harp pluck on Navel Tether Beam!
   navelBeamPluck() {
     this.playFM(660, 330, 290, 0.22, "triangle", 990, 0.18);
-    setTimeout(() => this.playFM(880, 220, 220, 0.20, "sine", 520, 0.15), 42);
+    this.playFM(880, 220, 220, 0.20, "sine", 520, 0.15, 0.042);
   }
 
   // Stage 5: Angel Halo ring curse (left/right flipper reversal)!
   haloReverse() {
     [1046.5, 783.99, 659.25, 523.25].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 1.5, 260, 0.15, "square", f * 0.84, 0.15), i * 36);
+      this.playFM(f, f * 1.5, 260, 0.15, "square", f * 0.84, 0.15, i * 0.036);
     });
   }
 
@@ -229,14 +261,14 @@ class FMSoundEngine {
   seraphFusion() {
     const chord = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98, 2093.0];
     chord.forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 0.5, 240, 0.24, "triangle", f * 1.02, 0.17), i * 48);
+      this.playFM(f, f * 0.5, 240, 0.24, "triangle", f * 1.02, 0.17, i * 0.048);
     });
   }
 
   // Elastic soft damp "Funyon" sound for rabbit ear tips
   earBoing() {
     this.playFM(260, 22, 120, 0.26, "sine", 160, 0.16);
-    setTimeout(() => this.playFM(180, 14, 90, 0.22, "sine", 280, 0.14), 70);
+    this.playFM(180, 14, 90, 0.22, "sine", 280, 0.14, 0.07);
   }
 
   // Plunger pull / ratchet click sound
@@ -247,13 +279,13 @@ class FMSoundEngine {
   // Fever start fanfare arpeggio
   feverStart() {
     [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, f * 0.5, 140, 0.16, "square", f * 1.08, 0.16), i * 40);
+      this.playFM(f, f * 0.5, 140, 0.16, "square", f * 1.08, 0.16, i * 0.04);
     });
   }
 
   // Spring release & ball launch: "BASHIIIN!! Biyo-yo-yo-n!"
   plungerLaunch(powerPct = 80) {
-    if (!this.enabled) return;
+    if (!this._enabled) return;
     this.init();
     if (!this.ctx) return;
 
@@ -263,46 +295,36 @@ class FMSoundEngine {
     this.playFM(180 * intensity, 90, 320 * intensity, 0.14, "sawtooth", 40, 0.22);
 
     // 2. High-speed metal ping
-    setTimeout(() => {
-      this.playFM(880 + intensity * 400, 440, 220, 0.18, "square", 1200, 0.18);
-    }, 20);
+    this.playFM(880 + intensity * 400, 440, 220, 0.18, "square", 1200, 0.18, 0.02);
 
     // 3. Spring coil oscillation "Biyo-yo-n" resonance
-    setTimeout(() => {
-      this.playFM(340, 28, 160 * intensity, 0.38, "sine", 180, 0.15);
-    }, 45);
+    this.playFM(340, 28, 160 * intensity, 0.38, "sine", 180, 0.15, 0.045);
   }
 
   // Sonic ring-scatter cascade on ball drain
   sonicScatter() {
     const notes = [1318.51, 1760.0, 2093.0, 1760.0, 2093.0, 2637.02];
     notes.forEach((f, i) => {
-      setTimeout(() => {
-        this.playFM(f, f * 0.5, 90, 0.12, i % 2 === 0 ? "triangle" : "square", f * 0.88, 0.16);
-      }, i * 28);
+      this.playFM(f, f * 0.5, 90, 0.12, i % 2 === 0 ? "triangle" : "square", f * 0.88, 0.16, i * 0.028);
     });
   }
 
   // Dramatic power-down sweep on game over
   gameOverDown() {
     this.playFM(440, 110, 260, 0.65, "sawtooth", 45, 0.22);
-    setTimeout(() => {
-      this.playFM(120, 30, 400, 0.8, "sine", 25, 0.25);
-    }, 180);
+    this.playFM(120, 30, 400, 0.8, "sine", 25, 0.25, 0.18);
     [659.25, 523.25, 392.0, 261.63].forEach((f, i) => {
-      setTimeout(() => this.playFM(f, 65, 120, 0.24, "triangle", f * 0.85, 0.14), i * 110);
+      this.playFM(f, 65, 120, 0.24, "triangle", f * 0.85, 0.14, i * 0.11);
     });
   }
 
   // DoDonPachi Strategic AI digital glitch reveal
   glitchReveal() {
     this.playFM(1850, 1420, 800, 0.22, "sawtooth", 120, 0.20);
-    setTimeout(() => this.playFM(980, 770, 600, 0.28, "square", 330, 0.18), 35);
-    setTimeout(() => {
-      [110, 164.81, 220, 329.63].forEach(f => {
-        this.playFM(f, 55, 40, 1.2, "sine", f * 1.01, 0.15);
-      });
-    }, 120);
+    this.playFM(980, 770, 600, 0.28, "square", 330, 0.18, 0.035);
+    [110, 164.81, 220, 329.63].forEach(f => {
+      this.playFM(f, 55, 40, 1.2, "sine", f * 1.01, 0.15, 0.12);
+    });
   }
 
   // "ジョワッ！！" Ultraman-style heroic launch whoosh + fanfare
@@ -317,28 +339,24 @@ class FMSoundEngine {
       { f: 1318.51, d: 0.32 },
       { f: 1567.98, d: 0.65 }
     ];
-    let delay = 320;
+    let delaySec = 0.32;
     fanfare.forEach((n) => {
-      setTimeout(() => {
-        this.playFM(n.f, n.f * 0.5, 120, n.d, "sawtooth", n.f * 1.01, 0.22);
-        this.playFM(n.f * 0.5, n.f * 0.25, 80, n.d, "triangle", null, 0.15);
-      }, delay);
-      delay += Math.floor(n.d * 750);
+      this.playFM(n.f, n.f * 0.5, 120, n.d, "sawtooth", n.f * 1.01, 0.22, delaySec);
+      this.playFM(n.f * 0.5, n.f * 0.25, 80, n.d, "triangle", null, 0.15, delaySec);
+      delaySec += Math.floor(n.d * 750) / 1000;
     });
   }
 
   // Classic dual-burst electronic transceiver ring (ピロリロリン♪ ピロリロリン♪)
   codecRing() {
-    const playBurst = (startDelay) => {
+    const playBurst = (startDelaySec) => {
       const p = [1480, 1175, 1480, 1175, 1480, 1175];
       p.forEach((f, i) => {
-        setTimeout(() => {
-          this.playFM(f, f * 0.5, 40, 0.045, "square", null, 0.14);
-        }, startDelay + i * 42);
+        this.playFM(f, f * 0.5, 40, 0.045, "square", null, 0.14, startDelaySec + i * 0.042);
       });
     };
     playBurst(0);
-    playBurst(360);
+    playBurst(0.36);
   }
 
   // Tactical transceiver open pip (ピッ！)

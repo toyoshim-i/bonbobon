@@ -444,8 +444,38 @@ window.UI = {
     };
 
     // Keyboard Bindings
+    const LEFT_FLIP_CODES = new Set(["KeyZ", "ShiftLeft"]);
+    const RIGHT_FLIP_CODES = new Set(["KeyV", "ShiftRight"]);
+    const PLUNGER_CODES = new Set(["KeyC", "Space"]);
+    const heldLeftKeys = new Set();
+    const heldRightKeys = new Set();
+    const heldPlungerKeys = new Set();
+
+    const releaseAllHeldKeys = () => {
+      if (heldLeftKeys.size > 0) {
+        heldLeftKeys.clear();
+        setLeft(false);
+      }
+      if (heldRightKeys.size > 0) {
+        heldRightKeys.clear();
+        setRight(false);
+      }
+      if (heldPlungerKeys.size > 0) {
+        heldPlungerKeys.clear();
+        engine.releasePlunger();
+      }
+    };
+
+    const isShown = (id) => {
+      const el = document.getElementById(id);
+      return !!(el && !el.classList.contains("hidden"));
+    };
+
+    window.addEventListener("blur", releaseAllHeldKeys);
+
     window.addEventListener("keydown", e => {
       if (e.code === "Escape") {
+        if (e.repeat) return;
         e.preventDefault();
         const menuModal = document.getElementById("menuModal");
         const rankingModal = document.getElementById("rankingModal");
@@ -458,41 +488,95 @@ window.UI = {
             window.GameFlow.closeRankingModal();
           }
         } else {
+          releaseAllHeldKeys();
           openMenu();
         }
         return;
       }
-      if (["ArrowLeft", "KeyA", "KeyZ"].includes(e.code)) {
+
+      if (e.repeat) return;
+
+      // Dynamic Z / X / C / V mapping for non-gameplay bottom decks
+      if (isShown("menuControlsBar")) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+          e.preventDefault();
+          document.getElementById("btnBottomMenuClose")?.click();
+        }
+        return;
+      }
+
+      if (isShown("rankingModal") || isShown("gameOverModal")) {
+        return;
+      }
+
+      if (isShown("endingControlsBar")) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+          e.preventDefault();
+          document.getElementById("btnBottomEndingAction")?.click();
+        }
+        return;
+      }
+
+      if (isShown("titleControlsBar")) {
+        if (e.code === "KeyZ") {
+          e.preventDefault();
+          document.getElementById("btnTitleSettings")?.click();
+        } else if (e.code === "KeyX" || e.code === "KeyC") {
+          e.preventDefault();
+          document.getElementById("btnTitleStart")?.click();
+        } else if (e.code === "KeyV") {
+          e.preventDefault();
+          document.getElementById("btnTitleRanking")?.click();
+        }
+        return;
+      }
+
+      // Gameplay controls (#gameControlsBar)
+      if (!isShown("gameControlsBar")) return;
+
+      if (LEFT_FLIP_CODES.has(e.code)) {
         e.preventDefault();
-        setLeft(true);
-      } else if (["ArrowRight", "KeyD", "Slash"].includes(e.code)) {
+        const wasEmpty = heldLeftKeys.size === 0;
+        heldLeftKeys.add(e.code);
+        if (wasEmpty) setLeft(true);
+      } else if (RIGHT_FLIP_CODES.has(e.code)) {
         e.preventDefault();
-        setRight(true);
-      } else if (["ArrowDown", "KeyS"].includes(e.code)) {
+        const wasEmpty = heldRightKeys.size === 0;
+        heldRightKeys.add(e.code);
+        if (wasEmpty) setRight(true);
+      } else if (PLUNGER_CODES.has(e.code)) {
         e.preventDefault();
-        engine.startPlungerPull();
-      } else if (e.code === "Space") {
+        const wasEmpty = heldPlungerKeys.size === 0;
+        heldPlungerKeys.add(e.code);
+        if (wasEmpty) engine.startPlungerPull();
+      } else if (e.code === "KeyX") {
+        e.preventDefault();
+        Physics.triggerNudge(engine.state);
+      } else if (e.code === "KeyB") {
         e.preventDefault();
         Systems.triggerBurst(engine.state);
-      } else if (["ArrowUp", "KeyW"].includes(e.code)) {
+      } else if (e.code === "ArrowUp") {
         e.preventDefault();
         Physics.triggerDirectionalNudge(engine.state, 0, -1, 1.0);
-      } else if (e.code === "KeyQ") {
+      } else if (e.code === "ArrowDown") {
         e.preventDefault();
-        Physics.triggerDirectionalNudge(engine.state, -1, -0.5, 1.1);
-      } else if (e.code === "KeyE") {
+        Physics.triggerDirectionalNudge(engine.state, 0, 1, 1.0);
+      } else if (e.code === "ArrowLeft") {
         e.preventDefault();
-        Physics.triggerDirectionalNudge(engine.state, 1, -0.5, 1.1);
+        Physics.triggerDirectionalNudge(engine.state, -1, 0, 1.0);
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        Physics.triggerDirectionalNudge(engine.state, 1, 0, 1.0);
       }
     });
 
     window.addEventListener("keyup", e => {
-      if (["ArrowLeft", "KeyA", "KeyZ"].includes(e.code)) {
-        setLeft(false);
-      } else if (["ArrowRight", "KeyD", "Slash"].includes(e.code)) {
-        setRight(false);
-      } else if (["ArrowDown", "KeyS"].includes(e.code)) {
-        engine.releasePlunger();
+      if (LEFT_FLIP_CODES.has(e.code) && heldLeftKeys.delete(e.code)) {
+        if (heldLeftKeys.size === 0) setLeft(false);
+      } else if (RIGHT_FLIP_CODES.has(e.code) && heldRightKeys.delete(e.code)) {
+        if (heldRightKeys.size === 0) setRight(false);
+      } else if (PLUNGER_CODES.has(e.code) && heldPlungerKeys.delete(e.code)) {
+        if (heldPlungerKeys.size === 0) engine.releasePlunger();
       }
     });
 

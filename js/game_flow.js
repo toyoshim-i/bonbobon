@@ -270,6 +270,7 @@ window.GameFlow = {
 
     // Global Key Listener for Title / Ending (Space / Enter)
     window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
       this.resetIdleTimer();
       const titleModal = document.getElementById("titleModal");
       const isTitleVisible = titleModal && !titleModal.classList.contains("hidden");
@@ -288,36 +289,13 @@ window.GameFlow = {
 
       const endingModal = document.getElementById("endingModal");
       const isEndingVisible = endingModal && !endingModal.classList.contains("hidden");
-      if (isEndingVisible) {
-        if (this.ending.act === 3 && !this.ending.registered) {
-          if (/^[a-zA-Z0-9\-]$/.test(e.key)) {
-            e.preventDefault();
-            this.inputCallsignKey(e.key.toUpperCase());
-            return;
-          }
-          if (e.key === "Backspace") {
-            e.preventDefault();
-            this.inputCallsignKey("BS");
-            return;
-          }
-          if (e.code === "Space") {
-            e.preventDefault();
-            this.inputCallsignKey("SPC");
-            return;
-          }
-          if (e.code === "Enter") {
-            e.preventDefault();
-            this.registerEndingScore();
-            return;
-          }
-        }
-        if (e.code === "Space" || e.code === "Enter") {
+      if (isEndingVisible && (e.code === "Space" || e.code === "Enter")) {
+        if (this.ending.act === 1) {
           e.preventDefault();
-          if (this.ending.act === 1) {
-            this.advanceEnding();
-          } else if (this.ending.act === 2) {
-            this.showEndingAct3();
-          }
+          this.advanceEnding();
+        } else if (this.ending.act === 2) {
+          e.preventDefault();
+          this.showEndingAct3();
         }
       }
     });

@@ -511,5 +511,78 @@ window.StageCommon = {
       ctx.restore();
     }
     ctx.restore();
+  },
+
+  smoothControlPoints(ctrlPts, subdiv = 5) {
+    const out = [];
+    const n = ctrlPts.length;
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = ctrlPts[Math.max(0, i - 1)];
+      const p1 = ctrlPts[i];
+      const p2 = ctrlPts[i + 1];
+      const p3 = ctrlPts[Math.min(n - 1, i + 2)];
+      const steps = (i === n - 2) ? subdiv : subdiv - 1;
+      for (let s = 0; s <= steps; s++) {
+        if (i < n - 2 && s === steps) continue;
+        const t = s / subdiv;
+        const t2 = t * t;
+        const t3 = t2 * t;
+        const cr = (a, b, c, d) =>
+          0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        const pt = {
+          x: cr(p0.x, p1.x, p2.x, p3.x),
+          y: cr(p0.y, p1.y, p2.y, p3.y),
+          elev: Math.max(0, Math.min(1, cr(p0.elev, p1.elev, p2.elev, p3.elev)))
+        };
+        if (p1.lanternId !== undefined || p2.lanternId !== undefined) {
+          pt.lanternId = t < 0.28 ? p1.lanternId : (t > 0.72 ? p2.lanternId : null);
+        }
+        out.push(pt);
+      }
+    }
+    return out;
+  },
+
+  buildPolylineMetrics(points, subdiv = 5) {
+    const smoothPts = this.smoothControlPoints(points, subdiv);
+    const segs = [];
+    let totalLen = 0;
+    for (let i = 0; i < smoothPts.length - 1; i++) {
+      const a = smoothPts[i];
+      const b = smoothPts[i + 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      segs.push({ a, b, len, startDist: totalLen, endDist: totalLen + len });
+      totalLen += len;
+    }
+    return { segs, totalLen, smoothPts };
+  },
+
+  samplePolylineRamp(metrics, dist, opts = {}) {
+    const withLanterns = !!opts.withLanterns;
+    const clamped = Math.max(0, Math.min(metrics.totalLen, dist));
+    for (let i = 0; i < metrics.segs.length; i++) {
+      const s = metrics.segs[i];
+      if (clamped <= s.endDist || i === metrics.segs.length - 1) {
+        const t = Math.max(0, Math.min(1, (clamped - s.startDist) / s.len));
+        const dx = (s.b.x - s.a.x) / s.len;
+        const dy = (s.b.y - s.a.y) / s.len;
+        const res = {
+          x: s.a.x + (s.b.x - s.a.x) * t,
+          y: s.a.y + (s.b.y - s.a.y) * t,
+          elev: s.a.elev + (s.b.elev - s.a.elev) * t,
+          tx: dx,
+          ty: dy,
+          totalLen: metrics.totalLen
+        };
+        if (withLanterns) {
+          res.nearLanternId = t > 0.65 ? s.b.lanternId : (t < 0.35 ? s.a.lanternId : null);
+        }
+        return res;
+      }
+    }
+    const last = metrics.segs[metrics.segs.length - 1];
+    const fallback = { x: last.b.x, y: last.b.y, elev: last.b.elev, tx: 0, ty: 1, totalLen: metrics.totalLen };
+    if (withLanterns) fallback.nearLanternId = null;
+    return fallback;
   }
 };

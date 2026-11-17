@@ -101,73 +101,14 @@ window.Stage5 = {
     }
   },
 
-  smoothControlPoints(ctrlPts, subdiv = 5) {
-    const out = [];
-    const n = ctrlPts.length;
-    for (let i = 0; i < n - 1; i++) {
-      const p0 = ctrlPts[Math.max(0, i - 1)];
-      const p1 = ctrlPts[i];
-      const p2 = ctrlPts[i + 1];
-      const p3 = ctrlPts[Math.min(n - 1, i + 2)];
-      const steps = (i === n - 2) ? subdiv : subdiv - 1;
-      for (let s = 0; s <= steps; s++) {
-        if (i < n - 2 && s === steps) continue;
-        const t = s / subdiv;
-        const t2 = t * t;
-        const t3 = t2 * t;
-        const cr = (a, b, c, d) =>
-          0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-        out.push({
-          x: cr(p0.x, p1.x, p2.x, p3.x),
-          y: cr(p0.y, p1.y, p2.y, p3.y),
-          elev: Math.max(0, Math.min(1, cr(p0.elev, p1.elev, p2.elev, p3.elev)))
-        });
-      }
-    }
-    return out;
-  },
-
-  buildPolylineMetrics(points) {
-    const smoothPts = this.smoothControlPoints(points, 5);
-    const segs = [];
-    let totalLen = 0;
-    for (let i = 0; i < smoothPts.length - 1; i++) {
-      const a = smoothPts[i];
-      const b = smoothPts[i + 1];
-      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-      segs.push({ a, b, len, startDist: totalLen, endDist: totalLen + len });
-      totalLen += len;
-    }
-    return { segs, totalLen, smoothPts };
-  },
-
   sampleRamp(rampKey, dist) {
     if (!this._rampMetrics) {
       this._rampMetrics = {
-        left: this.buildPolylineMetrics(this.WIRE_RAMPS.left.points),
-        right: this.buildPolylineMetrics(this.WIRE_RAMPS.right.points)
+        left: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.left.points),
+        right: StageCommon.buildPolylineMetrics(this.WIRE_RAMPS.right.points)
       };
     }
-    const m = this._rampMetrics[rampKey];
-    const clamped = Math.max(0, Math.min(m.totalLen, dist));
-    for (let i = 0; i < m.segs.length; i++) {
-      const s = m.segs[i];
-      if (clamped <= s.endDist || i === m.segs.length - 1) {
-        const t = Math.max(0, Math.min(1, (clamped - s.startDist) / s.len));
-        const dx = (s.b.x - s.a.x) / s.len;
-        const dy = (s.b.y - s.a.y) / s.len;
-        return {
-          x: s.a.x + (s.b.x - s.a.x) * t,
-          y: s.a.y + (s.b.y - s.a.y) * t,
-          elev: s.a.elev + (s.b.elev - s.a.elev) * t,
-          tx: dx,
-          ty: dy,
-          totalLen: m.totalLen
-        };
-      }
-    }
-    const last = m.segs[m.segs.length - 1];
-    return { x: last.b.x, y: last.b.y, elev: last.b.elev, tx: 0, ty: 1, totalLen: m.totalLen };
+    return StageCommon.samplePolylineRamp(this._rampMetrics[rampKey], dist);
   },
 
   createBossState() {

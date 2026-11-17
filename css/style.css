@@ -107,3 +107,44 @@ body {
   }
 }
 
+/* CODEC Green CRT & Glitch Effect */
+.codec-crt-img {
+  filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(340%) contrast(130%) brightness(0.95);
+  animation: codecGlitch 4.2s infinite;
+}
+
+.codec-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(52, 255, 138, 0.08) 0px,
+    rgba(52, 255, 138, 0.08) 1px,
+    rgba(0, 12, 4, 0.45) 2px,
+    rgba(0, 12, 4, 0.45) 3px
+  );
+  pointer-events: none;
+}
+
+@keyframes codecGlitch {
+  0%, 91%, 94%, 97%, 100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  92% {
+    transform: translate(-2px, 0) skewX(3deg);
+    opacity: 0.85;
+  }
+  93% {
+    transform: translate(2px, 1px) skewX(-2deg);
+    opacity: 0.92;
+  }
+  95% {
+    transform: translate(-1px, -1px);
+    opacity: 0.8;
+  }
+  96% {
+    transform: translate(1px, 0);
+    opacity: 1;
+  }
+}
+
+

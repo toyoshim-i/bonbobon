@@ -105,30 +105,33 @@ window.UI = {
 
   updateScreenMode(state) {
     const isTitle = !!(state && state.inTitle);
+    const isEnding = !!(state && state.inEnding);
+    const isFullscreenMode = isTitle || isEnding;
     const hudBar = this.el("inGameHudBar");
     const buffBar = this.el("inGameBuffBar");
     const titleControls = this.el("titleControlsBar");
     const gameControls = this.el("gameControlsBar");
     const menuControls = this.el("menuControlsBar");
+    const endingControls = this.el("endingControlsBar");
     const playfieldFrame = this.el("playfieldFrame");
     const objectivePill = this.el("hudObjectivePill");
     const btnHudDebugSettings = this.el("btnHudDebugSettings");
 
     if (playfieldFrame) {
-      playfieldFrame.classList.toggle("title-screen-mode", isTitle);
+      playfieldFrame.classList.toggle("title-screen-mode", isFullscreenMode);
     }
     if (objectivePill) {
-      objectivePill.classList.toggle("hidden", isTitle);
-      objectivePill.classList.toggle("flex", !isTitle);
+      objectivePill.classList.toggle("hidden", isFullscreenMode);
+      objectivePill.classList.toggle("flex", !isFullscreenMode);
     }
 
     if (hudBar) {
-      if (isTitle) hudBar.classList.add("hidden");
+      if (isFullscreenMode) hudBar.classList.add("hidden");
       else hudBar.classList.remove("hidden");
     }
     if (btnHudDebugSettings) {
       const isDbg = window.Systems && typeof Systems.isDebugMenuEnabled === "function" && Systems.isDebugMenuEnabled();
-      if (!isTitle && isDbg) {
+      if (!isFullscreenMode && isDbg) {
         btnHudDebugSettings.classList.remove("hidden");
         btnHudDebugSettings.classList.add("flex");
       } else {
@@ -137,7 +140,7 @@ window.UI = {
       }
     }
     if (buffBar) {
-      if (isTitle) buffBar.classList.add("hidden");
+      if (isFullscreenMode) buffBar.classList.add("hidden");
       else buffBar.classList.remove("hidden");
     }
 
@@ -147,6 +150,10 @@ window.UI = {
       if (menuControls) {
         menuControls.classList.remove("hidden");
         menuControls.classList.add("block");
+      }
+      if (endingControls) {
+        endingControls.classList.add("hidden");
+        endingControls.classList.remove("block");
       }
       if (titleControls) {
         titleControls.classList.add("hidden");
@@ -161,8 +168,17 @@ window.UI = {
         menuControls.classList.add("hidden");
         menuControls.classList.remove("block");
       }
+      if (endingControls) {
+        if (isEnding) {
+          endingControls.classList.remove("hidden");
+          endingControls.classList.add("block");
+        } else {
+          endingControls.classList.add("hidden");
+          endingControls.classList.remove("block");
+        }
+      }
       if (titleControls) {
-        if (isTitle) {
+        if (isTitle && !isEnding) {
           titleControls.classList.remove("hidden");
           titleControls.classList.add("grid");
         } else {
@@ -171,7 +187,7 @@ window.UI = {
         }
       }
       if (gameControls) {
-        if (isTitle) {
+        if (isFullscreenMode) {
           gameControls.classList.add("hidden");
           gameControls.classList.remove("grid");
         } else {
@@ -731,6 +747,17 @@ window.UI = {
     if (btnSelS4) btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
     const btnSelS5 = document.getElementById("btnSelectStage5");
     if (btnSelS5) btnSelS5.addEventListener("click", () => loadStageFromUI(window.Stage5));
+    const btnSelEnding = document.getElementById("btnSelectEnding");
+    if (btnSelEnding) {
+      btnSelEnding.addEventListener("click", () => {
+        if (window.sfx && window.sfx.ensureInit) window.sfx.ensureInit();
+        const menuModal = document.getElementById("menuModal");
+        if (menuModal) UI.closeModal(menuModal);
+        if (window.GameFlow && window.GameFlow.startEnding) {
+          GameFlow.startEnding(engine.state);
+        }
+      });
+    }
 
     // Permanent Upgrades Quick Presets
     const btnPermAllReset = document.getElementById("btnPermAllReset");

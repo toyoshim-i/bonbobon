@@ -234,10 +234,16 @@ window.GameFlow = {
     }
 
     // Ending Navigation Buttons
-    const btnEndingNext = document.getElementById("btnEndingNext");
-    if (btnEndingNext) {
-      btnEndingNext.addEventListener("click", () => {
-        this.advanceEnding();
+    const btnBottomEndingAction = document.getElementById("btnBottomEndingAction");
+    if (btnBottomEndingAction) {
+      btnBottomEndingAction.addEventListener("click", () => {
+        if (this.ending.act === 1) {
+          this.advanceEnding();
+        } else if (this.ending.act === 2) {
+          this.showEndingAct3();
+        } else if (this.ending.act === 3) {
+          this.showTitle();
+        }
       });
     }
 
@@ -248,10 +254,10 @@ window.GameFlow = {
       });
     }
 
-    const btnEndingToAct3 = document.getElementById("btnEndingToAct3");
-    if (btnEndingToAct3) {
-      btnEndingToAct3.addEventListener("click", () => {
-        this.showEndingAct3();
+    const codecDialogueText = document.getElementById("codecDialogueText");
+    if (codecDialogueText) {
+      codecDialogueText.addEventListener("click", () => {
+        if (this.ending.act === 1) this.advanceEnding();
       });
     }
 
@@ -259,13 +265,6 @@ window.GameFlow = {
     if (btnEndingRegister) {
       btnEndingRegister.addEventListener("click", () => {
         this.registerEndingScore();
-      });
-    }
-
-    const btnEndingReturnTitle = document.getElementById("btnEndingReturnTitle");
-    if (btnEndingReturnTitle) {
-      btnEndingReturnTitle.addEventListener("click", () => {
-        this.showTitle();
       });
     }
 
@@ -304,6 +303,8 @@ window.GameFlow = {
   // Title Screen & Idle Attract-Mode
   // -------------------------------------------------------------------------
   showTitle() {
+    clearTimeout(this.ending.typeTimer);
+    this.ending.isTyping = false;
     this.stopAttractDemo();
     this.hideAllModals();
     if (window.GameEngine) {
@@ -808,6 +809,7 @@ window.GameFlow = {
     state.inTitle = false;
     state.gameOver = false;
     this.hideAllModals();
+    if (window.UI && UI.updateScreenMode) UI.updateScreenMode(state);
 
     const skipBtn = document.getElementById("btnEndingSkip");
     if (skipBtn) skipBtn.classList.remove("hidden");
@@ -834,8 +836,12 @@ window.GameFlow = {
 
   advanceEnding() {
     if (this.ending.act === 1) {
+      if (this.ending.isTyping) {
+        this.finishEndingTyping();
+        return;
+      }
       this.ending.beat++;
-      if (this.ending.beat <= 2) {
+      if (this.ending.beat <= 4) {
         if (window.sfx && window.sfx.flip) window.sfx.flip();
         this.showEndingAct1Beat(this.ending.beat);
       } else {
@@ -847,11 +853,172 @@ window.GameFlow = {
   },
 
   skipEnding() {
+    clearTimeout(this.ending.typeTimer);
+    this.ending.isTyping = false;
     if (window.sfx && window.sfx.codecClose) window.sfx.codecClose();
     this.showEndingAct3();
   },
 
+  setCodecSpeakerVisual(speaker) {
+    const leftBox = document.getElementById("codecLeftBox");
+    const rightBox = document.getElementById("codecRightBox");
+    const leftImg = document.getElementById("codecLeftPortraitImg");
+    const leftLabel = document.getElementById("codecLeftLabel");
+
+    if (speaker === "elon") {
+      if (leftImg && !leftImg.getAttribute("src").includes("dr_elon.jpg?v=193")) {
+        leftImg.style.display = "";
+        leftImg.src = "./assets/ui/dr_elon.jpg?v=193";
+        leftImg.alt = "Dr. Elon";
+      }
+      if (leftLabel) leftLabel.textContent = "[DR. ELON]";
+    } else if (speaker === "colonel") {
+      if (leftImg && !leftImg.getAttribute("src").includes("commander.jpg?v=193")) {
+        leftImg.style.display = "";
+        leftImg.src = "./assets/ui/commander.jpg?v=193";
+        leftImg.alt = "Colonel";
+      }
+      if (leftLabel) leftLabel.textContent = "[COLONEL]";
+    }
+
+    const isRightActive = speaker === "ball";
+    if (leftBox) {
+      leftBox.classList.toggle("opacity-50", isRightActive);
+      leftBox.classList.toggle("opacity-100", !isRightActive);
+    }
+    if (rightBox) {
+      rightBox.classList.toggle("opacity-50", !isRightActive);
+      rightBox.classList.toggle("opacity-100", isRightActive);
+    }
+  },
+
+  getCodecSpeakerMeta(speaker) {
+    if (speaker === "elon") return { name: "【エローン博士】", cls: "text-[#e6ff00] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    if (speaker === "ball") return { name: "【シルバーボール】", cls: "text-[#00f5e8] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    return { name: "【大佐】", cls: "text-[#9effc4] font-black text-[13px] sm:text-[14px] tracking-wider" };
+  },
+
+  wrapCodecSegments(segments, maxW = 22) {
+    const charW = (ch) => (/[\x00-\x7F]/.test(ch) ? 0.55 : 1.0);
+    const strW = (s) => {
+      let w = 0;
+      for (const ch of s) w += charW(ch);
+      return w;
+    };
+    const segInst = (typeof Intl !== "undefined" && Intl.Segmenter)
+      ? new Intl.Segmenter("ja", { granularity: "word" })
+      : null;
+    const tokenize = (text) => {
+      const protectedRe = /(『[^』]{1,14}』|――|……|異星人|異星艦隊|桃色装甲艦隊|最終迎撃演習|最終テスト|戦闘AI|美少女艦隊学|軌道ドック|シルバーボール|エローン博士|ボン・ボヤージュ|[0-9]+隻|[ァ-ヶー・]{2,}|[A-Za-z0-9%％]+)/g;
+      const raw = [];
+      let last = 0;
+      const pushPlain = (str) => {
+        if (!str) return;
+        if (segInst) {
+          for (const s of segInst.segment(str)) raw.push(s.segment);
+        } else {
+          for (const ch of str) raw.push(ch);
+        }
+      };
+      for (const m of text.matchAll(protectedRe)) {
+        if (m.index > last) pushPlain(text.slice(last, m.index));
+        raw.push(m[0]);
+        last = m.index + m[0].length;
+      }
+      if (last < text.length) pushPlain(text.slice(last));
+
+      const NO_START = /^[、。！？…・ー―：』」）】〉》っゃゅょぁぃぅぇぉッャュョァィゥェォ%％]/;
+      const NO_END = /[『「（【〈《]$/;
+      const merged = [];
+      for (const tok of raw) {
+        if (merged.length > 0 && NO_START.test(tok) && !merged[merged.length - 1].endsWith("\n")) {
+          merged[merged.length - 1] += tok;
+        } else if (merged.length > 0 && NO_END.test(merged[merged.length - 1])) {
+          merged[merged.length - 1] += tok;
+        } else {
+          merged.push(tok);
+        }
+      }
+      return merged;
+    };
+
+    let col = 0;
+    let prevEndedWithNewline = false;
+    return segments.map((seg, segIdx) => {
+      if (!seg.inline) {
+        col = 0;
+        prevEndedWithNewline = false;
+      }
+      const tokens = tokenize(seg.text);
+      const nextSeg = segments[segIdx + 1];
+      const hasMoreInSameLine = !!(nextSeg && nextSeg.inline);
+      let out = "";
+      tokens.forEach((tok, tIdx) => {
+        if (tok === "\n") {
+          const alreadyNewline = out.endsWith("\n") || (out.length === 0 && prevEndedWithNewline);
+          if (!alreadyNewline && (out.length > 0 || seg.inline)) {
+            out += "\n";
+          }
+          col = 0;
+          return;
+        }
+        if (col === 0 && tok === " ") return;
+        const w = strW(tok);
+        if (col > 0 && col + w > maxW) {
+          out += "\n";
+          col = 0;
+          if (tok === " ") return;
+        }
+        out += tok;
+        col += w;
+        const isLastTok = (tIdx === tokens.length - 1) && !hasMoreInSameLine;
+        const nextTok = tokens[tIdx + 1];
+        if (!isLastTok && /[。！？]$/.test(tok) && nextTok !== "\n") {
+          out += "\n";
+          col = 0;
+        }
+      });
+      if (out.length > 0) {
+        prevEndedWithNewline = out.endsWith("\n");
+      }
+      return { ...seg, text: out };
+    });
+  },
+
+  finishEndingTyping() {
+    clearTimeout(this.ending.typeTimer);
+    this.ending.isTyping = false;
+    const dialogEl = document.getElementById("codecDialogueText");
+    const segs = this.ending.currentSegments || [];
+    if (dialogEl) {
+      dialogEl.innerHTML = "";
+      let bodyBox = null;
+      segs.forEach((s, idx) => {
+        if (!s.inline) {
+          const meta = this.getCodecSpeakerMeta(s.speaker);
+          const hdr = document.createElement("div");
+          hdr.className = idx > 0 ? `${meta.cls} mt-1.5` : meta.cls;
+          hdr.textContent = meta.name;
+          dialogEl.appendChild(hdr);
+
+          bodyBox = document.createElement("div");
+          bodyBox.className = "pl-5 whitespace-pre-wrap";
+          dialogEl.appendChild(bodyBox);
+        }
+        const sp = document.createElement("span");
+        if (s.cls) sp.className = s.cls;
+        sp.textContent = s.text;
+        if (bodyBox) bodyBox.appendChild(sp);
+      });
+      dialogEl.scrollTop = dialogEl.scrollHeight;
+    }
+    if (segs.length > 0) {
+      this.setCodecSpeakerVisual(segs[segs.length - 1].speaker);
+    }
+  },
+
   showEndingAct1Beat(beatIdx) {
+    clearTimeout(this.ending.typeTimer);
     this.ending.beat = beatIdx;
     const act1Box = document.getElementById("endingAct1");
     const act2Box = document.getElementById("endingAct2");
@@ -862,29 +1029,170 @@ window.GameFlow = {
 
     const beats = [
       {
-        text: `司令官「――諸君、実にご苦労だった。<br>これにて対異星体・最終迎撃演習『計画名：ボン・ボヤージュ』全行程を終了する。」`,
+        segments: [
+          { speaker: "colonel", text: "――ご苦労だった。これにて対異星人・最終迎撃演習『計画名：ボン・ボヤージュ』\n全行程を終了する。" },
+          { speaker: "ball", text: "……待ってくれ大佐\n『演習』ってのはどういうことだ！？" }
+        ],
         btn: "通信を進める ▶"
       },
       {
-        text: `司令官「……何？ なぜ急に某戦術諜報無線のような画面なのかだと？ 細かいことは気にするな、通信費の節約だ！！」<br><br>司令官「それより聞け！ 貴官が戦った『美少女戦艦群の襲来』はAIが見せていた演習だが――<span class="text-[#e6ff00] font-black">彼女たち『桃色装甲艦隊』5隻は軌道ドックに実在する！！</span>」`,
+        segments: [
+          { speaker: "colonel", text: "まだ気づかんのか。あんな格好をして異星人が攻めてくるわけがないだろう。" },
+          { speaker: "ball", text: "……計ったな、大佐！" },
+          { speaker: "colonel", text: "それより聞け！\n貴官が戦った仮想空間の『桃色装甲艦隊』5隻は\nエローン博士によって開発され――" },
+          { speaker: "colonel", inline: true, pauseMs: 450, cls: "text-[#e6ff00] font-black", text: "\n軌道ドックに実在する！！" }
+        ],
         btn: "通信を進める ▶"
       },
       {
-        text: `司令官「人類滅亡の危機という極限状態での激突データこそが、彼女たちの戦闘AIを完成させる『最終実戦チューニング』だったのだ！<br><br><span class="text-[#00f5e8] font-black">調律率100%……これより貴官に全艦の指揮権を委譲する。本物の異星艦隊へ向かい、全艦、出撃せよ！！</span>」`,
+        segments: [
+          { speaker: "ball", text: "おい、なんだって大佐\nそれはどういうことだ！" },
+          { speaker: "elon", text: "その件については私が説明するわ。" },
+          { speaker: "ball", text: "……あんたは誰だ？" }
+        ],
+        btn: "通信を進める ▶"
+      },
+      {
+        segments: [
+          { speaker: "elon", text: "英雄にお目にかかれて光栄だわ。私はエローン。大学で『美少女艦隊学』を専攻していたの。\n今は軍に従事して、桃色装甲艦隊の開発を\n任されているわ。" },
+          { speaker: "colonel", text: "博士は美少女を扱うのがうまい。君もあの見事なギミックを見ただろう。" },
+          { speaker: "elon", text: "人類滅亡の危機という極限状態での衝突。\nそのデータこそが、彼女たちを完成させる\n最終テストだったのよ。" }
+        ],
+        btn: "通信を進める ▶"
+      },
+      {
+        segments: [
+          { speaker: "colonel", text: "……そういうことだ。全5隻の覚醒率は100%に達した。" },
+          { speaker: "colonel", inline: true, cls: "text-[#e6ff00] font-black", text: "\n彼女たちを隅々まで探り尽くした貴官に" },
+          { speaker: "colonel", inline: true, text: "\n全艦の指揮権を委譲する。" },
+          { speaker: "ball", text: "くそっ、やっぱり計ったな。\n……面白くなってきやがったぜ！" },
+          { speaker: "colonel", cls: "text-[#00f5e8] font-black", text: "今度こそ本物の異星艦隊が相手だ。頼んだぞ、シルバーボール。\n――全艦、出撃せよ！！" }
+        ],
         btn: "通信終了 ➔ 全艦、出撃！！ ▶"
       }
     ];
 
     const cur = beats[beatIdx] || beats[0];
-    const dialogEl = document.getElementById("codecDialogueText");
-    if (dialogEl) {
-      dialogEl.innerHTML = cur.text;
-    }
+    const wrappedSegments = this.wrapCodecSegments(cur.segments, 22);
+    this.ending.currentSegments = wrappedSegments;
+    this.updateEndingBottomButton(cur.btn, "codec");
 
-    const nextBtn = document.getElementById("btnEndingNext");
-    if (nextBtn) {
-      nextBtn.textContent = cur.btn;
+    const dialogEl = document.getElementById("codecDialogueText");
+    if (!dialogEl) return;
+    dialogEl.innerHTML = "";
+
+    let segIdx = 0;
+    let charIdx = 0;
+    let currentBodyBox = null;
+    let currentSpan = null;
+    this.ending.isTyping = true;
+
+    const initSegmentNode = (seg, idx) => {
+      if (!seg.inline) {
+        const meta = this.getCodecSpeakerMeta(seg.speaker);
+        const hdr = document.createElement("div");
+        hdr.className = idx > 0 ? `${meta.cls} mt-1.5` : meta.cls;
+        hdr.textContent = meta.name;
+        dialogEl.appendChild(hdr);
+
+        currentBodyBox = document.createElement("div");
+        currentBodyBox.className = "pl-5 whitespace-pre-wrap";
+        dialogEl.appendChild(currentBodyBox);
+      }
+      const sp = document.createElement("span");
+      if (seg.cls) sp.className = seg.cls;
+      if (currentBodyBox) currentBodyBox.appendChild(sp);
+      this.setCodecSpeakerVisual(seg.speaker);
+      return sp;
+    };
+
+    currentSpan = initSegmentNode(wrappedSegments[0], 0);
+
+    const stepType = () => {
+      if (this.ending.act !== 1 || !this.ending.isTyping) return;
+      const seg = wrappedSegments[segIdx];
+      if (!seg) {
+        this.ending.isTyping = false;
+        return;
+      }
+
+      if (charIdx < seg.text.length) {
+        const ch = seg.text[charIdx++];
+        currentSpan.textContent += ch;
+        dialogEl.scrollTop = dialogEl.scrollHeight;
+
+        if (ch === "\n") {
+          this.ending.typeTimer = setTimeout(stepType, 0);
+          return;
+        }
+
+        if (!/[\s、。「」『』！？」]/.test(ch)) {
+          if (window.sfx && window.sfx.codecSpeakBlip) {
+            window.sfx.codecSpeakBlip(seg.speaker);
+          }
+        }
+
+        const isPunct = /[、。！？…]/.test(ch);
+        let delay;
+        if (seg.speaker === "elon") {
+          delay = isPunct ? 150 : 56;
+        } else if (seg.speaker === "colonel") {
+          delay = isPunct ? 230 : 84;
+        } else {
+          delay = isPunct ? 190 : 70;
+        }
+        this.ending.typeTimer = setTimeout(stepType, delay);
+      } else {
+        segIdx++;
+        charIdx = 0;
+        if (segIdx < wrappedSegments.length) {
+          const nextSeg = wrappedSegments[segIdx];
+          currentSpan = initSegmentNode(nextSeg, segIdx);
+          const pauseMs = nextSeg.pauseMs != null ? nextSeg.pauseMs : (nextSeg.inline ? 20 : 650);
+          this.ending.typeTimer = setTimeout(stepType, pauseMs);
+        } else {
+          this.ending.isTyping = false;
+        }
+      }
+    };
+
+    this.ending.typeTimer = setTimeout(stepType, 60);
+  },
+
+  updateEndingBottomButton(label, variant) {
+    const btn = document.getElementById("btnBottomEndingAction");
+    if (!btn) return;
+    btn.textContent = label;
+    const base = "h-12 w-full rounded-lg font-black active:scale-95 transition cursor-pointer select-none flex items-center justify-center";
+    if (variant === "codec") {
+      btn.className = `${base} bg-[#125830] hover:bg-[#1f8f4f] text-[#34ff8a] font-mono text-sm border-2 border-[#34ff8a] shadow-[0_0_12px_rgba(52,255,138,0.3)]`;
+    } else if (variant === "launch") {
+      btn.className = `${base} bg-gradient-to-r from-[#ff1493] via-[#00f5e8] to-[#e6ff00] text-black text-sm shadow-lg hover:brightness-110`;
+    } else {
+      btn.className = `${base} bg-gradient-to-r from-[#ff1493] to-[#7928ca] text-white text-sm shadow-lg hover:brightness-110`;
     }
+  },
+
+  buildEndingAct2Html() {
+    const lines = [
+      { text: "✨ 全艦、宇宙へ飛翔！！ ✨", cls: "text-base sm:text-lg font-black text-[#00f5d4] tracking-wider mb-1", shadow: "#00f5d4" },
+      { text: "軌道ドック全ゲート開放！", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: "旗艦『シルバーボール』の先導のもと、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: "貴官が操る『桃色装甲艦隊』5隻が、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: "本物の異星艦隊が待つ深宇宙へ向かい、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: "いま一斉に翔け上がる！", cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
+      { text: "「ジョワッ！！」", cls: "text-xl sm:text-2xl font-black text-[#ff66b2] tracking-widest", shadow: "#ff1493" },
+      { text: "蒼き地球に見送られ、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: "少女たちの銀翼は星の海へ……", cls: "text-[15px] sm:text-[17px] font-bold text-[#00f5d4] leading-relaxed" },
+      { text: "良い旅を、", cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
+      { text: "ボン・ボヤージュ！！", cls: "text-lg sm:text-xl font-black text-[#e6ff00] tracking-wider mb-1", shadow: "#e6ff00" },
+      { text: "✨ THE END ✨", cls: "text-base sm:text-lg font-mono font-black text-[#00f5e8] tracking-widest animate-pulse", shadow: "#00f5e8" }
+    ];
+    return lines.map(l => {
+      const outline = "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px #000, 0 0 10px #000";
+      const glow = l.shadow ? `${outline}, 0 0 14px ${l.shadow}` : outline;
+      return `<p class="${l.cls}" style="text-shadow: ${glow};">${l.text}</p>`;
+    }).join("");
   },
 
   showEndingAct2() {
@@ -899,6 +1207,12 @@ window.GameFlow = {
     if (act1Box) act1Box.classList.add("hidden");
     if (act3Box) act3Box.classList.add("hidden");
 
+    const track = document.getElementById("endingAct2ScrollTrack");
+    const viewport = document.getElementById("endingAct2Viewport");
+    if (track) {
+      track.innerHTML = this.buildEndingAct2Html();
+    }
+
     if (act2Box) {
       act2Box.classList.remove("hidden");
       act2Box.classList.remove("opacity-100");
@@ -910,6 +1224,17 @@ window.GameFlow = {
         }
       }, 1100);
     }
+
+    const viewH = (viewport && viewport.clientHeight) || 230;
+    const trackH = (track && track.offsetHeight) || 360;
+    this.ending.act2ScrollStartY = viewH * 0.85;
+    this.ending.act2ScrollMinY = -(trackH + 24);
+    this.ending.act2ScrollY = this.ending.act2ScrollStartY;
+    if (track) {
+      track.style.transform = `translateY(${this.ending.act2ScrollStartY.toFixed(1)}px)`;
+    }
+
+    this.updateEndingBottomButton("🏆 最終戦果＆ランキング登録へ ▶", "launch");
 
     // Spawn 32 rising plasma launch contrails & stars
     this.ending.launchParticles = Array.from({ length: 32 }, (_, i) => ({
@@ -938,6 +1263,8 @@ window.GameFlow = {
 
     const skipBtn = document.getElementById("btnEndingSkip");
     if (skipBtn) skipBtn.classList.add("hidden");
+
+    this.updateEndingBottomButton("🏠 タイトル画面へ帰還 (RETURN TO TITLE)", "title");
 
     const state = (window.GameEngine && GameEngine.state) || {};
     const finalScore = state.score || 0;
@@ -1018,11 +1345,11 @@ window.GameFlow = {
     const container = document.getElementById("codecSignalBars");
     if (!container) return;
     if (container.children.length === 0) {
-      container.innerHTML = Array.from({ length: 8 }, () => `<div class="flex-1 bg-[#34ff8a] rounded-xs transition-all duration-75" style="height: 4px"></div>`).join("");
+      container.innerHTML = Array.from({ length: 12 }, () => `<div class="flex-1 bg-[#34ff8a] rounded-xs transition-all duration-75" style="height: 4px"></div>`).join("");
     }
-    const isTalking = this.ending.act === 1 && Math.random() < 0.75;
+    const isTalking = this.ending.act === 1 && this.ending.isTyping && Math.random() < 0.85;
     Array.from(container.children).forEach((bar) => {
-      const h = isTalking ? (4 + Math.floor(Math.random() * 18)) : 4;
+      const h = isTalking ? (4 + Math.floor(Math.random() * 16)) : 4;
       bar.style.height = `${h}px`;
       bar.style.opacity = isTalking ? "1.0" : "0.35";
     });
@@ -1050,6 +1377,16 @@ window.GameFlow = {
       this.ending.act2Frame = (this.ending.act2Frame || 0) + 1;
       const progress = Math.min(1.0, this.ending.act2Frame / 90);
       const scale = 1.06 - 0.06 * progress;
+
+      // Cinematic bottom-to-top roll scroll after initial 1.1s unobstructed view
+      if (this.ending.act2Frame > 66) {
+        const track = document.getElementById("endingAct2ScrollTrack");
+        if (track) {
+          const minY = this.ending.act2ScrollMinY ?? -200;
+          this.ending.act2ScrollY = Math.max(minY, (this.ending.act2ScrollY ?? 180) - 0.42);
+          track.style.transform = `translateY(${this.ending.act2ScrollY.toFixed(1)}px)`;
+        }
+      }
 
       if (this.ending.launchImgLoaded && this.ending.launchImg.complete) {
         const dw = W * scale;

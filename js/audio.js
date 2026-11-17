@@ -369,6 +369,20 @@ class FMSoundEngine {
   codecClose() {
     this.playFM(1760, 880, 50, 0.05, "square", 1318, 0.16);
   }
+
+  // Character-specific CODEC typewriter voice blip
+  codecSpeakBlip(speaker) {
+    if (this.muted || !this.ctx) return;
+    const jitter = (Math.random() - 0.5) * 28;
+    if (speaker === "colonel") {
+      this.playFM(215 + jitter, 108, 25, 0.026, "square", null, 0.06);
+    } else if (speaker === "elon") {
+      this.playFM(640 + jitter * 1.4, 320, 20, 0.024, "sine", null, 0.07);
+    } else {
+      // silver ball / player
+      this.playFM(390 + jitter, 195, 22, 0.025, "triangle", null, 0.075);
+    }
+  }
 }
 
 const rawSfx = new FMSoundEngine();

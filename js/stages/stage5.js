@@ -2181,14 +2181,8 @@ window.Stage5 = {
       return null;
     }
 
-    const makeScaledBuffer = (img, targetW, targetH) => {
-      const c = document.createElement("canvas");
-      c.width = targetW;
-      c.height = targetH;
-      const cx = c.getContext("2d");
-      cx.drawImage(img, 0, 0, targetW, targetH);
-      return { canvas: c, ctx: cx, w: targetW, h: targetH, data: cx.getImageData(0, 0, targetW, targetH).data };
-    };
+    const makeScaledBuffer = (img, targetW, targetH) =>
+      StageCommon.createPixelBuffer(targetW, targetH, (cx) => cx.drawImage(img, 0, 0, targetW, targetH));
 
     // Scaled Character Buffers
     const wL = Math.round((336 / 768) * W);

@@ -257,41 +257,41 @@ window.StageCommon = {
       ctx.clip("evenodd");
       ctx.drawImage(src.canvas, IMG_BOX.x, IMG_BOX.y);
       ctx.restore();
+    }
 
-      const sd = src.data;
-      for (let v = 0; v < rh; v++) {
-        const py = y0 + v;
-        for (let u = 0; u < rw; u++) {
-          const px = x0 + u;
-          let offX = 0, offY = 0;
-          for (let fi = 0; fi < nF; fi++) {
-            const f = fields[fi];
-            const rxv = px - f.cx, ryv = py - f.cy;
-            const nx = rxv * f.irx, ny = ryv * f.iry;
-            const r2 = nx * nx + ny * ny;
-            if (r2 < 1.0) {
-              const t = 1.0 - r2;
-              const wgt = t * t;
-              offX += wgt * (f.dx + f.kx * rxv);
-              offY += wgt * (f.dy + f.ky * ryv);
-            }
+    const sd = src.data;
+    for (let v = 0; v < rh; v++) {
+      const py = y0 + v;
+      for (let u = 0; u < rw; u++) {
+        const px = x0 + u;
+        let ox = 0, oy = 0, inside = false;
+        for (let fi = 0; fi < nF; fi++) {
+          const f = fields[fi];
+          const rxv = px - f.cx, ryv = py - f.cy;
+          const nx = rxv * f.irx, ny = ryv * f.iry;
+          const r2 = nx * nx + ny * ny;
+          if (r2 < 1.0) {
+            const t = 1.0 - r2;
+            const wgt = t * t;
+            ox += wgt * (f.dx + f.kx * rxv);
+            oy += wgt * (f.dy + f.ky * ryv);
+            inside = true;
           }
+        }
+        if (!rgba && !inside) continue;
 
-          let sx = px - offX, sy = py - offY;
-          if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
-          if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
-          const ix = sx | 0, iy = sy | 0;
-          const fx = sx - ix, fy = sy - iy;
-          const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        let sx = px - ox, sy = py - oy;
+        if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
+        if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
+        const ix = sx | 0, iy = sy | 0;
+        const fx = sx - ix, fy = sy - iy;
+        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
+        const oi = (v * slot.capW + u) * 4;
 
-          const i00 = (iy * SW + ix) * 4;
-          const i10 = i00 + 4;
-          const i01 = i00 + SW * 4;
-          const i11 = i01 + 4;
-
+        if (rgba) {
           const a00 = sd[i00 + 3], a10 = sd[i10 + 3], a01 = sd[i01 + 3], a11 = sd[i11 + 3];
           const outA = a00 * w00 + a10 * w10 + a01 * w01 + a11 * w11;
-          const oi = (v * slot.capW + u) * 4;
           if (outA > 1) {
             const invA = 1 / outA;
             od[oi]     = (sd[i00] * a00 * w00 + sd[i10] * a10 * w10 + sd[i01] * a01 * w01 + sd[i11] * a11 * w11) * invA;
@@ -299,37 +299,7 @@ window.StageCommon = {
             od[oi + 2] = (sd[i00 + 2] * a00 * w00 + sd[i10 + 2] * a10 * w10 + sd[i01 + 2] * a01 * w01 + sd[i11 + 2] * a11 * w11) * invA;
             od[oi + 3] = outA;
           }
-        }
-      }
-    } else {
-      const sd = src.data;
-      for (let v = 0; v < rh; v++) {
-        const Y = y0 + v;
-        for (let u = 0; u < rw; u++) {
-          const X = x0 + u;
-          let ox = 0, oy = 0, inside = false;
-          for (let i = 0; i < nF; i++) {
-            const f = fields[i];
-            const rxv = X - f.cx, ryv = Y - f.cy;
-            const nx = rxv * f.irx, ny = ryv * f.iry;
-            const r2 = nx * nx + ny * ny;
-            if (r2 >= 1.0) continue;
-            const t = 1.0 - r2;
-            const wgt = t * t;
-            ox += wgt * (f.dx + f.kx * rxv);
-            oy += wgt * (f.dy + f.ky * ryv);
-            inside = true;
-          }
-          if (!inside) continue;
-
-          let sx = X - ox, sy = Y - oy;
-          if (sx < 0) sx = 0; else if (sx > SW - 1.001) sx = SW - 1.001;
-          if (sy < 0) sy = 0; else if (sy > SH - 1.001) sy = SH - 1.001;
-          const ix = sx | 0, iy = sy | 0;
-          const fx = sx - ix, fy = sy - iy;
-          const i00 = (iy * SW + ix) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
-          const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
-          const oi = (v * slot.capW + u) * 4;
+        } else {
           od[oi]     = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
           od[oi + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
           od[oi + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
@@ -595,10 +565,10 @@ window.StageCommon = {
       const cc = c.getContext("2d", { willReadFrequently: true });
       drawFn(cc, w, h);
       const d = cc.getImageData(0, 0, c.width, c.height);
-      return { key, w: c.width, h: c.height, data: d.data };
+      return { canvas: c, ctx: cc, key, w: c.width, h: c.height, data: d.data };
     } catch (e) {
       // file:// 等でキャンバスが汚染される環境では変形を諦める（原画のまま表示）
-      return { key, w: 0, h: 0, data: null };
+      return { canvas: null, ctx: null, key, w: 0, h: 0, data: null };
     }
   }
 };

@@ -1520,31 +1520,21 @@ window.Stage4 = {
     const splitSrcX = 386; // 原画768幅における左脚/右脚の境界X
     const splitDstX = Math.round((splitSrcX / 768) * W);
 
-    const makeBodyVariant = (brkL, brkR) => {
-      const c = document.createElement("canvas");
-      c.width = W;
-      c.height = H;
-      const cx = c.getContext("2d");
-      cx.drawImage(this.assets.charBodyImg, 0, 0, W, H);
-      if (this.assets.greavesBrokenImg.naturalWidth) {
-        if (brkL) {
-          cx.drawImage(this.assets.greavesBrokenImg, 0, 0, splitSrcX, 1376, 0, 0, splitDstX, H);
+    const makeBodyVariant = (brkL, brkR) =>
+      StageCommon.createPixelBuffer(W, H, (cx) => {
+        cx.drawImage(this.assets.charBodyImg, 0, 0, W, H);
+        if (this.assets.greavesBrokenImg.naturalWidth) {
+          if (brkL) {
+            cx.drawImage(this.assets.greavesBrokenImg, 0, 0, splitSrcX, 1376, 0, 0, splitDstX, H);
+          }
+          if (brkR) {
+            cx.drawImage(this.assets.greavesBrokenImg, splitSrcX, 0, 768 - splitSrcX, 1376, splitDstX, 0, W - splitDstX, H);
+          }
         }
-        if (brkR) {
-          cx.drawImage(this.assets.greavesBrokenImg, splitSrcX, 0, 768 - splitSrcX, 1376, splitDstX, 0, W - splitDstX, H);
-        }
-      }
-      return { canvas: c, ctx: cx, w: W, h: H, data: cx.getImageData(0, 0, W, H).data };
-    };
+      });
 
-    const makeScaled = (img) => {
-      const c = document.createElement("canvas");
-      c.width = W;
-      c.height = H;
-      const cx = c.getContext("2d");
-      cx.drawImage(img, 0, 0, W, H);
-      return { canvas: c, ctx: cx, w: W, h: H, data: cx.getImageData(0, 0, W, H).data };
-    };
+    const makeScaled = (img) =>
+      StageCommon.createPixelBuffer(W, H, (cx) => cx.drawImage(img, 0, 0, W, H));
 
     const charIntact_00 = makeBodyVariant(false, false);
     const charIntact_10 = makeBodyVariant(true, false);

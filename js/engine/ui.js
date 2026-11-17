@@ -841,6 +841,119 @@ window.UI = {
         if (next && window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
       });
     }
+
+    this.initClearModal(engine);
+    this.initDebugControls(engine);
+  },
+
+  initClearModal(engine) {
+    const modal = document.getElementById("clearModal");
+    if (!modal) return;
+
+    const replayBtn = document.getElementById("btnClearReplay");
+    if (replayBtn) {
+      replayBtn.addEventListener("click", () => {
+        this.closeModal(modal);
+        const curIdx = (engine.state && engine.state.stageIndex) || 1;
+        if (engine.state && engine.state.gameMode === "practice") {
+          engine.startPracticeStage(curIdx);
+        } else {
+          engine.startArcadeCampaign();
+        }
+      });
+    }
+
+    const nextBtn = document.getElementById("btnClearNext");
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        this.closeModal(modal);
+
+        const curId = engine.currentStage ? engine.currentStage.id : "stage1";
+        if (curId === "stage5") {
+          if (window.GameFlow && window.GameFlow.startEnding) {
+            GameFlow.startEnding(engine.state);
+          }
+          return;
+        }
+
+        let chosenRelic = "radar";
+        const selectedBtn = document.querySelector(".relic-btn.border-\\[\\#e6ff00\\]");
+        if (selectedBtn && selectedBtn.dataset.relic) {
+          chosenRelic = selectedBtn.dataset.relic;
+        }
+        engine.advanceToNextStage(chosenRelic);
+      });
+    }
+
+    document.querySelectorAll(".relic-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".relic-btn").forEach(b => b.classList.remove("border-[#e6ff00]", "bg-[#ff1493]/40"));
+        btn.classList.add("border-[#e6ff00]", "bg-[#ff1493]/40");
+        const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : "パーツ";
+        this.showCutin(`⚙️【パーツ換装】<br>${title} を装着！`, 160);
+      });
+    });
+  },
+
+  initDebugControls(engine) {
+    const closeMenuIfInGame = () => {
+      if (engine.state && !engine.state.inTitle && typeof this.closeMenu === "function") {
+        this.closeMenu(engine.state);
+      }
+    };
+
+    const dbgDropPerm = document.getElementById("dbgDropPerm");
+    if (dbgDropPerm) dbgDropPerm.addEventListener("click", () => {
+      closeMenuIfInGame();
+      Systems.spawnFloatingCapsule(engine.state, null, "perm");
+    });
+
+    const dbgDropBuff = document.getElementById("dbgDropBuff");
+    if (dbgDropBuff) dbgDropBuff.addEventListener("click", () => {
+      closeMenuIfInGame();
+      Systems.spawnFloatingCapsule(engine.state, null, "buff");
+    });
+
+    const dbgPuruTest = document.getElementById("dbgPuruTest");
+    if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
+      closeMenuIfInGame();
+      const cur = engine.currentStage;
+      if (cur && typeof cur.triggerDebugJiggle === "function") {
+        cur.triggerDebugJiggle(engine.state);
+      }
+    });
+
+    const dbgMultiball = document.getElementById("dbgMultiball");
+    if (dbgMultiball) dbgMultiball.addEventListener("click", () => {
+      closeMenuIfInGame();
+      Systems.startFeverMode(engine.state);
+    });
+
+    const dbgFaceAnim = document.getElementById("dbgFaceAnim");
+    if (dbgFaceAnim) dbgFaceAnim.addEventListener("click", () => {
+      closeMenuIfInGame();
+      if (window.sfx) window.sfx.capsuleCatch();
+      const modes = ["wink", "open_blush", "shock", "wince", "blink", "talk"];
+      window._faceIdx = ((window._faceIdx || 0) + 1) % modes.length;
+      const next = modes[window._faceIdx];
+      engine.state.boss.expression = next;
+      engine.state.boss.expressionTimer = 90;
+      if (next === "wink") engine.state.boss.winkTimer = 60;
+      if (next === "blink") engine.state.boss.blinkTimer = 6;
+      if (next === "talk") engine.state.boss.talkTimer = 90;
+      this.updateHUD(engine.state);
+      this.showCutin(`👁【表情テスト】: ${next}`, 90);
+    });
+
+    const dbgStageToggle = document.getElementById("dbgStageToggle");
+    if (dbgStageToggle) dbgStageToggle.addEventListener("click", () => {
+      if (window.sfx) window.sfx.flipperClick();
+      const currentIdx = (engine.state && engine.state.stageIndex) || 1;
+      const total = engine.STAGE_REGISTRY ? engine.STAGE_REGISTRY.length : 5;
+      const nextIdx = (currentIdx % total) + 1;
+      if (window.GameFlow && GameFlow.hideAllModals) GameFlow.hideAllModals();
+      engine.startPracticeStage(nextIdx);
+    });
   },
 
   presentStageClearModal(state, cfg = {}) {

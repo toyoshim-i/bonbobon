@@ -3,6 +3,7 @@
 // =========================================================================
 
 window.StageCommon = {
+  ASSET_QUERY: "?v=190",
   _defaultSlots: {},
 
   createFaceAnim(idleTimer = 0) {

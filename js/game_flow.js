@@ -83,9 +83,10 @@ window.GameFlow = {
   },
 
   preloadAttractAssets() {
+    const q = (window.StageCommon && StageCommon.ASSET_QUERY) || "";
     this.attractImages = [1, 2, 3, 4].map(idx => {
       const img = new Image();
-      img.src = `./assets/ui/story_${idx}.jpg?v=190`;
+      img.src = `./assets/ui/story_${idx}.jpg${q}`;
       return img;
     });
   },
@@ -783,7 +784,8 @@ window.GameFlow = {
     }
 
     this.ending.launchImg = new Image();
-    this.ending.launchImg.src = "./assets/ui/ending_launch.jpg?v=190";
+    const q = (window.StageCommon && StageCommon.ASSET_QUERY) || "";
+    this.ending.launchImg.src = `./assets/ui/ending_launch.jpg${q}`;
     this.ending.launchImg.onload = () => {
       this.ending.launchImgLoaded = true;
     };

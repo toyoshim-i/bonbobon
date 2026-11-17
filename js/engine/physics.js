@@ -423,41 +423,76 @@ window.Physics = {
       }
     }
 
-    // Flippers collision
+    // Flippers collision (interpolated per substep with anti-tunneling sweep on upward swing)
     const flippers = this.getFlippers(state);
     const cpFlip = this._cpFlipper;
+    const subT0 = s / SUBSTEPS;
+    const subT1 = (s + 1) / SUBSTEPS;
     for (let idx = 0; idx < flippers.length; idx++) {
       const f = flippers[idx];
       const st = this.flipperState[idx];
-      const tipX = f.px + Math.cos(st.angle) * f.len;
-      const tipY = f.py + Math.sin(st.angle) * f.len;
+      const omega = (st.angle - st.prevAngle) * 60;
+      const isSwingingUp = f.isLeft ? (omega < -0.15) : (omega > 0.15);
+
+      const subPrevAngle = st.prevAngle + (st.angle - st.prevAngle) * subT0;
+      const subCurAngle = st.prevAngle + (st.angle - st.prevAngle) * subT1;
+      const tipX = f.px + Math.cos(subCurAngle) * f.len;
+      const tipY = f.py + Math.sin(subCurAngle) * f.len;
       const cp = this.closestPointOnSeg(ball.x, ball.y, f.px, f.py, tipX, tipY, cpFlip);
       const dx = ball.x - cp.x;
       const dy = ball.y - cp.y;
       const dist = Math.hypot(dx, dy);
       const minDist = ball.r + 5.0;
 
-      if (dist < minDist && dist > 0.0001) {
+      // Upper-face unit normal of the flipper at subCurAngle
+      const upNx = f.isLeft ? Math.sin(subCurAngle) : -Math.sin(subCurAngle);
+      const upNy = f.isLeft ? -Math.cos(subCurAngle) : Math.cos(subCurAngle);
+
+      // Swept crossing check: if the upward-swinging flipper swept past a ball that was on/above
+      // the upper face at subPrevAngle, force-resolve it to the upper face to prevent tunneling.
+      let sweptHit = false;
+      if (isSwingingUp) {
+        const prevUpNx = f.isLeft ? Math.sin(subPrevAngle) : -Math.sin(subPrevAngle);
+        const prevUpNy = f.isLeft ? -Math.cos(subPrevAngle) : Math.cos(subPrevAngle);
+        const prevTipX = f.px + Math.cos(subPrevAngle) * f.len;
+        const prevTipY = f.py + Math.sin(subPrevAngle) * f.len;
+        const prevCp = this.closestPointOnSeg(ball.x, ball.y, f.px, f.py, prevTipX, prevTipY);
+        const prevSignedDist = (ball.x - prevCp.x) * prevUpNx + (ball.y - prevCp.y) * prevUpNy;
+        const curSignedDist = dx * upNx + dy * upNy;
+        const along = (ball.x - f.px) * Math.cos(subCurAngle) + (ball.y - f.py) * Math.sin(subCurAngle);
+        if (along >= -ball.r * 0.5 && along <= f.len + ball.r * 0.6 &&
+            prevSignedDist >= -minDist * 0.45 && curSignedDist < minDist) {
+          sweptHit = true;
+        }
+      }
+
+      if ((dist < minDist && dist > 0.0001) || sweptHit) {
         ball._crotchSpitActive = false;
-        const nx = dx / dist;
-        const ny = dy / dist;
+        let nx, ny;
+        if (sweptHit && (dx * upNx + dy * upNy < 0 || dist >= minDist)) {
+          nx = upNx;
+          ny = upNy;
+        } else {
+          nx = dx / dist;
+          ny = dy / dist;
+        }
         ball.x = cp.x + nx * minDist;
         ball.y = cp.y + ny * minDist;
 
-        const omega = (st.angle - st.prevAngle) * 60;
         const rArm = Math.hypot(cp.x - f.px, cp.y - f.py);
-        const vxSurface = -Math.sin(st.angle) * omega * (rArm / 50);
-        const vySurface =  Math.cos(st.angle) * omega * (rArm / 50);
+        const vxSurface = -Math.sin(subCurAngle) * omega * (rArm / 50);
+        const vySurface =  Math.cos(subCurAngle) * omega * (rArm / 50);
 
         const vRelX = ball.vx - vxSurface;
         const vRelY = ball.vy - vySurface;
         const dot = vRelX * nx + vRelY * ny;
 
-        if (dot < 0) {
+        if (dot < 0 || sweptHit) {
           if (Math.abs(omega) > 0.15) {
+            const effDot = Math.min(dot, -2.0);
             const rest = 0.65;
-            ball.vx = (vRelX - (1 + rest) * dot * nx) + vxSurface;
-            ball.vy = (vRelY - (1 + rest) * dot * ny) + vySurface;
+            ball.vx = (vRelX - (1 + rest) * effDot * nx) + vxSurface;
+            ball.vy = (vRelY - (1 + rest) * effDot * ny) + vySurface;
             const springMult = (1 + ((state.relics && state.relics.spring) || 0) * 0.14);
             const flipBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult);
             ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;

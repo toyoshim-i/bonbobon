@@ -1909,26 +1909,18 @@ window.Stage3 = {
     if (!this._srcPixCache) this._srcPixCache = {};
     if (this._srcPixCache[key]) return this._srcPixCache[key];
 
-    try {
-      const c = document.createElement("canvas");
-      c.width = IMG_BOX.w;
-      c.height = IMG_BOX.h;
-      const cc = c.getContext("2d", { willReadFrequently: true });
-      cc.drawImage(img, 0, 0, IMG_BOX.w, IMG_BOX.h);
+    this._srcPixCache[key] = StageCommon.createPixelBuffer(IMG_BOX.w, IMG_BOX.h, (cc, w, h) => {
+      cc.drawImage(img, 0, 0, w, h);
       if (bgMidLReady) {
-        cc.drawImage(this.assets.bgBitMidLImg, (128 / 768) * IMG_BOX.w, (704 / 1376) * IMG_BOX.h, (80 / 768) * IMG_BOX.w, (80 / 1376) * IMG_BOX.h);
+        cc.drawImage(this.assets.bgBitMidLImg, (128 / 768) * w, (704 / 1376) * h, (80 / 768) * w, (80 / 1376) * h);
       }
       if (kneeReady) {
-        cc.drawImage(this.assets.kneeBrokenImg, (420 / 768) * IMG_BOX.w, (770 / 1376) * IMG_BOX.h, (230 / 768) * IMG_BOX.w, (340 / 1376) * IMG_BOX.h);
+        cc.drawImage(this.assets.kneeBrokenImg, (420 / 768) * w, (770 / 1376) * h, (230 / 768) * w, (340 / 1376) * h);
       }
       if (dmgReady) {
-        cc.drawImage(this.assets.bodyDamageImg, (250 / 768) * IMG_BOX.w, (480 / 1376) * IMG_BOX.h, (255 / 768) * IMG_BOX.w, (320 / 1376) * IMG_BOX.h);
+        cc.drawImage(this.assets.bodyDamageImg, (250 / 768) * w, (480 / 1376) * h, (255 / 768) * w, (320 / 1376) * h);
       }
-      const d = cc.getImageData(0, 0, c.width, c.height);
-      this._srcPixCache[key] = { key, w: c.width, h: c.height, data: d.data };
-    } catch (e) {
-      this._srcPixCache[key] = { key, w: 0, h: 0, data: null };
-    }
+    }, key);
     return this._srcPixCache[key];
   },
 

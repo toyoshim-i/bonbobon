@@ -77,6 +77,22 @@ window.GameEngine = {
     UI.initControls(this);
   },
 
+  createDefaultClearSequence() {
+    if (window.StageCommon && typeof StageCommon.createClearSequenceState === "function") {
+      return StageCommon.createClearSequenceState(false);
+    }
+    return {
+      active: false,
+      frame: 0,
+      phase: "playing",
+      whiteoutAlpha: 0,
+      cgRevealAlpha: 0,
+      uiShown: false,
+      shatterPieces: [],
+      smokeClouds: []
+    };
+  },
+
   createInitialState() {
     return {
       score: 0,
@@ -146,18 +162,7 @@ window.GameEngine = {
       leftFlipperDown: false,
       rightFlipperDown: false,
 
-      clearSequence: (window.StageCommon && typeof StageCommon.createClearSequenceState === "function")
-        ? StageCommon.createClearSequenceState(false)
-        : {
-            active: false,
-            frame: 0,
-            phase: "playing",
-            whiteoutAlpha: 0,
-            cgRevealAlpha: 0,
-            uiShown: false,
-            shatterPieces: [],
-            smokeClouds: []
-          }
+      clearSequence: this.createDefaultClearSequence()
     };
   },
 
@@ -170,18 +175,7 @@ window.GameEngine = {
     this.state.phase = 1;
     this.state.stageCleared = false;
     this.state._clearBonusAwarded = false;
-    this.state.clearSequence = (window.StageCommon && typeof StageCommon.createClearSequenceState === "function")
-      ? StageCommon.createClearSequenceState(false)
-      : {
-          active: false,
-          frame: 0,
-          phase: "playing",
-          whiteoutAlpha: 0,
-          cgRevealAlpha: 0,
-          uiShown: false,
-          shatterPieces: [],
-          smokeClouds: []
-        };
+    this.state.clearSequence = this.createDefaultClearSequence();
     this.state.armorDebris = [];
     this.state.particles = [];
     this.state.popups = [];

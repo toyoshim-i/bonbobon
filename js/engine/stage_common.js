@@ -488,26 +488,6 @@ window.StageCommon = {
       seq.uiShown = true;
       if (window.UI && typeof UI.presentStageClearModal === "function") {
         UI.presentStageClearModal(state, cfg);
-      } else {
-        if (window.UI && typeof UI.updateHUD === "function") {
-          UI.updateHUD(state);
-        }
-        const modal = document.getElementById("clearModal");
-        if (modal) {
-          if (cfg.bossDisplayName) {
-            const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
-            if (nameEl) nameEl.textContent = cfg.bossDisplayName;
-          }
-          if (cfg.defeatQuoteHtml) {
-            const quoteEl = modal.querySelector("p");
-            if (quoteEl) quoteEl.innerHTML = cfg.defeatQuoteHtml;
-          }
-          modal.classList.remove("hidden");
-          modal.classList.add("flex");
-          void modal.offsetWidth;
-          modal.classList.remove("opacity-0");
-          modal.classList.add("opacity-100");
-        }
       }
     }
   },
@@ -605,5 +585,20 @@ window.StageCommon = {
     const fallback = { x: last.b.x, y: last.b.y, elev: last.b.elev, tx: 0, ty: 1, totalLen: metrics.totalLen };
     if (withLanterns) fallback.nearLanternId = null;
     return fallback;
+  },
+
+  createPixelBuffer(w, h, drawFn, key = "") {
+    try {
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const cc = c.getContext("2d", { willReadFrequently: true });
+      drawFn(cc, w, h);
+      const d = cc.getImageData(0, 0, c.width, c.height);
+      return { key, w: c.width, h: c.height, data: d.data };
+    } catch (e) {
+      // file:// 等でキャンバスが汚染される環境では変形を諦める（原画のまま表示）
+      return { key, w: 0, h: 0, data: null };
+    }
   }
 };

@@ -1277,18 +1277,9 @@ window.Stage2 = {
     if (!img || !img.complete || !img.naturalWidth) return null;
     const key = img.src + "|" + IMG_BOX.w + "x" + IMG_BOX.h;
     if (this._srcPix && this._srcPix.key === key) return this._srcPix;
-    try {
-      const c = document.createElement("canvas");
-      c.width = IMG_BOX.w;
-      c.height = IMG_BOX.h;
-      const cc = c.getContext("2d", { willReadFrequently: true });
-      cc.drawImage(img, 0, 0, IMG_BOX.w, IMG_BOX.h);
-      const d = cc.getImageData(0, 0, c.width, c.height);
-      this._srcPix = { key, w: c.width, h: c.height, data: d.data };
-    } catch (e) {
-      // file:// 等でキャンバスが汚染される環境では変形を諦める（原画のまま表示）
-      this._srcPix = { key, w: 0, h: 0, data: null };
-    }
+    this._srcPix = StageCommon.createPixelBuffer(IMG_BOX.w, IMG_BOX.h, (cc, w, h) => {
+      cc.drawImage(img, 0, 0, w, h);
+    }, key);
     return this._srcPix;
   },
 

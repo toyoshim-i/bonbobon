@@ -4,8 +4,8 @@
 
 window.Stage1 = {
   id: "stage1",
-  name: "桃色装甲リリス",
-  bossName: "リリス (LILITH)",
+  get name() { return t("stage1.name"); },
+  get bossName() { return t("stage1.bossName"); },
 
   assets: {
     armoredImg: new Image(),
@@ -122,26 +122,26 @@ window.Stage1 = {
   },
 
   getTargetDesc(state) {
-    if (state.stageCleared) return "✨リリス撃破！ STAGE 1 CLEAR!";
+    if (state.stageCleared) return t("stage1.obj.clear");
     if (!state.boss.armR_Broken || !state.boss.armL_Broken) {
-      if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return "ドローンを撃破しシールド解除せよ！";
-      return "両腕＆胴体の装甲を破壊せよ！";
+      if (state.boss.droneL_HP > 0 || state.boss.droneR_HP > 0) return t("stage1.obj.drone");
+      return t("stage1.obj.armor");
     }
     if (!state.boss.chestArmorBroken) {
-      return `胴体装甲を集中砲火せよ！(HP:${state.boss.chestArmorHP})`;
+      return t("stage1.obj.chest", { hp: state.boss.chestArmorHP });
     }
-    return `露出コアへ集中連打せよ！(HP:${state.boss.coreHP})`;
+    return t("stage1.obj.core", { hp: state.boss.coreHP });
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
 
-    UI.setBossHeader("#ff1493", "TYPE-LILITH (リリス)");
-    UI.setText("targetBriefingText", "「変な重力トラップに引っかかるなんて……！ 装甲がパージされる前に早く助けなさいよっ！」");
-    UI.setText("dtArmRLabel", "右手装甲(R-ARM):");
-    UI.setText("dtArmLLabel", "左手装甲(L-ARM):");
-    UI.setText("dtChestLabel", "胴体装甲(TORSO):");
-    UI.setText("dtCrotchLabel", "クロッチ吸引場:");
+    UI.setBossHeader("#ff1493", t("stage1.header"));
+    UI.setText("targetBriefingText", t("stage1.briefing"));
+    UI.setText("dtArmRLabel", t("stage1.dt.armR"));
+    UI.setText("dtArmLLabel", t("stage1.dt.armL"));
+    UI.setText("dtChestLabel", t("stage1.dt.chest"));
+    UI.setText("dtCrotchLabel", t("stage1.dt.crotch"));
 
     UI.setText("dtArmRStatus", state.boss.armR_Broken ? "💥PURGED!" : `ARMORED (${state.boss.armR_HP}/6)`);
     UI.setClass("dtArmRStatus", state.boss.armR_Broken ? "font-bold text-[#ff1493] animate-pulse" : "font-bold text-[#e6ff00]");
@@ -176,23 +176,23 @@ window.Stage1 = {
 
     const rStr = state.boss.armR_Broken ? "PURGED" : `${state.boss.armR_HP}/6`;
     const lStr = state.boss.armL_Broken ? "PURGED" : `${state.boss.armL_HP}/6`;
-    UI.setText("statusShoulders", `右手:${rStr} / 左手:${lStr}`);
+    UI.setText("statusShoulders", t("stage1.status.shoulders", { r: rStr, l: lStr }));
 
     UI.setText("statusChestArmor", state.boss.chestArmorBroken ? "💥PURGED!" : `HP: ${state.boss.chestArmorHP}/8`);
 
     UI.setText("statusEars", `L:${state.boss.leftEarLit ? "ON" : "OFF"} / R:${state.boss.rightEarLit ? "ON" : "OFF"}`);
 
     UI.setText("statusCore", state.phase === 3
-      ? `HP: ${state.boss.coreHP}/16 [KO可]`
+      ? t("stage1.status.coreHp", { hp: state.boss.coreHP })
       : (state.boss.coreUnlocked ? "★UNLOCKED★" : "SHIELDED"));
 
     const faceMap = {
-      smile: "余裕スマイル",
-      blush: "赤面ぷるぷる",
-      shock: "ダメージ焦り顔!?",
-      angry_emp: "EMP逆上カウンター⚡"
+      smile: t("stage1.face.smile"),
+      blush: t("stage1.face.blush"),
+      shock: t("stage1.face.shock"),
+      angry_emp: t("stage1.face.angry_emp")
     };
-    UI.setText("bossFaceStatus", faceMap[state.boss.expression] || "余裕スマイル");
+    UI.setText("bossFaceStatus", faceMap[state.boss.expression] || t("stage1.face.smile"));
   },
 
   impulseBust(state, which, vxImpact, vyImpact) {
@@ -216,7 +216,7 @@ window.Stage1 = {
 
     Systems.addFever(state, 12);
     Particles.add(state, b.x, b.y, "#ff66b2", 8, 2.8);
-    Systems.addScore(state, 600, b.x, b.y - 18, "♥ぷるんっ! SOFT");
+    Systems.addScore(state, 600, b.x, b.y - 18, t("stage1.softBounce"));
 
     // EMP Counter at 100% Blush
     if (state.boss.blushGauge >= 100) {
@@ -224,7 +224,7 @@ window.Stage1 = {
       state.boss.expression = "angry_emp";
       state.boss.expressionTimer = 60;
       if (window.sfx) window.sfx.armorBreak();
-      UI.showCutin("⚡「ちょ、どこ触ってんのよっ！！」<br>カウンターEMP発動＆カプセル放出！", 180);
+      UI.showCutin(t("stage1.empCounter"), 180);
       Particles.add(state, 210, 390, "#ff1493", 32, 6.5);
       Systems.dropReward(state, "minor", 5);
       state.balls.forEach(ball => {

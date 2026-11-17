@@ -1528,7 +1528,7 @@ Object.assign(window.Stage5, {
           ctx.fillStyle = (animTick % 8 < 4) ? "#ff2ad4" : "#ffffff";
           ctx.fillText("⚠️ DANGER! STRAIGHT DOWN SPIT! ⚠️", 198, 430);
           ctx.fillStyle = "#e6ff00";
-          ctx.fillText("⚡ NUDGE (台揺らし) TO SAVE!! ⚡", 198, 480);
+          ctx.fillText(t("stage5.render.nudgeSave"), 198, 480);
           ctx.restore();
         }
       }

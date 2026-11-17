@@ -4,8 +4,8 @@
 
 window.Stage3 = {
   id: "stage3",
-  name: "電脳空間ノア",
-  bossName: "ノア (NOA)",
+  get name() { return t("stage3.name"); },
+  get bossName() { return t("stage3.bossName"); },
 
   assets: {
     bareImg: new Image(),
@@ -370,7 +370,7 @@ window.Stage3 = {
       { expr: "open_blush", frames: 65 }
     ]);
     if (window.sfx) window.sfx.armorBreak();
-    UI.showCutin("⚡「ちょ、ちょっと…っ！ 変なとこばっかり当てないでよぉっ！！」<br>羞恥オーバーフロー＆アイテムカプセル放出！", 185);
+    UI.showCutin(t("stage3.cutin.softOverflow"), 185);
     Particles.add(state, 198, 290, "#00f5d4", 28, 6.0);
     Particles.add(state, 198, 290, "#ff1493", 24, 5.5);
     Systems.dropReward(state, "minor", 5);
@@ -444,7 +444,7 @@ window.Stage3 = {
     Systems.addFever(state, 5);
     Particles.add(state, b.x, b.y, "#ff66b2", 8, 2.8);
     Particles.spawnHeart(state, b.x, b.y, false);
-    Systems.addScore(state, 1800, b.x, b.y - 16, "♥ぷるんっ! SOFT");
+    Systems.addScore(state, 1800, b.x, b.y - 16, t("stage3.softBounce"));
 
     if (state.boss.blushGauge >= 100) {
       this.triggerBlushOverflow(state);
@@ -537,34 +537,34 @@ window.Stage3 = {
     if (!state.boss) return "---";
     const b = state.boss;
     if (state.stageCleared) {
-      return "✨ノア撃破！ STAGE 3 CLEAR!";
+      return t("stage3.obj.clear");
     }
     if (b.bitLasers && b.bitLasers.snipePhase === "locked" && !b.bitLasers.nudgedDuringLock) {
-      return "⚠️赤ロック！台揺らしで回避せよ！";
+      return t("stage3.obj.snipe");
     }
     const bitsAlive = this.getAllBits(b).filter(x => !x.broken).length;
     if (state.phase === 3) {
       return bitsAlive > 0
-        ? `首ペンダントを連打せよ！(HP:${b.core.hp}/機${bitsAlive})`
-        : `首ペンダントを連打せよ！(HP:${b.core.hp})`;
+        ? t("stage3.obj.coreWithBits", { hp: b.core.hp, bits: bitsAlive })
+        : t("stage3.obj.core", { hp: b.core.hp });
     }
     if (state.phase === 2) {
-      return `胸部ビスチェを破壊せよ！(HP:${b.chestArmorHP})`;
+      return t("stage3.obj.chest", { hp: b.chestArmorHP });
     }
-    return `右膝アーマーを破壊せよ！(HP:${b.kneePad.hp})`;
+    return t("stage3.obj.knee", { hp: b.kneePad.hp });
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const b = state.boss;
 
-    UI.setBossHeader("#00f5d4", "TYPE-NOA (ノア)");
-    UI.setText("targetBriefingText", "「4機のビットが3機以上残ってるとデルタビーム！ 2機以下になったら必中ロックオンでボールを砕いちゃうから、赤ロックで台を揺らして避けてみてねっ！」");
+    UI.setBossHeader("#00f5d4", t("stage3.header"));
+    UI.setText("targetBriefingText", t("stage3.briefing"));
 
-    UI.setText("dtArmRLabel", "浮遊ビット(4-BITS):");
-    UI.setText("dtArmLLabel", "膝＆腰端子(KNEE/HIP):");
-    UI.setText("dtChestLabel", "胸部＆首ペンダント:");
-    UI.setText("dtCrotchLabel", "両手吸引(VACUUM):");
+    UI.setText("dtArmRLabel", t("stage3.dt.armR"));
+    UI.setText("dtArmLLabel", t("stage3.dt.armL"));
+    UI.setText("dtChestLabel", t("stage3.dt.chest"));
+    UI.setText("dtCrotchLabel", t("stage3.dt.crotch"));
 
     const alive = this.getAllBits(b).filter(x => !x.broken).length;
     if (alive === 0) {
@@ -577,10 +577,10 @@ window.Stage3 = {
       UI.setText("dtArmRStatus", "⚠️LOCKED! NUDGE!");
       UI.setClass("dtArmRStatus", "font-bold text-[#ff1744] animate-pulse");
     } else if (alive < 3) {
-      UI.setText("dtArmRStatus", `🎯LOCK SNIPE (${alive}/4機)`);
+      UI.setText("dtArmRStatus", t("stage3.dt.lockSnipe", { alive }));
       UI.setClass("dtArmRStatus", "font-bold text-[#e6ff00]");
     } else {
-      UI.setText("dtArmRStatus", `DELTA READY (${alive}/4機)`);
+      UI.setText("dtArmRStatus", t("stage3.dt.deltaReady", { alive }));
       UI.setClass("dtArmRStatus", "font-bold text-[#00f5d4]");
     }
 
@@ -592,7 +592,7 @@ window.Stage3 = {
     } else {
       const kStr = kBroken ? "OK" : `${b.kneePad.hp}`;
       const hStr = hBroken ? "OK" : `${b.hipPort.hp}`;
-      UI.setText("dtArmLStatus", `膝:${kStr} / 腰:${hStr}`);
+      UI.setText("dtArmLStatus", t("stage3.dt.kneeHipStatus", { k: kStr, h: hStr }));
       UI.setClass("dtArmLStatus", "font-bold text-[#e6ff00]");
     }
 
@@ -622,15 +622,15 @@ window.Stage3 = {
     UI.setWidth("blushGaugeBar", `${b.blushGauge || 0}%`);
 
     const faceMap = {
-      normal: "電脳オペレート（余裕）",
-      wink: "☆ワープウインク☆",
-      shock: "⚡演算エラー発生!?",
-      wince: "くぅっ…バグが…！",
-      shout: "⚡出力フルバースト！",
-      open_blush: "♥熱暴走ハァハァ…♥",
-      talk: "データリンク中…",
-      talk_sm: "演算処理中…"
+      normal: t("stage3.face.normal"),
+      wink: t("stage3.face.wink"),
+      shock: t("stage3.face.shock"),
+      wince: t("stage3.face.wince"),
+      shout: t("stage3.face.shout"),
+      open_blush: t("stage3.face.open_blush"),
+      talk: t("stage3.face.talk"),
+      talk_sm: t("stage3.face.talk_sm")
     };
-    UI.setText("bossFaceStatus", faceMap[b.expression] || "電脳オペレート（余裕）");
+    UI.setText("bossFaceStatus", faceMap[b.expression] || t("stage3.face.normal"));
   }
 };

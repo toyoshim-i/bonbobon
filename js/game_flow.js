@@ -48,28 +48,28 @@ window.GameFlow = {
     {
       image: "./assets/ui/story_1.jpg?v=190",
       zoom: true,
-      body: "西暦2098年――\n\n太陽系外縁・冥王星軌道上に\n謎の超重力反応が出現。\n\n迎え撃った地球統合防衛艦隊は\nわずか数時間で壊滅した。",
+      get body() { return t("attract.cut1.body"); },
       punch: ""
     },
     {
       image: "./assets/ui/story_2.jpg?v=190",
       zoom: false,
-      body: "人類を恐怖のどん底へ\n叩き落とした謎の勢力……",
-      punch: "侵略者は、\n桃色装甲艦隊であった。",
+      get body() { return t("attract.cut2.body"); },
+      get punch() { return t("attract.cut2.punch"); },
       punchColor: "#ff66cc",
       punchMargin: "mt-6"
     },
     {
       image: "./assets/ui/story_3.jpg?v=190",
       zoom: true,
-      body: "艦隊を包む\n『柔軟位相フィールド』は\nあらゆるレーザーや\n核ミサイルを無効化。\n\n障壁を貫けるのは、超運動量による\n「直接打撃」のみであった。",
+      get body() { return t("attract.cut3.body"); },
       punch: ""
     },
     {
       image: "./assets/ui/story_4.jpg?v=190",
       zoom: true,
-      body: "残された唯一の希望――\n単座弾道戦闘艇\n《シルバーボール》！\n\n２基の電磁パドルで機体を弾き\n敵中枢コアを撃ち抜け！",
-      punch: "人類の存亡を懸けた特攻作戦が\nいま幕を開ける――！！",
+      get body() { return t("attract.cut4.body"); },
+      get punch() { return t("attract.cut4.punch"); },
       punchColor: "#e6ff00",
       punchMargin: "mt-5"
     }
@@ -764,7 +764,7 @@ window.GameFlow = {
     const idx = state.stageIndex || 1;
     const meta = window.GameEngine && GameEngine.getStageMeta ? GameEngine.getStageMeta(idx) : null;
     const curStageName = (idx === 5 && state.phase === 3)
-      ? "熾天使セラフィア (FINAL)"
+      ? t("engine.stage5.finalDisplayName")
       : (meta ? meta.displayName : "STAGE 1");
 
     const stageEl = document.getElementById("gameOverStage");
@@ -895,9 +895,9 @@ window.GameFlow = {
   },
 
   getCodecSpeakerMeta(speaker) {
-    if (speaker === "elon") return { name: "【エローン博士】", cls: "text-[#e6ff00] font-black text-[13px] sm:text-[14px] tracking-wider" };
-    if (speaker === "ball") return { name: "【シルバーボール】", cls: "text-[#00f5e8] font-black text-[13px] sm:text-[14px] tracking-wider" };
-    return { name: "【大佐】", cls: "text-[#9effc4] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    if (speaker === "elon") return { name: t("ending.speaker.elon"), cls: "text-[#e6ff00] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    if (speaker === "ball") return { name: t("ending.speaker.ball"), cls: "text-[#00f5e8] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    return { name: t("ending.speaker.colonel"), cls: "text-[#9effc4] font-black text-[13px] sm:text-[14px] tracking-wider" };
   },
 
   wrapCodecSegments(segments, maxW = 22) {
@@ -907,8 +907,9 @@ window.GameFlow = {
       for (const ch of s) w += charW(ch);
       return w;
     };
+    const locale = (window.I18N && I18N.lang === "en") ? "en" : "ja";
     const segInst = (typeof Intl !== "undefined" && Intl.Segmenter)
-      ? new Intl.Segmenter("ja", { granularity: "word" })
+      ? new Intl.Segmenter(locale, { granularity: "word" })
       : null;
     const tokenize = (text) => {
       const protectedRe = /(『[^』]{1,14}』|――|……|異星人|異星艦隊|桃色装甲艦隊|最終迎撃演習|最終テスト|戦闘AI|美少女艦隊学|軌道ドック|シルバーボール|エローン博士|ボン・ボヤージュ|[0-9]+隻|[ァ-ヶー・]{2,}|[A-Za-z0-9%％]+)/g;
@@ -1032,45 +1033,45 @@ window.GameFlow = {
     const beats = [
       {
         segments: [
-          { speaker: "colonel", text: "――ご苦労だった。これにて対異星人・最終迎撃演習『計画名：ボン・ボヤージュ』\n全行程を終了する。" },
-          { speaker: "ball", text: "……待ってくれ大佐\n『演習』ってのはどういうことだ！？" }
+          { speaker: "colonel", text: t("ending.act1.s0.l0") },
+          { speaker: "ball", text: t("ending.act1.s0.l1") }
         ],
-        btn: "通信を進める ▶"
+        btn: t("controls.advanceCodec")
       },
       {
         segments: [
-          { speaker: "colonel", text: "まだ気づかんのか。あんな格好をして異星人が攻めてくるわけがないだろう。" },
-          { speaker: "ball", text: "……計ったな、大佐！" },
-          { speaker: "colonel", text: "それより聞け！\n貴官が戦った仮想空間の『桃色装甲艦隊』5隻は\nエローン博士によって開発され――" },
-          { speaker: "colonel", inline: true, pauseMs: 450, cls: "text-[#e6ff00] font-black", text: "\n軌道ドックに実在する！！" }
+          { speaker: "colonel", text: t("ending.act1.s1.l0") },
+          { speaker: "ball", text: t("ending.act1.s1.l1") },
+          { speaker: "colonel", text: t("ending.act1.s1.l2") },
+          { speaker: "colonel", inline: true, pauseMs: 450, cls: "text-[#e6ff00] font-black", text: t("ending.act1.s1.l3") }
         ],
-        btn: "通信を進める ▶"
+        btn: t("controls.advanceCodec")
       },
       {
         segments: [
-          { speaker: "ball", text: "おい、なんだって大佐\nそれはどういうことだ！" },
-          { speaker: "elon", text: "その件については私が説明するわ。" },
-          { speaker: "ball", text: "……あんたは誰だ？" }
+          { speaker: "ball", text: t("ending.act1.s2.l0") },
+          { speaker: "elon", text: t("ending.act1.s2.l1") },
+          { speaker: "ball", text: t("ending.act1.s2.l2") }
         ],
-        btn: "通信を進める ▶"
+        btn: t("controls.advanceCodec")
       },
       {
         segments: [
-          { speaker: "elon", text: "英雄にお目にかかれて光栄だわ。私はエローン。大学で『美少女艦隊学』を専攻していたの。\n今は軍に従事して、桃色装甲艦隊の開発を\n任されているわ。" },
-          { speaker: "colonel", text: "博士は美少女を扱うのがうまい。君もあの見事なギミックを見ただろう。" },
-          { speaker: "elon", text: "人類滅亡の危機という極限状態での衝突。\nそのデータこそが、彼女たちを完成させる\n最終テストだったのよ。" }
+          { speaker: "elon", text: t("ending.act1.s3.l0") },
+          { speaker: "colonel", text: t("ending.act1.s3.l1") },
+          { speaker: "elon", text: t("ending.act1.s3.l2") }
         ],
-        btn: "通信を進める ▶"
+        btn: t("controls.advanceCodec")
       },
       {
         segments: [
-          { speaker: "colonel", text: "……そういうことだ。全5隻の覚醒率は100%に達した。" },
-          { speaker: "colonel", inline: true, cls: "text-[#e6ff00] font-black", text: "\n彼女たちを隅々まで探り尽くした貴官に" },
-          { speaker: "colonel", inline: true, text: "\n全艦の指揮権を委譲する。" },
-          { speaker: "ball", text: "くそっ、やっぱり計ったな。\n……面白くなってきやがったぜ！" },
-          { speaker: "colonel", cls: "text-[#00f5e8] font-black", text: "今度こそ本物の異星艦隊が相手だ。頼んだぞ、シルバーボール。\n――全艦、出撃せよ！！" }
+          { speaker: "colonel", text: t("ending.act1.s4.l0") },
+          { speaker: "colonel", inline: true, cls: "text-[#e6ff00] font-black", text: t("ending.act1.s4.l1") },
+          { speaker: "colonel", inline: true, text: t("ending.act1.s4.l2") },
+          { speaker: "ball", text: t("ending.act1.s4.l3") },
+          { speaker: "colonel", cls: "text-[#00f5e8] font-black", text: t("ending.act1.s4.l4") }
         ],
-        btn: "通信終了 ➔ 全艦、出撃！！ ▶"
+        btn: t("ending.act1.s4.btn")
       }
     ];
 
@@ -1177,17 +1178,17 @@ window.GameFlow = {
 
   buildEndingAct2Html() {
     const lines = [
-      { text: "✨ 全艦、宇宙へ飛翔！！ ✨", cls: "text-base sm:text-lg font-black text-[#00f5d4] tracking-wider mb-1", shadow: "#00f5d4" },
-      { text: "軌道ドック全ゲート開放！", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: "旗艦『シルバーボール』の先導のもと、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: "貴官が操る『桃色装甲艦隊』5隻が、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: "本物の異星艦隊が待つ深宇宙へ向かい、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: "いま一斉に翔け上がる！", cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
-      { text: "「ジョワッ！！」", cls: "text-xl sm:text-2xl font-black text-[#ff66b2] tracking-widest", shadow: "#ff1493" },
-      { text: "蒼き地球に見送られ、", cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: "少女たちの銀翼は星の海へ……", cls: "text-[15px] sm:text-[17px] font-bold text-[#00f5d4] leading-relaxed" },
-      { text: "良い旅を、", cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
-      { text: "ボン・ボヤージュ！！", cls: "text-lg sm:text-xl font-black text-[#e6ff00] tracking-wider mb-1", shadow: "#e6ff00" },
+      { text: t("ending.act2.l0"), cls: "text-base sm:text-lg font-black text-[#00f5d4] tracking-wider mb-1", shadow: "#00f5d4" },
+      { text: t("ending.act2.l1"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: t("ending.act2.l2"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: t("ending.act2.l3"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: t("ending.act2.l4"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: t("ending.act2.l5"), cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
+      { text: t("ending.act2.l6"), cls: "text-xl sm:text-2xl font-black text-[#ff66b2] tracking-widest", shadow: "#ff1493" },
+      { text: t("ending.act2.l7"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
+      { text: t("ending.act2.l8"), cls: "text-[15px] sm:text-[17px] font-bold text-[#00f5d4] leading-relaxed" },
+      { text: t("ending.act2.l9"), cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
+      { text: t("ending.act2.l10"), cls: "text-lg sm:text-xl font-black text-[#e6ff00] tracking-wider mb-1", shadow: "#e6ff00" },
       { text: "✨ THE END ✨", cls: "text-base sm:text-lg font-mono font-black text-[#00f5e8] tracking-widest animate-pulse", shadow: "#00f5e8" }
     ];
     return lines.map(l => {
@@ -1236,7 +1237,7 @@ window.GameFlow = {
       track.style.transform = `translateY(${this.ending.act2ScrollStartY.toFixed(1)}px)`;
     }
 
-    this.updateEndingBottomButton("🏆 最終戦果＆ランキング登録へ ▶", "launch");
+    this.updateEndingBottomButton(t("ending.toResultsBtn"), "launch");
 
     // Spawn 32 rising plasma launch contrails & stars
     this.ending.launchParticles = Array.from({ length: 32 }, (_, i) => ({
@@ -1266,7 +1267,7 @@ window.GameFlow = {
     const skipBtn = document.getElementById("btnEndingSkip");
     if (skipBtn) skipBtn.classList.add("hidden");
 
-    this.updateEndingBottomButton("🏠 タイトル画面へ帰還 (RETURN TO TITLE)", "title");
+    this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
 
     const state = (window.GameEngine && GameEngine.state) || {};
     const finalScore = state.score || 0;
@@ -1321,7 +1322,7 @@ window.GameFlow = {
     const regBtn = document.getElementById("btnEndingRegister");
     if (regBtn) {
       regBtn.disabled = false;
-      regBtn.textContent = "登録";
+      regBtn.textContent = t("ending.register");
       regBtn.className = "px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0";
     }
     if (kb) {
@@ -1407,10 +1408,32 @@ window.GameFlow = {
     const regBtn = document.getElementById("btnEndingRegister");
     if (regBtn) {
       regBtn.disabled = true;
-      regBtn.textContent = "登録完了 ✔";
+      regBtn.textContent = t("ending.registered");
       regBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-400 text-[9.5px] font-bold cursor-default shrink-0";
     }
     if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+  },
+
+  refreshLanguage() {
+    if (this.attract && this.attract.active) {
+      this.renderAttractCut(this.attract.cutIdx || 0);
+    }
+    const endingModal = document.getElementById("endingModal");
+    if (endingModal && !endingModal.classList.contains("hidden")) {
+      if (this.ending.act === 1) {
+        this.loadEndingBeat(this.ending.beat || 0);
+      } else if (this.ending.act === 2) {
+        const track = document.getElementById("endingAct2ScrollTrack");
+        if (track) track.innerHTML = this.buildEndingAct2Html();
+        this.updateEndingBottomButton(t("ending.toResultsBtn"), "launch");
+      } else if (this.ending.act === 3) {
+        this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
+        const regBtn = document.getElementById("btnEndingRegister");
+        if (regBtn) {
+          regBtn.textContent = this.ending.registered ? t("ending.registered") : t("ending.register");
+        }
+      }
+    }
   },
 
   // -------------------------------------------------------------------------

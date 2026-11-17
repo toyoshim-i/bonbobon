@@ -21,35 +21,35 @@ window.Systems = {
   PERM_DEFS: {
     centerPost: {
       id: "centerPost",
-      name: "センターストッパー",
-      desc: "中央ドレイン防止ポスト（耐久3ヒット）",
+      get name() { return t("perm.centerPost.name"); },
+      get desc() { return t("perm.centerPost.desc"); },
       maxLv: 2
     },
     kickbackL: {
       id: "kickbackL",
-      name: "左アウトレーンキックバック",
-      desc: "左落下時に緊急レーザー射出（各ボール1回）",
+      get name() { return t("perm.kickbackL.name"); },
+      get desc() { return t("perm.kickbackL.desc"); },
       maxLv: 1
     },
     kickbackR: {
       id: "kickbackR",
-      name: "右アウトレーンキックバック",
-      desc: "右落下時に緊急レーザー射出（各ボール1回）",
+      get name() { return t("perm.kickbackR.name"); },
+      get desc() { return t("perm.kickbackR.desc"); },
       maxLv: 1
     },
     wideFlipper: {
       id: "wideFlipper",
-      name: "ロングフリッパー",
-      desc: "フリッパー長拡大（打撃・防衛範囲UP）",
+      get name() { return t("perm.longFlipper.name"); },
+      get desc() { return t("perm.longFlipper.desc"); },
       maxLv: 2
     }
   },
 
   BUFF_DEFS: {
-    mult2x:   { id: "mult2x",   label: "スコア×2", color: "#ff1493", mult: 2.0, desc: "スコア倍率×2.0" },
-    overdrive:{ id: "overdrive",label: "電撃貫通", color: "#e6ff00", mult: 1.8, desc: "貫通電撃ボール＆倍率×1.8" },
-    magnet:   { id: "magnet",   label: "磁力吸着", color: "#00f5d4", mult: 1.5, desc: "フリッパー磁力吸着＆×1.5" },
-    fever:    { id: "fever",    label: "FEVER+玉", color: "#b84dff", mult: 2.2, desc: "即時フィーバーゲージ+50%" }
+    mult2x:   { id: "mult2x",   get label() { return t("buff.mult2x.label"); },   color: "#ff1493", mult: 2.0, get desc() { return t("buff.mult2x.desc"); } },
+    overdrive:{ id: "overdrive",get label() { return t("buff.overdrive.label"); },color: "#e6ff00", mult: 1.8, get desc() { return t("buff.overdrive.desc"); } },
+    magnet:   { id: "magnet",   get label() { return t("buff.magnet.label"); },   color: "#00f5d4", mult: 1.5, get desc() { return t("buff.magnet.desc"); } },
+    fever:    { id: "fever",    get label() { return t("buff.fever.label"); },    color: "#b84dff", mult: 2.2, get desc() { return t("buff.fever.desc"); } }
   },
 
   CAPSULE_SLOTS: [
@@ -114,7 +114,7 @@ window.Systems = {
       this.spawnBall(state, 198 + offset, 240, (Math.random() - 0.5) * 6, -8);
     }
 
-    if (window.UI) window.UI.showCutin("🔥【BOMB-O-FEVER 突入】🔥<br>マルチボール発動＆スコア倍率×5.0！", 200);
+    if (window.UI) window.UI.showCutin(t("systems.feverEnter"), 200);
     Particles.add(state, 210, 330, "#ff1493", 35, 6.0);
     Particles.add(state, 210, 330, "#e6ff00", 25, 5.0);
     if (window.UI) window.UI.updateHUD(state);
@@ -125,7 +125,7 @@ window.Systems = {
     state.fever.timer = 0;
     state.fever.gauge = 0;
     state.fever.mult = 1.0;
-    if (window.UI) window.UI.showCutin("【FEVER 終了】<br>通常モードへ復帰します", 100);
+    if (window.UI) window.UI.showCutin(t("systems.feverEnd"), 100);
     if (window.UI) window.UI.updateHUD(state);
   },
 
@@ -165,7 +165,7 @@ window.Systems = {
       state.boss.expressionTimer = 55;
     }
     Particles.add(state, 210, 340, "#e6ff00", 28, 5.5);
-    if (window.UI) window.UI.showCutin(`🔥【BURST解放】🔥<br>スコア倍率 ×${state.burstMultiplier.toFixed(1)} (10秒間発動)！`, 180);
+    if (window.UI) window.UI.showCutin(t("systems.burstTrigger", { mult: state.burstMultiplier.toFixed(1) }), 180);
     if (window.UI) window.UI.updateHUD(state);
   },
 
@@ -277,7 +277,7 @@ window.Systems = {
         if (key === "kickbackL") state.perm.kickbackL_charges = 1;
         if (key === "kickbackR") state.perm.kickbackR_charges = 1;
         Particles.addPopup(state, cap.x, cap.y - 12, `🛠 ${def.name} Lv.${state.perm[key]}`, "#00f5d4", 1.15);
-        if (window.UI) window.UI.showCutin(`🛠【パーツ鹵獲設置】<br>${def.name} Lv.${state.perm[key]} を展開！`, 160);
+        if (window.UI) window.UI.showCutin(t("systems.permDrop", { name: def.name, lv: state.perm[key] }), 160);
       } else {
         if (key === "centerPost") state.perm.centerPostHP = 3;
         if (key === "kickbackL") state.perm.kickbackL_charges = 1;
@@ -295,8 +295,8 @@ window.Systems = {
         if (existingIdx !== -1) {
           state.keptBuffs[existingIdx].tier++;
           const newTier = state.keptBuffs[existingIdx].tier;
-          Particles.addPopup(state, cap.x, cap.y - 12, `合成 ★Lv.${newTier}`, "#e6ff00", 1.2);
-          if (window.UI) window.UI.showCutin(`⚡【バフ合成強化】<br>${def.label} が ★Lv.${newTier} にランクアップ！`, 160);
+          Particles.addPopup(state, cap.x, cap.y - 12, t("systems.buffMergePopup", { tier: newTier }), "#e6ff00", 1.2);
+          if (window.UI) window.UI.showCutin(t("systems.buffMergeCutin", { label: def.label, tier: newTier }), 160);
         } else {
           const emptyIdx = state.keptBuffs.findIndex(b => b === null);
           if (emptyIdx !== -1) {
@@ -304,7 +304,7 @@ window.Systems = {
             Particles.addPopup(state, cap.x, cap.y - 12, `KEEP! ${def.label}`, def.color, 1.1);
           } else {
             state.keptBuffs[0].tier = Math.min(3, state.keptBuffs[0].tier + 1);
-            Particles.addPopup(state, cap.x, cap.y - 12, `FULL合成 ★Lv.${state.keptBuffs[0].tier}`, "#e6ff00", 1.1);
+            Particles.addPopup(state, cap.x, cap.y - 12, t("systems.buffFullMergePopup", { tier: state.keptBuffs[0].tier }), "#e6ff00", 1.1);
           }
         }
       }
@@ -344,7 +344,7 @@ window.Systems = {
     }
 
     if (!skipIntroCutin && window.UI) {
-      window.UI.showCutin("【ゲーム開始】<br>画面左右タップでパドル操作！<br>発射ボタン または 右下スワイプで射出！", 150);
+      window.UI.showCutin(t("systems.gameStartCutin"), 150);
     }
   },
 

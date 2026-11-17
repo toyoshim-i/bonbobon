@@ -446,7 +446,7 @@ Object.assign(window.Stage3, {
               // 台揺らし回避を促す緊急アラートバッジ
               const badgeX = Math.max(82, Math.min(314, bx));
               const badgeY = by > 82 ? (by - 24) : (by + 28);
-              const alertTxt = "⚠️LOCKED! 台揺らし!";
+              const alertTxt = t("stage3.render.lockedAlert");
               ctx.font = "bold 10px monospace";
               ctx.textAlign = "center";
               const tw = ctx.measureText(alertTxt).width + 14;

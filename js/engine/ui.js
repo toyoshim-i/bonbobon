@@ -212,7 +212,7 @@ window.UI = {
         this.setText(pHint, `POWER ${Math.round(state.plunger.power)}%`);
         this.setClass(pHint, "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse");
       } else {
-        this.setText(pHint, "引いて離す");
+        this.setText(pHint, t("controls.plungerReady"));
         this.setClass(pHint, "text-[9px] text-[#00f5d4] leading-none mt-0.5");
       }
     } else {
@@ -221,7 +221,7 @@ window.UI = {
         pBtn.classList.add("opacity-40", "grayscale");
         pBtn.classList.remove("cursor-pointer");
       }
-      this.setText(pHint, "発射済み");
+      this.setText(pHint, t("controls.plungerLaunched"));
       this.setClass(pHint, "text-[9px] text-gray-400 leading-none mt-0.5");
     }
   },
@@ -234,7 +234,7 @@ window.UI = {
     this.updateScreenMode(state);
     this.setText("hudScore", state.score.toLocaleString());
 
-    let targetDesc = "ドローン＆両肩アーマーを破壊せよ！";
+    let targetDesc = t("ui.defaultTarget");
     if (window.currentStage && window.currentStage.getTargetDesc) {
       targetDesc = window.currentStage.getTargetDesc(state);
     }
@@ -390,9 +390,9 @@ window.UI = {
         : (dp[def.id] || 0);
       let extraStatus = "";
       if (state && state.perm && !state.inTitle) {
-        if (def.id === "centerPost") extraStatus = ` [残HP:${state.perm.centerPostHP || 0}]`;
-        if (def.id === "kickbackL") extraStatus = ` [残弾:${state.perm.kickbackL_charges || 0}]`;
-        if (def.id === "kickbackR") extraStatus = ` [残弾:${state.perm.kickbackR_charges || 0}]`;
+        if (def.id === "centerPost") extraStatus = t("ui.permHp", { hp: state.perm.centerPostHP || 0 });
+        if (def.id === "kickbackL") extraStatus = t("ui.permAmmo", { ammo: state.perm.kickbackL_charges || 0 });
+        if (def.id === "kickbackR") extraStatus = t("ui.permAmmo", { ammo: state.perm.kickbackR_charges || 0 });
       }
       const row = document.createElement("div");
       row.className = "flex items-center justify-between p-1.5 rounded-lg border bg-black/30 border-[#00f5d4]/30 text-xs";
@@ -727,7 +727,7 @@ window.UI = {
           if (window.sfx) window.sfx.flipperClick();
           engine.resetGame();
           closeMenu();
-          UI.showCutin("🔄【GAME RESET】<br>盤面を初期化して再出撃！", 140);
+          UI.showCutin(t("ui.gameReset"), 140);
         });
       }
     };
@@ -861,6 +861,35 @@ window.UI = {
         if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
         UI.renderPermUpgrades(engine.state);
       });
+    }
+
+    // Language Toggle (Persisted via I18N)
+    const updateLanguageUI = () => {
+      const status = document.getElementById("txtMenuLanguageStatus");
+      if (status && window.I18N) {
+        status.textContent = I18N.t("app.langName");
+      }
+    };
+    const btnLang = document.getElementById("btnMenuToggleLanguage");
+    if (btnLang) {
+      btnLang.addEventListener("click", () => {
+        if (window.sfx) window.sfx.flipperClick();
+        if (window.I18N) I18N.toggleLang();
+      });
+    }
+    if (window.I18N) {
+      I18N.onChange(() => {
+        updateLanguageUI();
+        if (engine && engine.state) {
+          this.renderPermUpgrades(engine.state);
+          this.updateHUD(engine.state);
+        }
+        if (window.GameFlow && typeof GameFlow.refreshLanguage === "function") {
+          GameFlow.refreshLanguage();
+        }
+      });
+      I18N.applyDom();
+      updateLanguageUI();
     }
 
     // Audio Mute / Unmute Toggle (Persisted via Systems)
@@ -1017,8 +1046,8 @@ window.UI = {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".relic-btn").forEach(b => b.classList.remove("border-[#e6ff00]", "bg-[#ff1493]/40"));
         btn.classList.add("border-[#e6ff00]", "bg-[#ff1493]/40");
-        const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : "パーツ";
-        this.showCutin(`⚙️【パーツ換装】<br>${title} を装着！`, 160);
+        const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : t("ui.relicPart");
+        this.showCutin(t("ui.relicEquip", { title }), 160);
       });
     });
   },
@@ -1070,7 +1099,7 @@ window.UI = {
       if (next === "blink") engine.state.boss.blinkTimer = 6;
       if (next === "talk") engine.state.boss.talkTimer = 90;
       this.updateHUD(engine.state);
-      this.showCutin(`👁【表情テスト】: ${next}`, 90);
+      this.showCutin(t("ui.faceTest", { face: next }), 90);
     });
 
     const dbgStageToggle = document.getElementById("dbgStageToggle");
@@ -1127,13 +1156,13 @@ window.UI = {
     if (isStage5) {
       if (relicSection) relicSection.classList.add("hidden");
       if (nextBtn) {
-        nextBtn.innerHTML = `⚡ 統合司令AIの緊急通信を受信 (ENDING) ▶`;
+        nextBtn.innerHTML = t("clear.toEnding");
         nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#00f5e8] via-[#34ff8a] to-[#e6ff00] active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110 animate-pulse";
       }
     } else {
       if (relicSection) relicSection.classList.remove("hidden");
       if (nextBtn) {
-        nextBtn.innerHTML = `次のステージへ進む ▶`;
+        nextBtn.innerHTML = t("clear.nextStage");
         nextBtn.className = "flex-1 py-1.5 rounded bg-gradient-to-r from-[#ff1493]/90 to-[#e6ff00]/90 active:scale-95 text-black font-extrabold text-[10px] cursor-pointer transition shadow hover:brightness-110";
       }
     }

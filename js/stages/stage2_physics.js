@@ -9,8 +9,8 @@ Object.assign(window.Stage2, {
     // クリア演出進行
     if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
       StageCommon.updateClearSequence(state, {
-        bossDisplayName: "セルティ (CERTI)",
-        defeatQuoteHtml: "「あっ、熱い……プラズマが暴走して……っ！<br>あ、あたしが負けるなんて……認めないんだからぁ……っ！」",
+        bossDisplayName: t("stage2.bossName"),
+        defeatQuoteHtml: t("stage2.defeatQuote"),
         explosionOrigin: { x: state.boss.core ? state.boss.core.x : 198, y: state.boss.core ? state.boss.core.y : 320 },
         smokeColors: ["#00f5d4", "#ff007f", "#ffffff", "#e0ffff"]
       });
@@ -204,7 +204,7 @@ Object.assign(window.Stage2, {
           if (window.sfx && window.sfx.metalBumper) {
             window.sfx.metalBumper();
           }
-          UI.showCutin("⚡【ホログラムレーザー発砲！】⚡<br>高速移動で射線を回避せよ！", 140);
+          UI.showCutin(t("stage2.cutin.holoLaser"), 140);
         }
       } else if (holo.laserState === "fire") {
         holo.laserTimer--;
@@ -263,7 +263,7 @@ Object.assign(window.Stage2, {
               Particles.add(state, hit.qx, hit.qy, "#ff007f", 16, 5.0);
               Particles.addPopup(state, hit.qx, hit.qy - 14, "⚡LASER FISSION!! MINI-BALLS SPLIT!⚡", "#00f5d4", 1.4);
               Systems.addScore(state, 12000, hit.qx, hit.qy, "★FISSION MULTI-BALL!★");
-              UI.showCutin("⚡【高エネルギー直撃：超電導分裂！】⚡<br>レーザー直撃によりボールが2つのミニボールに核分裂！", 160);
+              UI.showCutin(t("stage2.cutin.laserSplit"), 160);
             } else {
               // かすり当たり、または既に分裂済みのミニボール：強烈にノックバック＆吹き飛ばし！
               ball.x = hit.qx + hit.nx * (hit.minDist + 2.0);
@@ -433,7 +433,7 @@ Object.assign(window.Stage2, {
                   ant.isActive = false;
                   ant.isWarning = false;
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
-                  UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
+                  UI.showCutin(t("stage2.cutin.antennaBreak"), 200);
                   Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
                   Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
@@ -457,7 +457,7 @@ Object.assign(window.Stage2, {
                   ant.isActive = false;
                   ant.isWarning = false;
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
-                  UI.showCutin("⚡【アンテナ放電機構 破壊！】⚡<br>電撃フィールド消失！ 放電機沈黙！", 200);
+                  UI.showCutin(t("stage2.cutin.antennaBreak"), 200);
                   Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
                   Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
@@ -495,7 +495,7 @@ Object.assign(window.Stage2, {
               { expr: "shout", frames: 30 },
               { expr: "wince", frames: 45 }
             ]);
-            UI.showCutin(`💥【${sideLabel}肩装甲大破！】💥<br>肩部装甲パージ！ +30,000pts ボーナス！`, 200);
+            UI.showCutin(t("stage2.cutin.shoulderBreak", { side: sideLabel }), 200);
             Systems.addScore(state, 30000, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
             Systems.dropReward(state, "major", { x: sh.x, y: sh.y });
             this.checkPhase1Clear(state);
@@ -532,7 +532,7 @@ Object.assign(window.Stage2, {
               { expr: "shout", frames: 30 },
               { expr: "wince", frames: 40 }
             ]);
-            UI.showCutin(`💥【${sideLabel}腕部装甲 大破！】💥<br>関節サーボ破損・装甲欠損！ +30,000pts!`, 200);
+            UI.showCutin(t("stage2.cutin.armBreak", { side: sideLabel }), 200);
             Systems.addScore(state, 30000, elb.x, elb.y, `★${sideLabel} ARM DESTROYED!★`);
             Systems.dropReward(state, "major", { x: elb.x, y: elb.y });
             this.checkPhase1Clear(state);
@@ -571,7 +571,7 @@ Object.assign(window.Stage2, {
               { expr: "shock", frames: 28 },
               { expr: "shout", frames: 32 }
             ]);
-            UI.showCutin(`💥【${nozLabel}ノズル 噴射口大破！】💥<br>スラスター破損・推進力低下！ +25,000pts!`, 200);
+            UI.showCutin(t("stage2.cutin.nozzleBreak", { side: nozLabel }), 200);
             Systems.addScore(state, 25000, noz.x, noz.y, `★NOZZLE-${nozLabel} DESTROYED!★`);
             Systems.dropReward(state, "major", { x: noz.x, y: noz.y });
 
@@ -582,7 +582,7 @@ Object.assign(window.Stage2, {
                 state.boss.jet.timer = 0;
                 state.boss.jet.active = false;
               }
-              UI.showCutin("💥【背中推進機関 完全大破！】💥<br>両スラスター停止！ ジェット風圧消失！ +30,000pts!", 220);
+              UI.showCutin(t("stage2.cutin.allNozzleBreak"), 220);
               Systems.addScore(state, 30000, noz.x, noz.y, "★ALL THRUSTERS DOWN!★");
               this.checkPhase2Clear(state);
             }
@@ -635,7 +635,7 @@ Object.assign(window.Stage2, {
                 { expr: "shout", frames: 32 },
                 { expr: "open_blush", frames: 50 }
               ]);
-              UI.showCutin("💥【ホログラム砲台 大破！】💥<br>レーザー主砲沈黙！ +40,000pts ボーナス！", 220);
+              UI.showCutin(t("stage2.cutin.holoBreak"), 220);
               Systems.addScore(state, 40000, holo.x, holo.y, "★HOLO CANNON DESTROYED!★");
               Systems.dropReward(state, "major", { x: holo.x, y: holo.y });
               this.checkPhase2Clear(state);
@@ -670,7 +670,7 @@ Object.assign(window.Stage2, {
           if (bust.hp === 0) {
             bust.broken = true;
             Particles.triggerArmorBreakEffect(state, "bust_armor", bust.x, bust.y);
-            UI.showCutin("♥【胸部装甲パージ！】♥<br>胸部センサー限界突破！ +30,000pts！", 200);
+            UI.showCutin(t("stage2.cutin.bustPurge"), 200);
             Systems.addScore(state, 30000, bust.x, bust.y, "★BUST ARMOR PURGED!★");
             Systems.dropReward(state, "major", { x: bust.x, y: bust.y });
             this.checkPhase2Clear(state);
@@ -824,7 +824,7 @@ Object.assign(window.Stage2, {
         { expr: "shout", frames: 40 },
         { expr: "wince", frames: 55 }
       ]);
-      UI.showCutin("💥【PHASE 1 突破！ 外装防衛網壊滅！】💥<br>肩部・両腕装甲強制パージ！ ホログラム砲台起動！", 240);
+      UI.showCutin(t("stage2.cutin.phase1Clear"), 240);
       Systems.dropReward(state, "rare", 2);
       UI.updateHUD(state);
     }
@@ -852,7 +852,7 @@ Object.assign(window.Stage2, {
         { expr: "open_blush", frames: 999 }
       ]);
       Systems.addScore(state, 50000, b.core.x, b.core.y, "★ALL ARMORS PURGED! +50,000★");
-      UI.showCutin("💥【大ブレイク！ 躯体大破＆装甲パージ！】💥<br>推進力喪失！ プラズマ・リアクターコア露出！ コアを直撃せよ！", 260);
+      UI.showCutin(t("stage2.cutin.phase2Clear"), 260);
       Systems.addFever(state, 100);
       Systems.dropReward(state, "rare", 3);
       UI.updateHUD(state);
@@ -882,7 +882,7 @@ Object.assign(window.Stage2, {
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
 
     if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
-    UI.showCutin("💥【CRITICAL K.O.】💥<br>セルティのプラズマ炉臨界オーバーヒート！ 機体制御崩壊！", 240);
+    UI.showCutin(t("stage2.cutin.criticalKO"), 240);
     const coreX = (b && b.core) ? b.core.x : 198;
     const coreY = (b && b.core) ? b.core.y : 320;
     Particles.add(state, coreX, coreY, "#00f5d4", 70, 10.5);
@@ -966,7 +966,7 @@ Object.assign(window.Stage2, {
       window.sfx.feverAlarm();
     }
 
-    UI.showCutin("🚀【背中ジェット噴射！】🚀<br>「ひゃんっ！？ どこ当ててるのバカッ！<br>吹き飛びなさいっっ！！」", 180);
+    UI.showCutin(t("stage2.cutin.backJet"), 180);
 
     state.shockwaves.push({
       x: jet.x,

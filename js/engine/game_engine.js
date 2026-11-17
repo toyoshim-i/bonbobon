@@ -25,40 +25,40 @@ window.GameEngine = {
       id: "stage1",
       globalName: "Stage1",
       headerLabel: "STAGE 1",
-      displayName: "リリス (STAGE 1)",
-      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『桃色装甲リリス』 IS APPROACHING FAST!!<br>シルバーボール、発進せよ！"
+      get displayName() { return t("engine.stage1.displayName"); },
+      get warningHtml() { return t("engine.stage1.warning"); }
     },
     {
       index: 2,
       id: "stage2",
       globalName: "Stage2",
       headerLabel: "STAGE 2",
-      displayName: "セルティ (STAGE 2)",
-      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『疾風紫電セルティ』 IS APPROACHING FAST!!"
+      get displayName() { return t("engine.stage2.displayName"); },
+      get warningHtml() { return t("engine.stage2.warning"); }
     },
     {
       index: 3,
       id: "stage3",
       globalName: "Stage3",
       headerLabel: "STAGE 3",
-      displayName: "ノア (STAGE 3)",
-      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳空間ノア』 IS APPROACHING FAST!!"
+      get displayName() { return t("engine.stage3.displayName"); },
+      get warningHtml() { return t("engine.stage3.warning"); }
     },
     {
       index: 4,
       id: "stage4",
       globalName: "Stage4",
       headerLabel: "STAGE 4",
-      displayName: "カスミ (STAGE 4)",
-      warningHtml: "🚨 WARNING!! A HUGE BATTLESHIP<br>『電脳夜桜カスミ』 IS APPROACHING FAST!!"
+      get displayName() { return t("engine.stage4.displayName"); },
+      get warningHtml() { return t("engine.stage4.warning"); }
     },
     {
       index: 5,
       id: "stage5",
       globalName: "Stage5",
       headerLabel: "FINAL",
-      displayName: "エル＆ノエル (FINAL)",
-      warningHtml: "🚨 FINAL WARNING!! TWIN BATTLESHIPS<br>『双子電脳天使エル＆ノエル』 APPROACHING FAST!!"
+      get displayName() { return t("engine.stage5.displayName"); },
+      get warningHtml() { return t("engine.stage5.warning"); }
     }
   ],
 
@@ -340,7 +340,7 @@ window.GameEngine = {
     }
     Systems.prepareBallForLaunch(this.state);
     UI.updateHUD(this.state);
-    UI.showCutin("🔄 テーブルとビルドを初期化しました", 100);
+    UI.showCutin(t("engine.resetInit"), 100);
   },
 
   stepPhysics() {
@@ -425,7 +425,7 @@ window.GameEngine = {
         state.burstMultiplier = 1.0;
         state.magnetActive = false;
         state.overdriveActive = false;
-        UI.showCutin("【BURST終了】倍率リセット", 90);
+        UI.showCutin(t("engine.burstEnd"), 90);
         UI.updateHUD(state);
       }
     }
@@ -478,7 +478,7 @@ window.GameEngine = {
         ball.stuckTimer = (ball.stuckTimer || 0) + 1;
         if (ball.stuckTimer >= Physics.BALANCE.STUCK_REMIND_FRAMES && (ball.stuckTimer - Physics.BALANCE.STUCK_REMIND_FRAMES) % 180 === 0) {
           // Casual reminder to nudge the table if ball is stuck anywhere
-          UI.showCutin("⚠️【ボール停滞中】<br>スワイプ または SPACE で台を揺らそう！", 120);
+          UI.showCutin(t("engine.ballStuck"), 120);
         } else if (ball.stuckTimer > Physics.BALANCE.STUCK_KICK_FRAMES) {
           // Machine auto-kick (Pinball Ball Search mechanism) to prevent deadlock
           ball.vy = -5.8;
@@ -549,9 +549,9 @@ window.GameEngine = {
             Systems.prepareBallForLaunch(state, true);
 
             if (state.score === 0) {
-              UI.showCutin("🚨【DANGER: SCORE 0!!】🚨<br>シールド枯渇！0点のまま落とすと即GAME OVER！！", 200);
+              UI.showCutin(t("engine.dangerZero"), 200);
             } else {
-              UI.showCutin("⚠️【MISS! -" + loss.toLocaleString() + " PTS】<br>バフ低下！残シールド: " + state.score.toLocaleString() + " pts", 165);
+              UI.showCutin(t("engine.miss", { loss: loss.toLocaleString(), score: state.score.toLocaleString() }), 165);
             }
           }
           UI.updateHUD(state);

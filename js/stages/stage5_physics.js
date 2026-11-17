@@ -11,8 +11,8 @@ Object.assign(window.Stage5, {
     // Clear sequence progress
     if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
       StageCommon.updateClearSequence(state, {
-        bossDisplayName: "熾天使セラフィア (SERAPHIA)",
-        defeatQuoteHtml: "「我が聖域の理を破るとは……！<br>人の子の放つ光、誠に見事でした……っ！」",
+        bossDisplayName: t("engine.stage5.finalDisplayName"),
+        defeatQuoteHtml: t("stage5.defeatQuote"),
         smokeColors: ["#ffffff", "#00f5e8", "#ff2ad4", "#ffe57f", "#b84dff"]
       });
       return;
@@ -246,7 +246,7 @@ Object.assign(window.Stage5, {
             b.cherubOrbs.forEach(o => { o.active = true; o.hp = o.maxHP; o.flash = 20; });
             b.orbCooldown = 480;
             if (window.sfx && window.sfx.bunshinSummon) window.sfx.bunshinSummon();
-            Particles.addPopup(state, 198, 205, "🛡️精霊オーブ再展開！", "#00f5e8", 1.1);
+            Particles.addPopup(state, 198, 205, t("stage5.popup.orbRespawn"), "#00f5e8", 1.1);
           }
         }
         // Rotate active orbs
@@ -365,7 +365,7 @@ Object.assign(window.Stage5, {
             b.hipR.vx += 6.5;
             if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
             state.shockwaves.push({ x: 198, y: 348, r: 8, maxR: 50, speed: 4.5, color: "#ff1493", lineWidth: 3.0, alpha: 1.0 });
-            Particles.addPopup(state, 198, 370, "⚠️真下排出! 台揺らし!!", "#ff2ad4", 1.15);
+            Particles.addPopup(state, 198, 370, t("stage5.popup.navelEject"), "#ff2ad4", 1.15);
           }
         } else if (nt.mode === "spit_cool") {
           nt.timer--;
@@ -759,9 +759,9 @@ Object.assign(window.Stage5, {
         } else if (hitFlipper) {
           state.flipperReverseTimer = 240; // 4.0 seconds
           if (window.sfx && window.sfx.haloReverse) window.sfx.haloReverse();
-          UI.showCutin("😇【呪いの天使輪！】<br>4秒間 左右パドルの操作がアベコベに逆転！！", 110);
+          UI.showCutin(t("stage5.cutin.curseRing"), 110);
           Particles.add(state, cpX, cpY, "#ff1493", 16, 4.0);
-          Particles.addPopup(state, 198, 560, "🔄LRパドル反転!!", "#ff1493", 1.2);
+          Particles.addPopup(state, 198, 560, t("stage5.popup.lrReverse"), "#ff1493", 1.2);
           ha.rings.splice(i, 1);
           continue;
         }
@@ -957,13 +957,13 @@ Object.assign(window.Stage5, {
               targetPrism.hp--;
               targetPrism.flash = 20;
               Particles.add(state, cp.x, cp.y, "#e6ff00", 16, 5.0);
-              Systems.addScore(state, 5000, cp.x, cp.y, "⚡へそ過負荷 -1HP!");
+              Systems.addScore(state, 5000, cp.x, cp.y, t("stage5.popup.navelOverload"));
               if (b.elleBroken && b.noelBroken && b.prismL.hp <= 0 && b.prismR.hp <= 0) {
                 this.triggerSeraphFusion(state);
               }
             }
           } else {
-            Systems.addScore(state, 1800, cp.x, cp.y, "🛡️へそバリア反射!!");
+            Systems.addScore(state, 1800, cp.x, cp.y, t("stage5.popup.navelReflect"));
           }
         }
       }
@@ -1272,7 +1272,7 @@ Object.assign(window.Stage5, {
               Systems.addFever(state, 8);
               if (b.cherubOrbs.every(o => !o.active)) {
                 b.orbCooldown = 480;
-                Particles.addPopup(state, b.core.x, b.core.y - 16, "💥結界解除! CORE OPEN!!", "#e6ff00", 1.15);
+                Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage5.popup.coreOpen"), "#e6ff00", 1.15);
               }
             } else {
               if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
@@ -1288,7 +1288,7 @@ Object.assign(window.Stage5, {
           const isShielded = b.coreGraceTimer > 0 || b.cherubOrbs.some(o => o.active);
           if (isShielded) {
             if (window.sfx && window.sfx.slingshot) window.sfx.slingshot();
-            Systems.addScore(state, 2000, b.core.x, b.core.y - 12, "🛡️精霊オーブ結界！オーブを倒せ！");
+            Systems.addScore(state, 2000, b.core.x, b.core.y - 12, t("stage5.popup.orbBarrier"));
           } else {
             b.core.hp = Math.max(0, b.core.hp - 1);
             b.expression = "wince";

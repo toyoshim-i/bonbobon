@@ -250,7 +250,7 @@ Object.assign(window.Stage3, {
       { expr: "wink", frames: 28 },
       { expr: "talk", frames: 28 }
     ]);
-    UI.showCutin("💥【ロックオン直撃！ ボール四散ロスト！】💥<br>赤ロック警報が鳴ったらタイミングよく『台揺らし』で振り切れ！", 175);
+    UI.showCutin(t("stage3.cutin.snipeHit"), 175);
 
     // 物理ステップ末尾の標準ドレイン処理に委ねて安全にボールロストさせる
     ball._shattered = true;
@@ -763,8 +763,8 @@ Object.assign(window.Stage3, {
     // クリア演出進行
     if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
       StageCommon.updateClearSequence(state, {
-        bossDisplayName: "ノア (NOA)",
-        defeatQuoteHtml: "「ふぇぇ……中枢ペンダント壊れちゃったよぉ……！<br>電脳空間が……シャットダウンしちゃう……っ！」",
+        bossDisplayName: t("stage3.bossName"),
+        defeatQuoteHtml: t("stage3.defeatQuote"),
         explosionOrigin: { x: b.core ? b.core.x : 198, y: b.core ? b.core.y : 330 },
         smokeColors: ["#00f5d4", "#ff1493", "#ffffff", "#e0ffff"]
       });
@@ -970,7 +970,7 @@ Object.assign(window.Stage3, {
         if (state.skillShotEligible) {
           state.skillShotEligible = false;
           Systems.addScore(state, 25000, hit.qx, hit.qy, "★SKILL SHOT!!");
-          UI.showCutin("🎯【SKILL SHOT 成功！】<br>ヘッドセットアンテナ弾性バウンス！<br>+25,000pts ＆ レアカプセル！", 180);
+          UI.showCutin(t("stage3.cutin.skillShot"), 180);
           Systems.dropReward(state, "rare", 2);
         } else {
           Systems.addScore(state, 3000, hit.qx, hit.qy - 12, "📡ANTENNA BOING!");
@@ -1023,13 +1023,13 @@ Object.assign(window.Stage3, {
               }
             }
             if (remBits === 3) {
-              UI.showCutin(`💥【浮遊ビット ${bit.label} 撃墜！】💥<br>残り3機！ 残存3機によるデルタビーム照射が継続！`, 185);
+              UI.showCutin(t("stage3.cutin.bit3", { label: bit.label }), 185);
             } else if (remBits === 2) {
-              UI.showCutin(`💥【浮遊ビット ${bit.label} 撃墜！】💥<br>デルタビーム解除！ 残存2機が『ロックオン粉砕レーザー』へ移行！<br>赤ロック時に『台揺らし』で回避せよ！`, 215);
+              UI.showCutin(t("stage3.cutin.bit2", { label: bit.label }), 215);
             } else if (remBits === 1) {
-              UI.showCutin(`💥【浮遊ビット ${bit.label} 撃墜！】💥<br>残り1機！ 最後のビットが単独ロックオン狙撃を続行！`, 185);
+              UI.showCutin(t("stage3.cutin.bit1", { label: bit.label }), 185);
             } else {
-              UI.showCutin(`💥【全浮遊ビット撃墜完了！】💥<br>ビット兵装壊滅！ ノアの両手吸引出力がさらに上昇！`, 185);
+              UI.showCutin(t("stage3.cutin.bit0"), 185);
             }
             Systems.dropReward(state, "major", { x: dynBit.x, y: dynBit.y });
             this.checkPhase1Clear(state);
@@ -1075,7 +1075,7 @@ Object.assign(window.Stage3, {
             state.baseMultiplier += 0.3;
             Particles.triggerArmorBreakEffect(state, "hip_port", hPort.x, hPort.y);
             Systems.addScore(state, 20000, hPort.x, hPort.y, "💥HIP LOCK OVERLOAD!!");
-            UI.showCutin("♥【腰部サイバーポート過負荷！】♥<br>ヒップ感度リミッター解除＆スコア倍率+0.3x！", 190);
+            UI.showCutin(t("stage3.cutin.hipOverload"), 190);
             Systems.dropReward(state, "major", 3);
           }
           this.checkSuctionEscalationNotice(state);
@@ -1166,7 +1166,7 @@ Object.assign(window.Stage3, {
               { expr: "open_blush", frames: 48 }
             ]);
             Systems.addScore(state, 25000, knee.x, knee.y, "★KNEE PAD PURGED!★");
-            UI.showCutin("💥【右膝当てアーマー大破！】💥<br>ニーパッド装甲パージ！ 両手の吸引出力が上昇！", 190);
+            UI.showCutin(t("stage3.cutin.kneeBreak"), 190);
             Systems.dropReward(state, "major", { x: knee.x, y: knee.y });
             this.checkPhase1Clear(state);
           }
@@ -1329,7 +1329,7 @@ Object.assign(window.Stage3, {
         { expr: "shout", frames: 36 },
         { expr: "wince", frames: 48 }
       ]);
-      UI.showCutin("💥【PHASE 1 突破！ 右膝当てアーマー大破！】💥<br>胸部ビスチェのロック解除！ ビットの弾幕をかいくぐり胸を狙え！", 220);
+      UI.showCutin(t("stage3.cutin.phase1Clear"), 220);
       Systems.dropReward(state, "rare", 2);
       UI.updateHUD(state);
     }
@@ -1361,7 +1361,7 @@ Object.assign(window.Stage3, {
     ]);
 
     Systems.addScore(state, 45000, 198, 270, "★CYBER BUSTIER PURGED!! +45,000★");
-    UI.showCutin("💥【大ブレイク！ 胸部パージ＆両手吸引MAX暴走！】💥<br>首元ペンダント解錠！ 必死の吸引ガードをかいくぐりコアを撃て！", 260);
+    UI.showCutin(t("stage3.cutin.phase2Clear"), 260);
     Systems.dropReward(state, "rare", 3);
     Systems.dropReward(state, "major", 4);
     Systems.startFeverMode(state);
@@ -1386,7 +1386,7 @@ Object.assign(window.Stage3, {
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
 
     if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
-    UI.showCutin("💥【CRITICAL K.O.】💥<br>ノアの中枢ペンダント臨界崩壊！ 電脳空間シャットダウン！", 240);
+    UI.showCutin(t("stage3.cutin.criticalKO"), 240);
     const coreX = (b && b.core) ? b.core.x : 198;
     const coreY = (b && b.core) ? b.core.y : 330;
     Particles.add(state, coreX, coreY, "#00f5d4", 70, 10.5);

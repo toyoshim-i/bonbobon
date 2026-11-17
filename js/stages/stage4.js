@@ -4,8 +4,8 @@
 
 window.Stage4 = {
   id: "stage4",
-  name: "電脳夜桜カスミ",
-  bossName: "カスミ (KASUMI)",
+  get name() { return t("stage4.name"); },
+  get bossName() { return t("stage4.bossName"); },
 
   assets: {
     bgAlleyImg: new Image(),
@@ -245,40 +245,40 @@ window.Stage4 = {
 
   getTargetDesc(state) {
     const b = state.boss;
-    if (!b) return "両コテ＆両膝を破壊せよ！";
-    if (state.stageCleared) return "🌸カスミ撃破！ STAGE 4 CLEAR!";
+    if (!b) return t("stage4.obj.default");
+    if (state.stageCleared) return t("stage4.obj.clear");
     const litCnt = b.lanterns.filter(l => l.lit).length;
     const activeClones = b.ninjutsu.clones.filter(c => c.active).length;
     if (b.ninjutsu.mode === "seal_charge") {
-      return "⚠️手裏剣斉射！パドルで斬り返せ！";
+      return t("stage4.obj.shuriken");
     }
     if (state.phase === 1) {
       const parts = [];
-      if (!b.tekkoL.broken || !b.tekkoR.broken) parts.push("両コテ");
-      if (!b.kneeL.broken || !b.kneeR.broken) parts.push("両膝");
-      return `${parts.join("・")}を破壊せよ！(提灯${litCnt}/5)`;
+      if (!b.tekkoL.broken || !b.tekkoR.broken) parts.push(t("stage4.obj.tekko"));
+      if (!b.kneeL.broken || !b.kneeR.broken) parts.push(t("stage4.obj.knee"));
+      return t("stage4.obj.phase1", { parts: parts.join(" & "), lit: litCnt });
     }
     if (state.phase === 2) {
       return activeClones > 0
-        ? `忍装束を破壊せよ！(HP:${b.chestArmorHP}/分身${activeClones})`
-        : `胸部忍装束を破壊せよ！(HP:${b.chestArmorHP})`;
+        ? t("stage4.obj.chestClones", { hp: b.chestArmorHP, clones: activeClones })
+        : t("stage4.obj.chest", { hp: b.chestArmorHP });
     }
     return activeClones > 0
-      ? `分身を倒し結界を解除せよ！(残${activeClones})`
-      : `チャクラ核を撃破せよ！(HP:${b.core.hp})`;
+      ? t("stage4.obj.clones", { clones: activeClones })
+      : t("stage4.obj.core", { hp: b.core.hp });
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const b = state.boss;
 
-    UI.setBossHeader("#b84dff", "TYPE-KASUMI (カスミ)");
-    UI.setText("targetBriefingText", "「手前に降り注ぐ電脳文字と夜桜は球速を奪う防壁よ！ 幻影分身と夜桜風魔大車輪を突破できるかしら？」");
+    UI.setBossHeader("#b84dff", t("stage4.header"));
+    UI.setText("targetBriefingText", t("stage4.briefing"));
 
-    UI.setText("dtArmRLabel", "夜桜提灯(LANTERNS):");
-    UI.setText("dtArmLLabel", "コテ＆両膝(SEAL GUARD):");
-    UI.setText("dtChestLabel", "忍装束＆チャクラ核:");
-    UI.setText("dtCrotchLabel", "幻影分身＆秘奥義:");
+    UI.setText("dtArmRLabel", t("stage4.dt.armR"));
+    UI.setText("dtArmLLabel", t("stage4.dt.armL"));
+    UI.setText("dtChestLabel", t("stage4.dt.chest"));
+    UI.setText("dtCrotchLabel", t("stage4.dt.crotch"));
 
     const litCnt = b.lanterns.filter(l => l.lit).length;
     if (b.lanternCelebrationTimer > 0) {
@@ -297,7 +297,7 @@ window.Stage4 = {
       const kr = b.tekkoR.broken ? "OK" : b.tekkoR.hp;
       const nl = b.kneeL.broken ? "OK" : b.kneeL.hp;
       const nr = b.kneeR.broken ? "OK" : b.kneeR.hp;
-      UI.setText("dtArmLStatus", `籠手${kl}/${kr} 膝${nl}/${nr}`);
+      UI.setText("dtArmLStatus", t("stage4.dt.armLStatus", { kl, kr, nl, nr }));
       UI.setClass("dtArmLStatus", "font-bold text-[#e6ff00]");
     }
 
@@ -311,16 +311,16 @@ window.Stage4 = {
 
     const activeClones = b.ninjutsu.clones.filter(c => c.active).length;
     if (b.giantFuma.active) {
-      UI.setText("dtCrotchStatus", activeClones > 0 ? `🌀大車輪＋分身×${activeClones}` : "🌀風魔大車輪 展開中!!");
+      UI.setText("dtCrotchStatus", activeClones > 0 ? t("stage4.dt.wheelClones", { clones: activeClones }) : t("stage4.dt.wheel"));
       UI.setClass("dtCrotchStatus", "font-bold text-[#e6ff00] animate-pulse");
     } else if (b.ninjutsu.mode === "seal_charge") {
-      UI.setText("dtCrotchStatus", "⚡九字レーザー照準中!!");
+      UI.setText("dtCrotchStatus", t("stage4.dt.kuji"));
       UI.setClass("dtCrotchStatus", "font-bold text-[#ff2a9d] animate-pulse");
     } else if (activeClones > 0) {
-      UI.setText("dtCrotchStatus", `👥幻影分身 ×${activeClones}体`);
+      UI.setText("dtCrotchStatus", t("stage4.dt.clones", { clones: activeClones }));
       UI.setClass("dtCrotchStatus", "font-bold text-[#00f5d4] animate-pulse");
     } else {
-      UI.setText("dtCrotchStatus", b.subLogHP > 0 ? `🪵丸太GUARD×${b.subLogHP}` : "READY");
+      UI.setText("dtCrotchStatus", b.subLogHP > 0 ? t("stage4.dt.log", { hp: b.subLogHP }) : "READY");
       UI.setClass("dtCrotchStatus", "font-bold text-[#00f5d4]");
     }
 
@@ -329,14 +329,14 @@ window.Stage4 = {
     UI.setWidth("blushGaugeBar", `${blushVal}%`);
 
     const faceMap = {
-      normal: b.chestArmorBroken ? "恥じらい忍び構え" : "クール忍法印",
-      wink: "🌸夜桜くノ一ウインク🌸",
-      shock: "⚡見切られた…っ!?",
-      wince: "くぅっ…不覚…！",
-      shout: "⚡忍法・手裏剣乱れ撃ち！",
-      open_blush: "♥くっ…晒しまでっ…♥",
-      talk: "忍法詠唱中…",
-      talk_sm: "気配察知中…"
+      normal: b.chestArmorBroken ? t("stage4.face.normalBroken") : t("stage4.face.normalArmor"),
+      wink: t("stage4.face.wink"),
+      shock: t("stage4.face.shock"),
+      wince: t("stage4.face.wince"),
+      shout: t("stage4.face.shout"),
+      open_blush: t("stage4.face.open_blush"),
+      talk: t("stage4.face.talk"),
+      talk_sm: t("stage4.face.talk_sm")
     };
     UI.setText("bossFaceStatus", faceMap[b.expression] || faceMap.normal);
   },
@@ -412,7 +412,7 @@ window.Stage4 = {
       if (window.sfx && window.sfx.bunshinSummon) window.sfx.bunshinSummon();
       b.sakuraStormTimer = Math.max(b.sakuraStormTimer, 120);
       b.stoleWind = Math.max(b.stoleWind, 1.3);
-      Particles.addPopup(state, 198, 172, "👥忍法・電脳幻影分身!!", "#e6ff00", 1.12);
+      Particles.addPopup(state, 198, 172, t("stage4.popup.clone"), "#e6ff00", 1.12);
     }
   },
 
@@ -469,7 +469,7 @@ window.Stage4 = {
 
     Systems.addScore(state, 45000, 198, 120, "🌸YOZAKURA FULL BLOOM!!");
     Systems.addFever(state, 24);
-    UI.showCutin("🌸【五灯満開・夜桜乱舞！！】🌸<br>極大・風魔大車輪スラッシュ発動 ＆ ドレインに『変わり身の丸太』展開！", 210);
+    UI.showCutin(t("stage4.cutin.lanternFull"), 210);
   },
 
   isCoreShieldedByBunshin(state) {
@@ -541,7 +541,7 @@ window.Stage4 = {
           if (window.sfx) window.sfx.armorBreak();
           if (b.ninjutsu.clones.every(c => !c.active)) {
             b.ninjutsu.cloneCooldown = 480;
-            Particles.addPopup(state, b.core.x, b.core.y - 16, "💥結界解除! CORE OPEN!!", "#e6ff00", 1.15);
+            Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
           }
         }
       } else if (b.coreGraceTimer <= 0) {
@@ -583,7 +583,7 @@ window.Stage4 = {
       ]);
       Systems.addScore(state, 40000, 198, 260, "🌸SEAL BROKEN! PHASE 2!");
       Systems.dropReward(state, "major", { x: 198, y: 295 });
-      UI.showCutin("💥【印ガード崩壊 ＆ 風魔大車輪・幻影分身展開！】💥<br>ランプ入口ラインを横断する風魔大車輪の隙を突いて胸部忍装束を破れ！", 220);
+      UI.showCutin(t("stage4.cutin.phase1Clear"), 220);
       UI.updateHUD(state);
     }
   },
@@ -616,7 +616,7 @@ window.Stage4 = {
     Particles.triggerArmorBreakEffect(state, "chest", 198, 260);
     Systems.addScore(state, 60000, 198, 260, "🌸SHINOBI SUIT PURGED!!");
     Systems.dropReward(state, "major", { x: 198, y: 268 });
-    UI.showCutin("🌸【忍装束パージ ＆ 変わり身結界展開！！】🌸<br>「くっ…晒し姿まで…！ 分身を倒さない限りチャクラ核には触れさせないわ！」", 240);
+    UI.showCutin(t("stage4.cutin.phase2Clear"), 240);
     UI.updateHUD(state);
   },
 
@@ -632,7 +632,7 @@ window.Stage4 = {
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
     if (window.sfx) window.sfx.burstTrigger();
     Systems.addScore(state, 160000, 198, 225, "🌸STAGE 4 CLEAR!!🌸");
-    UI.showCutin("🌸【電脳夜桜カスミ 完全撃破！！】🌸<br>「お見事…参りました…っ！」", 260);
+    UI.showCutin(t("stage4.cutin.criticalKO"), 260);
     UI.updateHUD(state);
   }
 };

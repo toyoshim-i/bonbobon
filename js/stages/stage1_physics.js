@@ -9,8 +9,8 @@ Object.assign(window.Stage1, {
     // クリア演出進行
     if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
       StageCommon.updateClearSequence(state, {
-        bossDisplayName: "リリス (LILITH)",
-        defeatQuoteHtml: "「う、嘘でしょ……あたしの桃色装甲が……全パージされちゃうなんてぇ……っ！」",
+        bossDisplayName: t("stage1.bossName"),
+        defeatQuoteHtml: t("stage1.defeatQuote"),
         explosionOrigin: { x: 198, y: 307 },
         smokeColors: ["#ff66b2", "#b84dff", "#e6e0f8", "#ffffff"]
       });
@@ -141,7 +141,7 @@ Object.assign(window.Stage1, {
                 { expr: "shout", frames: 28 },
                 { expr: "open_blush", frames: 70 }
               ]);
-              UI.showCutin("💥【胸部装甲パージ！】💥<br>左右排気口破壊により装甲強制パージ！<br>秘密のグラビティコア起動！", 220);
+              UI.showCutin(t("stage1.cutin.ventPurge"), 220);
               Systems.addScore(state, 20000, 198, 353, "TORSO PURGED!!");
               Systems.dropReward(state, "major", 2);
               Systems.dropReward(state, "minor", 5);
@@ -149,11 +149,11 @@ Object.assign(window.Stage1, {
               if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
                 state.boss.allArmorsPurged = true;
                 Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
-                UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+                UI.showCutin(t("stage1.cutin.allPurge"), 260);
                 Systems.startFeverMode(state);
               }
             } else if (v.hp === 0) {
-              UI.showCutin(`⚠️【${sideLabel}排気口破壊！】⚠️<br>胸部オーバーヒート！ 逆側を狙え！`, 160);
+              UI.showCutin(t("stage1.cutin.ventOne", { side: t(`stage1.side.${sideLabel === "左" ? "L" : "R"}`) }), 160);
               Particles.triggerArmorBreakEffect(state, "chest", v.x, v.y);
             }
           }
@@ -186,7 +186,7 @@ Object.assign(window.Stage1, {
             Particles.triggerArmorBreakEffect(state, "chest", hit.cx, hit.cy);
             state.boss.expression = "blush";
             state.boss.expressionTimer = 85;
-            UI.showCutin("💥【胴体装甲パージ！】💥<br>胸部装甲完全パージ！<br>秘密のグラビティコア起動！", 220);
+            UI.showCutin(t("stage1.cutin.chestPurge"), 220);
             Systems.addScore(state, 18000, hit.cx, hit.cy, "TORSO PURGED!!");
             Systems.dropReward(state, "major", 2);
             Systems.dropReward(state, "minor", 5);
@@ -194,7 +194,7 @@ Object.assign(window.Stage1, {
             if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
               state.boss.allArmorsPurged = true;
               Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
-              UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+              UI.showCutin(t("stage1.cutin.allPurge"), 260);
               Systems.startFeverMode(state);
             }
           } else {
@@ -281,7 +281,7 @@ Object.assign(window.Stage1, {
             if (window.sfx) window.sfx.armorBreak();
             Particles.add(state, d.x, d.y, "#ff1493", 22, 6.0);
             Systems.addScore(state, 6000, d.x, d.y - 15, `💥${tag} DESTROYED!`);
-            UI.showCutin(`💥【${tag} 撃破】<br>肩アーマーの電磁シールドが解除！`, 160);
+            UI.showCutin(t("stage1.cutin.droneKill", { tag }), 160);
             Systems.dropReward(state, "major", which === "L" ? 0 : 1);
             state.baseMultiplier += 0.25;
             this.checkPhase1Clear(state);
@@ -323,18 +323,18 @@ Object.assign(window.Stage1, {
         if (state.skillShotEligible) {
           state.skillShotEligible = false;
           Systems.addScore(state, 25000, hit.qx, hit.qy, "★SKILL SHOT!!");
-          UI.showCutin("🎯【SKILL SHOT 炸裂】<br>垂れ耳クッションキャッチ！<br>+25,000pts ＆ レアカプセル！", 180);
+          UI.showCutin(t("stage1.cutin.skillShot"), 180);
           Systems.dropReward(state, "rare", 2);
         } else {
           Systems.addScore(state, 2000, hit.qx, hit.qy, "🐰FUNYON DAMP!");
-          Particles.addPopup(state, hit.qx, hit.qy - 18, "🐰ふにょん (SPEED DAMP)", "#e6ff00", 1.0);
+          Particles.addPopup(state, hit.qx, hit.qy - 18, t("stage1.popup.earDamp"), "#e6ff00", 1.0);
         }
 
         const litKey = which === "L" ? "leftEarLit" : "rightEarLit";
         state.boss[litKey] = true;
         if (state.boss.leftEarLit && state.boss.rightEarLit) {
           state.boss.coreUnlocked = true;
-          UI.showCutin("🔓【両耳センサー達成】<br>胸部コアのロックが一時解除！", 180);
+          UI.showCutin(t("stage1.cutin.earUnlock"), 180);
         }
         UI.updateHUD(state);
       }
@@ -342,9 +342,9 @@ Object.assign(window.Stage1, {
 
     // 4. Arm / Shoulder Armor Clusters (Right Arm = Left Screen, Left Arm = Right Screen)
     [
-      { pod: state.boss.podL, which: "L", armKey: "armR", label: "右手装甲", tag: "R-ARM" },
-      { pod: state.boss.podR, which: "R", armKey: "armL", label: "左手装甲", tag: "L-ARM" }
-    ].forEach(({ pod, which, armKey, label, tag }) => {
+      { pod: state.boss.podL, which: "L", armKey: "armR", labelKey: "stage1.armRLabel", tag: "R-ARM" },
+      { pod: state.boss.podR, which: "R", armKey: "armL", labelKey: "stage1.armLLabel", tag: "L-ARM" }
+    ].forEach(({ pod, which, armKey, labelKey, tag }) => {
       checkBumper(pod, 8.2, () => {
         const hpKey = `${armKey}_HP`;
         const brokenKey = `${armKey}_Broken`;
@@ -355,7 +355,7 @@ Object.assign(window.Stage1, {
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, pod.x, pod.y, "#00f5d4", 16, 4.5);
           Systems.addScore(state, 500, pod.x, pod.y - 12, "🛡️SHIELDED!");
-          Particles.addPopup(state, pod.x, pod.y - 15, `先に${which}-DRONEを倒せ!`, "#00f5d4", 0.95);
+          Particles.addPopup(state, pod.x, pod.y - 15, t("stage1.popup.droneFirst", { which }), "#00f5d4", 0.95);
         } else {
           if (!state.boss[brokenKey] && state.boss[hpKey] > 0) {
             state.boss[hpKey]--;
@@ -370,7 +370,7 @@ Object.assign(window.Stage1, {
               state.boss.expression = "shock";
               state.boss.expressionTimer = 65;
               Systems.addScore(state, 12000, pod.x, pod.y, `💥${tag} PURGED!!`);
-              UI.showCutin(`💥【${label}パージ！】💥<br>${tag} ARMOR SHATTERED!<br>⚡素肌露出＆EX-BOUNCE活性化！`, 200);
+              UI.showCutin(t("stage1.cutin.armPurge", { label: t(labelKey), tag }), 200);
               Systems.dropReward(state, "rare", which === "L" ? 3 : 4);
               this.checkPhase1Clear(state);
 
@@ -378,7 +378,7 @@ Object.assign(window.Stage1, {
               if (state.boss.armR_Broken && state.boss.armL_Broken && state.boss.chestArmorBroken && !state.boss.allArmorsPurged) {
                 state.boss.allArmorsPurged = true;
                 Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
-                UI.showCutin("✨【全装甲パージ達成！！】✨<br>完全脱衣ボーナス ＋40,000pts！<br>全開フィーバー突入！", 260);
+                UI.showCutin(t("stage1.cutin.allPurge"), 260);
                 Systems.startFeverMode(state);
               }
             } else {
@@ -412,7 +412,7 @@ Object.assign(window.Stage1, {
           if (hip.hp === 0) {
             Particles.triggerArmorBreakEffect(state, side === "L" ? "shoulder_l" : "shoulder_r", hip.x, hip.y);
             Systems.addScore(state, 8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
-            UI.showCutin(`💥【${side === "L" ? "左" : "右"}腰ユニット過熱】<br>冷却系ダウン！ スコア倍率UP！`, 160);
+            UI.showCutin(t("stage1.cutin.hipHeat", { side: t(`stage1.side.${side}`) }), 160);
             state.baseMultiplier += 0.5;
             Systems.addFever(state, 15);
           }
@@ -498,7 +498,7 @@ Object.assign(window.Stage1, {
 
             if (crotch.charge < crotch.maxCharge) {
               Systems.addScore(state, 5000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY TRAP ${crotch.charge}/${crotch.maxCharge}`);
-              Particles.addPopup(state, crotch.x, crotch.y - 30, "「あっ……吸い付いちゃった……！？ 早く落としてよっ」", "#ff66b2", 1.05);
+              Particles.addPopup(state, crotch.x, crotch.y - 30, t("stage1.popup.crotchTrap"), "#ff66b2", 1.05);
             } else {
               crotch.charge = 0;
               crotch.cooldown = 60 * 18;
@@ -507,8 +507,8 @@ Object.assign(window.Stage1, {
                 window.sfx.exSpark();
               }
               Systems.addScore(state, 30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
-              Particles.addPopup(state, crotch.x, crotch.y - 35, "「きゃあああっ！？ 重力場が反転しちゃう……っ！！」", "#e6ff00", 1.3);
-              UI.showCutin("🌀【GRAVITY OVERLOAD!!】🌀<br>重力特異点崩壊！<br>秘密のマルチボール＆全開フィーバー！", 220);
+              Particles.addPopup(state, crotch.x, crotch.y - 35, t("stage1.popup.crotchOverload"), "#e6ff00", 1.3);
+              UI.showCutin(t("stage1.cutin.gravityOverload"), 220);
 
               ball.crotchHitTimer = 45;
               ball.vy = -8.5;
@@ -560,7 +560,7 @@ Object.assign(window.Stage1, {
       if (window.sfx) window.sfx.burstTrigger();
       state.boss.expression = "shock";
       state.boss.expressionTimer = 90;
-      UI.showCutin("🎉【PHASE 1 突破】外装防衛網壊滅！<br>胸部装甲＆秘密のグラビティコア露出！", 240);
+      UI.showCutin(t("stage1.cutin.phase1Clear"), 240);
       Systems.dropReward(state, "rare", 2);
     }
   },
@@ -574,7 +574,7 @@ Object.assign(window.Stage1, {
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
 
     if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
-    UI.showCutin("💥【CRITICAL K.O.】💥<br>機体制御崩壊！ 装甲強制パージ！", 180);
+    UI.showCutin(t("stage1.cutin.criticalKO"), 180);
     Particles.add(state, 198, 307, "#ffffff", 60, 9.5);
     Particles.add(state, 198, 307, "#ff1493", 60, 8.0);
     Particles.add(state, 198, 307, "#e6ff00", 60, 8.0);

@@ -653,7 +653,7 @@ Object.assign(window.Stage4, {
     // 6. Phase 3: 首元の羽衣チャクラ核 ＆ 頭頂水引クリティカルサブコア
     if (state.phase >= 3 && b.core.unlocked) {
       if (this.isCoreShieldedByBunshin(state)) {
-        drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "CHAKRA CORE", "🛡️分身結界", { isLocked: true });
+        drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "CHAKRA CORE", t("stage4.render.barrier"), { isLocked: true });
       } else {
         drawGuide(b.core.x, b.core.y, b.core.r, TC.ATTACK, b.core.flash, animTick * 0.045, "★CHAKRA CORE★", `HP:${b.core.hp}/${b.core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
         drawGuide(b.hairpinCore.x, b.hairpinCore.y, b.hairpinCore.r, TC.ATTACK, b.hairpinCore.flash, -animTick * 0.045, "KAMI-KAZARI", "CRIT ×2!", { isCritical: true, innerColor: TC.SCORE });
@@ -786,7 +786,7 @@ Object.assign(window.Stage4, {
       ctx.fillStyle = "#e6ff00";
       ctx.font = "bold 8px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(`丸太×${b.subLogHP}`, 198, 631);
+      ctx.fillText(t("stage4.render.log", { hp: b.subLogHP }), 198, 631);
       ctx.restore();
     }
   },
@@ -862,9 +862,9 @@ Object.assign(window.Stage4, {
       ctx.textAlign = "center";
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 2.5;
-      ctx.strokeText(`連打×${count}`, mx, my - 17);
+      ctx.strokeText(t("stage4.render.mash", { count }), mx, my - 17);
       ctx.fillStyle = "#e6ff00";
-      ctx.fillText(`連打×${count}`, mx, my - 17);
+      ctx.fillText(t("stage4.render.mash", { count }), mx, my - 17);
       ctx.restore();
     });
 

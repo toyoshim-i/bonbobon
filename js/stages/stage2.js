@@ -4,8 +4,8 @@
 
 window.Stage2 = {
   id: "stage2",
-  name: "疾風紫電セルティ",
-  bossName: "セルティ (CELTY)",
+  get name() { return t("stage2.name"); },
+  get bossName() { return t("stage2.bossName"); },
   // 左足付け根装甲のお尻揺れ追従率。装甲は太もも（揺れない部位）に付いているので 0 で固定。
   // 0 以外にすると、スプライトの移動で下地の原画に残る装甲輪郭がはみ出し、黒い隙間として見える。
   HIP_FOLLOW: 0,
@@ -314,39 +314,39 @@ window.Stage2 = {
   getTargetDesc(state) {
     if (!state.boss) return "---";
     if (state.stageCleared) {
-      return "✨セルティ撃破！ STAGE 2 CLEAR!";
+      return t("stage2.obj.clear");
     }
 
     if (state.phase === 3) {
-      return `リアクターコアを直撃せよ！(HP:${state.boss.core.hp})`;
+      return t("stage2.obj.core", { hp: state.boss.core.hp });
     }
 
     if (state.phase === 2) {
       const holo = state.boss.hologram;
       if (holo && holo.laserState === "charge") {
-        return holo.isLocked ? "⚠️ロックオン！緊急回避せよ！" : "⚠️砲台追尾中！動き続けろ！";
+        return holo.isLocked ? t("stage2.obj.locked") : t("stage2.obj.tracking");
       }
-      return "砲台・ノズル・胸先端を破壊せよ！";
+      return t("stage2.obj.phase2");
     }
 
     // Phase 1
     const ant = state.boss.antenna;
     if (ant && ant.isActive) {
-      return "⚡放電の隙を突いて上へ抜けろ！";
+      return t("stage2.obj.discharge");
     }
-    return "左肩・両腕・アンテナを破壊せよ！";
+    return t("stage2.obj.phase1");
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
 
-    UI.setBossHeader("#00f5d4", "TYPE-CERTI (セルティ)");
-    UI.setText("targetBriefingText", "「あたしのサイバー防衛網を突破できると思ってるの？……って、なによ今のイレギュラーバウンドは……っ！」");
+    UI.setBossHeader("#00f5d4", t("stage2.header"));
+    UI.setText("targetBriefingText", t("stage2.briefing"));
 
-    UI.setText("dtArmRLabel", "右腕関節(R-ELBOW):");
-    UI.setText("dtArmLLabel", "左肩＆肘(L-ARM/SH):");
-    UI.setText("dtChestLabel", "胸部＆コア(BUST/CORE):");
-    UI.setText("dtCrotchLabel", "ホロ砲台(HOLO CANNON):");
+    UI.setText("dtArmRLabel", t("stage2.dt.armR"));
+    UI.setText("dtArmLLabel", t("stage2.dt.armL"));
+    UI.setText("dtChestLabel", t("stage2.dt.chest"));
+    UI.setText("dtCrotchLabel", t("stage2.dt.crotch"));
 
     const elbR = state.boss.elbowR;
     if (elbR) {
@@ -386,15 +386,15 @@ window.Stage2 = {
     }
 
     const faceMap = {
-      normal: "疾風の紫電（余裕）",
-      wink: "☆放電ウインク☆",
-      shock: "⚡焦りショック!?",
-      wince: "痛っ…負けないわ！",
-      shout: "⚡全出力プラズマ！",
-      open_blush: "♥赤面ハァハァ…♥",
-      talk: "通信交信中…",
-      talk_sm: "呼吸整え中…"
+      normal: t("stage2.face.normal"),
+      wink: t("stage2.face.wink"),
+      shock: t("stage2.face.shock"),
+      wince: t("stage2.face.wince"),
+      shout: t("stage2.face.shout"),
+      open_blush: t("stage2.face.open_blush"),
+      talk: t("stage2.face.talk"),
+      talk_sm: t("stage2.face.talk_sm")
     };
-    UI.setText("bossFaceStatus", faceMap[state.boss.expression] || "疾風の紫電（余裕）");
+    UI.setText("bossFaceStatus", faceMap[state.boss.expression] || t("stage2.face.normal"));
   }
 };

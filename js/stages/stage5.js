@@ -5,8 +5,8 @@
 
 window.Stage5 = {
   id: "stage5",
-  name: "電脳天界サンクチュアリ",
-  bossName: "エル＆ノエル ➔ 熾天使セラフィア",
+  get name() { return t("stage5.name"); },
+  get bossName() { return t("stage5.bossName"); },
 
   assets: {
     twinLIntactImg: new Image(),
@@ -265,50 +265,51 @@ window.Stage5 = {
 
   getTargetDesc(state) {
     const b = state.boss;
-    if (!b) return "双子天使を撃破せよ！";
-    if (state.stageCleared) return "✨セラフィア撃破！";
-    if (b.fusionSeq && b.fusionSeq.active) return "✨セラフィア降臨中！";
+    if (!b) return t("stage5.obj.default");
+    if (state.stageCleared) return t("stage5.obj.clear");
+    if (b.fusionSeq && b.fusionSeq.active) return t("stage5.obj.fusion");
+    if ((state.flipperReverseTimer || 0) > 0) return t("stage5.obj.reverse");
 
     if (state.phase < 3) {
       if (!b.elleBroken && !b.noelBroken) {
-        return "光輪・髪飾り・膝を破壊せよ！";
+        return t("stage5.obj.p1Both");
       }
       if (b.elleBroken && !b.noelBroken) {
-        return b.prismL.hp > 0 ? "エル胸核＆ノエル装備を破壊せよ！" : "ノエルの装備を破壊せよ！";
+        return b.prismL.hp > 0 ? t("stage5.obj.p1LPrism") : t("stage5.obj.p1Noel");
       }
       if (!b.elleBroken && b.noelBroken) {
-        return b.prismR.hp > 0 ? "ノエル胸核＆エル装備を破壊せよ！" : "エルの装備を破壊せよ！";
+        return b.prismR.hp > 0 ? t("stage5.obj.p1RPrism") : t("stage5.obj.p1Elle");
       }
-      return "胸部ブローチを破壊せよ！";
+      return t("stage5.obj.p1Brooch");
     }
     // Phase 3
     if (!b.chestArmorBroken) {
-      return `胸部装甲を破壊せよ！(HP:${b.chestArmorHP})`;
+      return t("stage5.obj.p2", { hp: b.chestArmorHP });
     }
     const orbs = b.cherubOrbs.filter(o => o.active).length;
     if (orbs > 0 || b.coreGraceTimer > 0) {
-      return `精霊オーブを倒し結界を解除せよ！`;
+      return t("stage5.obj.p3Orbs");
     }
-    return `アーク核を撃破せよ！(HP:${b.core.hp})`;
+    return t("stage5.obj.p3Core", { hp: b.core.hp });
   },
 
   updateStatusMonitor(state) {
     if (!state.boss) return;
     const b = state.boss;
 
-    UI.setBossHeader("#e6ff00", state.phase === 3 ? "SERAPHIA (熾天使セラフィア)" : "ELLE & NOEL (双子天使)");
+    UI.setBossHeader("#e6ff00", state.phase === 3 ? t("stage5.headerSeraphia") : t("stage5.headerTwins"));
 
     if (state.phase === 1) {
-      UI.setText("targetBriefingText", "「私たちの天界光輪・髪飾り・膝装甲を狙ってみて！ 交互に当てるとシンクロ崩壊よ！」");
-      UI.setText("dtArmLLabel", "左天使エル (L-TWIN):");
-      UI.setText("dtArmRLabel", "右天使ノエル (R-TWIN):");
-      UI.setText("dtChestLabel", "合体ロック:");
-      UI.setText("dtCrotchLabel", "宇宙事象 / 光輪攻撃:");
+      UI.setText("targetBriefingText", t("stage5.briefing.p1"));
+      UI.setText("dtArmLLabel", t("stage5.dt.p1L"));
+      UI.setText("dtArmRLabel", t("stage5.dt.p1R"));
+      UI.setText("dtChestLabel", t("stage5.dt.p1Chest"));
+      UI.setText("dtCrotchLabel", t("stage5.dt.p1Crotch"));
 
       const lRemain = (!b.haloL.broken ? 1 : 0) + (!b.odangoL.broken ? 1 : 0) + (!b.kneeL.broken ? 1 : 0);
       const rRemain = (!b.haloR.broken ? 1 : 0) + (!b.antennaR.broken ? 1 : 0) + (!b.kneeR.broken ? 1 : 0);
-      const lStatus = b.elleBroken ? "💥BROKEN!" : `装備残:${lRemain}/3`;
-      const rStatus = b.noelBroken ? "💥BROKEN!" : `装備残:${rRemain}/3`;
+      const lStatus = b.elleBroken ? "💥BROKEN!" : t("stage5.dt.remain", { remain: lRemain });
+      const rStatus = b.noelBroken ? "💥BROKEN!" : t("stage5.dt.remain", { remain: rRemain });
       UI.setText("dtArmLStatus", lStatus);
       UI.setClass("dtArmLStatus", b.elleBroken ? "font-bold text-[#ff1493]" : "font-bold text-[#ff2ad4]");
       UI.setText("dtArmRStatus", rStatus);
@@ -316,11 +317,11 @@ window.Stage5 = {
       UI.setText("dtChestStatus", "🔒FUSED LOCK");
       UI.setClass("dtChestStatus", "font-bold text-gray-400");
     } else if (state.phase === 2) {
-      UI.setText("targetBriefingText", "「へそシンクロ光線が過負荷を起こしてる…！ 胸のブローチを狙わないで！」");
-      UI.setText("dtArmLLabel", "エル・ブローチ:");
-      UI.setText("dtArmRLabel", "ノエル・ブローチ:");
-      UI.setText("dtChestLabel", "テザー過負荷:");
-      UI.setText("dtCrotchLabel", "宇宙事象 / 光輪攻撃:");
+      UI.setText("targetBriefingText", t("stage5.briefing.p2"));
+      UI.setText("dtArmLLabel", t("stage5.dt.p2L"));
+      UI.setText("dtArmRLabel", t("stage5.dt.p2R"));
+      UI.setText("dtChestLabel", t("stage5.dt.p2Chest"));
+      UI.setText("dtCrotchLabel", t("stage5.dt.p2Crotch"));
 
       UI.setText("dtArmLStatus", b.prismL.hp <= 0 ? "💥BROOCH DOWN" : `HP: ${b.prismL.hp}/4`);
       UI.setClass("dtArmLStatus", b.prismL.hp <= 0 ? "font-bold text-gray-400" : "font-bold text-[#ff2ad4] animate-pulse");
@@ -329,11 +330,11 @@ window.Stage5 = {
       UI.setText("dtChestStatus", "⚡TETHER OVERLOAD");
       UI.setClass("dtChestStatus", "font-bold text-[#e6ff00] animate-pulse");
     } else {
-      UI.setText("targetBriefingText", "「双子を超越せし神聖なる熾天使の前に跪きなさい！ アーク・コアには触れさせません！」");
-      UI.setText("dtArmLLabel", "精霊オーブ-L:");
-      UI.setText("dtArmRLabel", "精霊オーブ-R:");
-      UI.setText("dtChestLabel", "胸部装甲 / コア:");
-      UI.setText("dtCrotchLabel", "パドル状態:");
+      UI.setText("targetBriefingText", t("stage5.briefing.p3"));
+      UI.setText("dtArmLLabel", t("stage5.dt.p3L"));
+      UI.setText("dtArmRLabel", t("stage5.dt.p3R"));
+      UI.setText("dtChestLabel", t("stage5.dt.p3Chest"));
+      UI.setText("dtCrotchLabel", t("stage5.dt.p3Crotch"));
 
       UI.setText("dtArmLStatus", b.cherubOrbs[0].active ? `ORB-L (${b.cherubOrbs[0].hp}/3)` : "💥DOWN");
       UI.setClass("dtArmLStatus", b.cherubOrbs[0].active ? "font-bold text-[#ff2ad4] animate-pulse" : "font-bold text-gray-400");
@@ -357,16 +358,16 @@ window.Stage5 = {
 
     if ((state.flipperReverseTimer || 0) > 0) {
       const secLeft = (state.flipperReverseTimer / 60).toFixed(1);
-      UI.setText("dtCrotchStatus", `🔄LR反転中 (${secLeft}s)`);
+      UI.setText("dtCrotchStatus", t("stage5.dt.reverse", { sec: secLeft }));
       UI.setClass("dtCrotchStatus", "font-bold text-[#ff1493] animate-pulse");
     } else if (b.cosmic.mode === "gamma_fire") {
-      UI.setText("dtCrotchStatus", "💥ガンマ線バースト発射中!!");
+      UI.setText("dtCrotchStatus", t("stage5.dt.gamma"));
       UI.setClass("dtCrotchStatus", "font-bold text-[#e6ff00] animate-pulse");
     } else if (b.cosmic.mode === "bh_active") {
-      UI.setText("dtCrotchStatus", "🕳️特異点重力発生中!!");
+      UI.setText("dtCrotchStatus", t("stage5.dt.singularity"));
       UI.setClass("dtCrotchStatus", "font-bold text-[#b84dff] animate-pulse");
     } else if (b.haloAttack.mode === "charging") {
-      UI.setText("dtCrotchStatus", "⚡光輪投擲照準中!!");
+      UI.setText("dtCrotchStatus", t("stage5.dt.haloAim"));
       UI.setClass("dtCrotchStatus", "font-bold text-[#00f5e8] animate-pulse");
     } else {
       UI.setText("dtCrotchStatus", "NORMAL");
@@ -378,14 +379,14 @@ window.Stage5 = {
     UI.setWidth("blushGaugeBar", `${blushVal}%`);
 
     const faceMap = {
-      normal: b.chestArmorBroken ? "神聖なる羞恥" : "威厳ある微笑み",
-      wink: "✨天界のウインク✨",
-      shock: "！神聖領域侵犯…っ！？",
-      wince: "くぅっ…！アーク・コアが…！",
-      shout: "神罰の光輪よ、彼らを裁け！",
-      open_blush: "♥恥ずかしい…見ないで…♥",
-      talk: "聖域の啓示を告げる…",
-      talk_sm: "調和を司る…"
+      normal: b.chestArmorBroken ? t("stage5.face.normalBroken") : t("stage5.face.normalArmor"),
+      wink: t("stage5.face.wink"),
+      shock: t("stage5.face.shock"),
+      wince: t("stage5.face.wince"),
+      shout: t("stage5.face.shout"),
+      open_blush: t("stage5.face.open_blush"),
+      talk: t("stage5.face.talk"),
+      talk_sm: t("stage5.face.talk_sm")
     };
     UI.setText("bossFaceStatus", faceMap[b.expression] || faceMap.normal);
   },
@@ -502,7 +503,7 @@ window.Stage5 = {
     b.hipL.vx = -5;
     b.hipR.vx = 5;
     if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
-    UI.showCutin("⚠️【へそ重力捕獲 ➔ 股間ゲート開放！】<br>真下へ高速排出！台揺らし(NUDGE)で回避せよ！", 95);
+    UI.showCutin(t("stage5.cutin.navelTrap"), 95);
   },
 
   getActiveBossTarget(state) {
@@ -585,7 +586,7 @@ window.Stage5 = {
             if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
             if (b.cherubOrbs.every(o => !o.active)) {
               b.orbCooldown = 480;
-              Particles.addPopup(state, b.core.x, b.core.y - 16, "💥結界解除! CORE OPEN!!", "#e6ff00", 1.15);
+              Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage5.popup.coreOpen"), "#e6ff00", 1.15);
             }
           }
         } else if (b.coreGraceTimer <= 0) {
@@ -634,10 +635,10 @@ window.Stage5 = {
         this.triggerSeraphFusion(state);
       }
     } else if (newlyBrokenL) {
-      UI.showCutin("💥【エル軽ブレイク！】<br>エルのハイタッチ解除＆胸プリズム露出！", 175);
+      UI.showCutin(t("stage5.cutin.elleBreak"), 175);
       Systems.addScore(state, 25000, b.prismL.x, b.prismL.y, "💥ELLE BREAK!!");
     } else if (newlyBrokenR) {
-      UI.showCutin("💥【ノエル軽ブレイク！】<br>ノエルのハイタッチ解除＆胸プリズム露出！", 175);
+      UI.showCutin(t("stage5.cutin.noelBreak"), 175);
       Systems.addScore(state, 25000, b.prismR.x, b.prismR.y, "💥NOEL BREAK!!");
     }
   },
@@ -652,7 +653,7 @@ window.Stage5 = {
       Particles.add(state, 198 + (Math.random() - 0.5) * 160, 250 + (Math.random() - 0.5) * 160, Math.random() < 0.5 ? "#ff2ad4" : "#00f5e8", 3, 4.0);
     }
     if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
-    UI.showCutin("💥【双子ともブレイク完了！】<br>残る胸プリズムを撃破せよ！", 190);
+    UI.showCutin(t("stage5.cutin.twinsBreak"), 190);
     Systems.addScore(state, 40000, 198, 250, "💥BOTH TWINS BROKEN!");
     Systems.dropReward(state, "major", { x: 198, y: 250 });
     UI.updateHUD(state);
@@ -673,7 +674,7 @@ window.Stage5 = {
     });
 
     if (window.sfx && window.sfx.seraphFusion) window.sfx.seraphFusion();
-    UI.showCutin("✨【超次元合体シークエンス】<br>エル＆ノエル天界昇華 ➔ 熾天使セラフィア降臨！！", 195);
+    UI.showCutin(t("stage5.cutin.fusion"), 195);
     UI.updateHUD(state);
   },
 
@@ -691,7 +692,7 @@ window.Stage5 = {
 
     Particles.triggerArmorBreakEffect(state, "chest", 198, 208);
     if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
-    UI.showCutin("💖【熾天使装甲ブレイク！】💖<br>「くっ…聖なる衣が…！ 精霊オーブよ、結界を張りなさい！」", 220);
+    UI.showCutin(t("stage5.cutin.seraphiaArmor"), 220);
     Systems.addScore(state, 100000, 198, 208, "💖ARMOR PURGED!!");
     Systems.dropReward(state, "major", { x: 198, y: 208 });
     StageCommon.setExpressionSequence(state, [
@@ -712,7 +713,7 @@ window.Stage5 = {
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
     if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
     Systems.addScore(state, 200000, 198, 225, "✨STAGE 5 ALL CLEAR!!✨");
-    UI.showCutin("✨【熾天使セラフィア 完全解脱！！】✨<br>「我が聖域の理を破るとは…人の子の光、見届けました…！」", 260);
+    UI.showCutin(t("stage5.cutin.seraphiaClear"), 260);
     UI.updateHUD(state);
   }
 };

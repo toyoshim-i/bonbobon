@@ -83,8 +83,8 @@ window.Physics = {
   _cpWall: { x: 0, y: 0, t: 0 },
   _cpFlipper: { x: 0, y: 0, t: 0 },
   KICKBACK_DEFS: [
-    { permKey: "kickbackL", chargeKey: "kickbackL_charges", minX: 14, maxX: 52, vx: 4.2, fxX: 33, checkLane: false, label: "⚡L-LASER SAVE!", cutin: "🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！" },
-    { permKey: "kickbackR", chargeKey: "kickbackR_charges", minX: 344, maxX: 382, vx: -4.2, fxX: 363, checkLane: true, label: "⚡R-LASER SAVE!", cutin: "🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！" }
+    { permKey: "kickbackL", chargeKey: "kickbackL_charges", minX: 14, maxX: 52, vx: 4.2, fxX: 33, checkLane: false, label: "⚡L-LASER SAVE!", cutinKey: "physics.kickbackL.cutin" },
+    { permKey: "kickbackR", chargeKey: "kickbackR_charges", minX: 344, maxX: 382, vx: -4.2, fxX: 363, checkLane: true, label: "⚡R-LASER SAVE!", cutinKey: "physics.kickbackR.cutin" }
   ],
 
   closestPointOnSeg(px, py, x1, y1, x2, y2, out = null) {
@@ -156,13 +156,13 @@ window.Physics = {
             if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
             if (window.Particles) {
               Particles.add(state, mx, my, "#e6ff00", 16, 4.8);
-              Particles.addPopup(state, mx, my - 16, "⚔️拘束解除!!", "#00f5d4", 1.1);
+              Particles.addPopup(state, mx, my - 16, t("physics.pinRelease"), "#00f5d4", 1.1);
             }
           } else {
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
             if (window.Particles) {
               Particles.add(state, mx, my, "#b84dff", 5, 2.4);
-              Particles.addPopup(state, mx, my - 14, `📌あと${state[pinKey]}回!`, "#e6ff00", 0.92);
+              Particles.addPopup(state, mx, my - 14, t("physics.pinRemain", { count: state[pinKey] }), "#e6ff00", 0.92);
             }
           }
         }
@@ -504,7 +504,7 @@ window.Physics = {
             Particles.addPopup(state, px, py - 15, "GUARD BROKEN!", "#ff1493", 1.1);
             if (window.sfx) window.sfx.armorBreak();
           } else {
-            Particles.addPopup(state, px, py - 15, `SAVE! 残りHP:${state.perm.centerPostHP}`, "#00f5d4", 0.95);
+            Particles.addPopup(state, px, py - 15, t("physics.centerPostSave", { hp: state.perm.centerPostHP }), "#00f5d4", 0.95);
           }
         }
       }
@@ -522,7 +522,7 @@ window.Physics = {
           Particles.add(state, kb.fxX, 560, "#00f5d4", 18, 5.0);
           Particles.add(state, kb.fxX, 560, "#e6ff00", 12, 4.0);
           if (window.Systems) window.Systems.addScore(state, this.BALANCE.KICKBACK_SAVE_SCORE, kb.fxX, 540, kb.label);
-          if (window.UI) window.UI.showCutin(kb.cutin, 90);
+          if (window.UI) window.UI.showCutin(t(kb.cutinKey), 90);
         }
       }
     }

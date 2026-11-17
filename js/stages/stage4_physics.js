@@ -19,8 +19,8 @@ Object.assign(window.Stage4, {
     // クリア演出進行
     if (state.stageCleared && state.clearSequence && state.clearSequence.active) {
       StageCommon.updateClearSequence(state, {
-        bossDisplayName: "カスミ (KASUMI)",
-        defeatQuoteHtml: "「くっ……忍びの装束も秘術も見破られるなんて……！<br>お、お見事……参りました……っ！」",
+        bossDisplayName: t("stage4.bossName"),
+        defeatQuoteHtml: t("stage4.defeatQuote"),
         smokeColors: ["#ffb7dd", "#00f5d4", "#b84dff", "#ff2a9d"]
       });
       return;
@@ -313,7 +313,7 @@ Object.assign(window.Stage4, {
               fst.pinShake = 10;
               if (window.sfx) window.sfx.metalBumper();
               Particles.add(state, cp.x, cp.y, "#b84dff", 14, 3.8);
-              Particles.addPopup(state, cp.x, cp.y - 16, "📌拘束! 5回ガチャで解除!", "#ff2a9d", 0.96);
+              Particles.addPopup(state, cp.x, cp.y - 16, t("stage4.popup.pinTrap"), "#ff2a9d", 0.96);
               nj.thrownShurikens.splice(i, 1);
             }
             break;
@@ -426,7 +426,7 @@ Object.assign(window.Stage4, {
           Systems.addFever(state, 10);
           if (state.phase === 3 && b.ninjutsu.clones.every(c => !c.active)) {
             b.ninjutsu.cloneCooldown = 480;
-            Particles.addPopup(state, b.core.x, b.core.y - 16, "💥結界解除! CORE OPEN!!", "#e6ff00", 1.15);
+            Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
           }
           if (b.lastFlipActiveTimer > 0) {
             b.ninjutsu.thrownShurikens.push({
@@ -629,7 +629,7 @@ Object.assign(window.Stage4, {
         }
       } else {
         if (window.sfx) window.sfx.slingshot();
-        const msg = state.phase >= 3 ? "🛡️分身結界！分身を倒せ！" : "🔒CHAKRA BARRIER";
+        const msg = state.phase >= 3 ? t("stage4.popup.cloneBarrier") : "🔒CHAKRA BARRIER";
         Systems.addScore(state, 2200, b.core.x, b.core.y - 12, msg);
       }
       UI.updateHUD(state);
@@ -647,14 +647,14 @@ Object.assign(window.Stage4, {
         if (window.sfx) window.sfx.exSpark();
         state.shockwaves.push({ x: b.hairpinCore.x, y: b.hairpinCore.y, r: 8, maxR: 60, speed: 4.5, color: "#e6ff00", lineWidth: 3.2, alpha: 1.0 });
         Particles.add(state, b.hairpinCore.x, b.hairpinCore.y, "#e6ff00", 22, 5.8);
-        Systems.addScore(state, 18000, b.hairpinCore.x, b.hairpinCore.y - 12, `⚡CRITICAL -2HP! (残${b.core.hp})`);
+        Systems.addScore(state, 18000, b.hairpinCore.x, b.hairpinCore.y - 12, t("stage4.popup.hairpinCrit", { hp: b.core.hp }));
         Systems.addFever(state, 10);
         if (b.core.hp <= 0) {
           this.triggerStageClear(state);
         }
       } else {
         if (window.sfx) window.sfx.metalBumper();
-        const msg = state.phase >= 3 ? "🛡️分身結界中！" : "✨KAMI-KAZARI BONUS!";
+        const msg = state.phase >= 3 ? t("stage4.popup.cloneBarrierShort") : "✨KAMI-KAZARI BONUS!";
         Systems.addScore(state, 4200, b.hairpinCore.x, b.hairpinCore.y - 10, msg);
         Systems.addFever(state, 4);
       }
@@ -671,7 +671,7 @@ Object.assign(window.Stage4, {
         b.sakuraStormTimer = Math.max(b.sakuraStormTimer, 90);
         if (window.sfx) window.sfx.armorBreak();
         Particles.add(state, 198, 612, "#ffb7dd", 18, 4.8);
-        Particles.addPopup(state, 198, 592, b.subLogHP > 0 ? `🪵KAWARIMI SAVE! (残${b.subLogHP})` : "🪵KAWARIMI VANISHED!", "#e6ff00", 1.05);
+        Particles.addPopup(state, 198, 592, b.subLogHP > 0 ? t("stage4.popup.kawarimiSave", { hp: b.subLogHP }) : "🪵KAWARIMI VANISHED!", "#e6ff00", 1.05);
       });
     }
   }

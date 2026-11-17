@@ -247,7 +247,8 @@ window.GameEngine = {
       this.state.relics[chosenRelic] = (this.state.relics[chosenRelic] || 0) + 1;
       this.state.selectedRelic = chosenRelic;
       if (chosenRelic === "radar") {
-        this.state.baseMultiplier = +(1.0 + (this.state.relics.radar || 0) * 0.25).toFixed(2);
+        const perStack = (window.Systems && Systems.BALANCE.RADAR_MULT_PER_STACK) || 0.25;
+        this.state.baseMultiplier = +(1.0 + (this.state.relics.radar || 0) * perStack).toFixed(2);
       }
     }
     const nextIdx = (this.state.stageIndex || 1) + 1;
@@ -280,7 +281,8 @@ window.GameEngine = {
     // Linear power based on charge duration / drag distance (respects slight taps)
     const currentPower = Math.max(3, this.state.plunger.power);
     const p = currentPower / 100;
-    const launchSpeed = 1.4 + p * 16.2;
+    const pb = Physics.BALANCE;
+    const launchSpeed = pb.PLUNGER_BASE_SPEED + p * pb.PLUNGER_MAX_ADD_SPEED;
 
     // Spring oscillation recoil impulse
     this.state.plunger.springVy = -p * 22;
@@ -311,7 +313,7 @@ window.GameEngine = {
         this.state.plunger.waitingForLaunch = false;
         if (this.state.boss) this.state.boss.winkTimer = 35;
 
-        if (p >= 0.70 && p <= 0.86) {
+        if (p >= pb.SKILL_SHOT_MIN_RATIO && p <= pb.SKILL_SHOT_MAX_RATIO) {
           this.state.skillShotEligible = true;
         }
       }
@@ -410,7 +412,8 @@ window.GameEngine = {
     // Fever Mode Timer
     if (state.fever.active) {
       state.fever.timer--;
-      state.fever.gauge = Math.max(0, (state.fever.timer / (60 * 18)) * 100);
+      const feverDur = (window.Systems && Systems.BALANCE.FEVER_DURATION_FRAMES) || (60 * 18);
+      state.fever.gauge = Math.max(0, (state.fever.timer / feverDur) * 100);
       if (state.fever.timer <= 0 || state.balls.length <= 1) {
         Systems.endFeverMode(state);
       }
@@ -422,8 +425,8 @@ window.GameEngine = {
     if (this.currentStage) this.currentStage.update(state, this);
     Physics.updateFlippers(state);
 
-    const SUBSTEPS = 6;
-    const gravity = 0.118 / SUBSTEPS;
+    const SUBSTEPS = Physics.BALANCE.SUBSTEPS;
+    const gravity = Physics.BALANCE.GRAVITY / SUBSTEPS;
 
     for (let s = 0; s < SUBSTEPS; s++) {
       for (let bi = state.balls.length - 1; bi >= 0; bi--) {
@@ -453,10 +456,10 @@ window.GameEngine = {
 
       if (isStuck) {
         ball.stuckTimer = (ball.stuckTimer || 0) + 1;
-        if (ball.stuckTimer >= 85 && (ball.stuckTimer - 85) % 180 === 0) {
+        if (ball.stuckTimer >= Physics.BALANCE.STUCK_REMIND_FRAMES && (ball.stuckTimer - Physics.BALANCE.STUCK_REMIND_FRAMES) % 180 === 0) {
           // Casual reminder to nudge the table if ball is stuck anywhere
           UI.showCutin("⚠️【ボール停滞中】<br>スワイプ または SPACE で台を揺らそう！", 120);
-        } else if (ball.stuckTimer > 360) {
+        } else if (ball.stuckTimer > Physics.BALANCE.STUCK_KICK_FRAMES) {
           // Machine auto-kick (Pinball Ball Search mechanism) to prevent deadlock
           ball.vy = -5.8;
           ball.vx = (Math.random() - 0.5) * 6.2;
@@ -481,7 +484,8 @@ window.GameEngine = {
           } else {
             // Sonic Ring-Scatter Survival!
             const stageNum = state.stageIndex || 1;
-            const loss = Math.min(state.score, Math.max(30000 * stageNum, Math.floor(state.score * 0.35)));
+            const bal = Systems.BALANCE;
+            const loss = Math.min(state.score, Math.max(bal.MISS_PENALTY_MIN_BASE * stageNum, Math.floor(state.score * bal.MISS_PENALTY_RATIO)));
             state.score = Math.max(0, state.score - loss);
             state.totalMisses = (state.totalMisses || 0) + 1;
             state.stageMisses = (state.stageMisses || 0) + 1;
@@ -492,7 +496,7 @@ window.GameEngine = {
             state.magnetActive = false;
             state.overdriveActive = false;
             if (state.fever) {
-              state.fever.gauge = Math.floor((state.fever.gauge || 0) * 0.5);
+              state.fever.gauge = Math.floor((state.fever.gauge || 0) * bal.MISS_FEVER_KEEP_RATIO);
             }
 
             // Degrade 1 highest-tier keptBuffs slot by 1 level

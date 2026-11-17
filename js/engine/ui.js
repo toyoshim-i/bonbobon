@@ -958,9 +958,10 @@ window.UI = {
 
   presentStageClearModal(state, cfg = {}) {
     const stageIdx = state.stageIndex || 1;
-    const clearBonus = 50000 * stageIdx;
+    const bal = (window.Systems && Systems.BALANCE) || {};
+    const clearBonus = (bal.CLEAR_BONUS_BASE ?? 50000) * stageIdx;
     const isNoMiss = (state.stageMisses || 0) === 0;
-    const noMissBonus = isNoMiss ? 100000 * stageIdx : 0;
+    const noMissBonus = isNoMiss ? (bal.NO_MISS_BONUS_BASE ?? 100000) * stageIdx : 0;
     const totalBonus = clearBonus + noMissBonus;
 
     if (!state._clearBonusAwarded) {

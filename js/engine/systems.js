@@ -3,6 +3,21 @@
 // =========================================================================
 
 window.Systems = {
+  // 全システム共通のゲームバランス定数（調整時の単一参照先）
+  BALANCE: {
+    FEVER_DURATION_FRAMES: 60 * 18,
+    FEVER_MULT: 5.0,
+    FEVER_TARGET_BALLS: 3,
+    BURST_DURATION_FRAMES: 60 * 10,
+    CAPSULE_LIFE_FRAMES: 960,
+    RADAR_MULT_PER_STACK: 0.25,
+    MISS_PENALTY_MIN_BASE: 30000,
+    MISS_PENALTY_RATIO: 0.35,
+    MISS_FEVER_KEEP_RATIO: 0.5,
+    CLEAR_BONUS_BASE: 50000,
+    NO_MISS_BONUS_BASE: 100000
+  },
+
   PERM_DEFS: {
     centerPost: {
       id: "centerPost",
@@ -87,14 +102,14 @@ window.Systems = {
 
   startFeverMode(state) {
     state.fever.active = true;
-    state.fever.timer = 60 * 18; // 18 seconds
+    state.fever.timer = this.BALANCE.FEVER_DURATION_FRAMES;
     state.fever.gauge = 100;
-    state.fever.mult = 5.0;
+    state.fever.mult = this.BALANCE.FEVER_MULT;
 
     if (window.sfx && window.sfx.feverStart) window.sfx.feverStart();
 
-    // Spawn 2 multiballs (total 3 on screen)
-    while (state.balls.length < 3) {
+    // Spawn multiballs up to target count
+    while (state.balls.length < this.BALANCE.FEVER_TARGET_BALLS) {
       const offset = (Math.random() - 0.5) * 40;
       this.spawnBall(state, 198 + offset, 240, (Math.random() - 0.5) * 6, -8);
     }
@@ -138,7 +153,7 @@ window.Systems = {
     }
 
     state.burstMultiplier = Math.round(totalMult * 10) / 10;
-    state.burstTimer = 60 * 10;
+    state.burstTimer = this.BALANCE.BURST_DURATION_FRAMES;
     state.keptBuffs = [null, null, null, null];
 
     if (spawnExtraBall || activeList.length >= 3) {
@@ -216,8 +231,8 @@ window.Systems = {
         baseY: slotPos.y,
         phase: Math.random() * Math.PI * 2,
         r: 15,
-        life: 960,
-        maxLife: 960,
+        life: this.BALANCE.CAPSULE_LIFE_FRAMES,
+        maxLife: this.BALANCE.CAPSULE_LIFE_FRAMES,
         category: "perm",
         subId: pickKey,
         label: labels[pickKey] || "UPGRADE",

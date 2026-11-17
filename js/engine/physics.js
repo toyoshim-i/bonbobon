@@ -3,6 +3,25 @@
 // =========================================================================
 
 window.Physics = {
+  // 全テーブル共通の物理・反発・スコア定数（調整時の単一参照先）
+  BALANCE: {
+    GRAVITY: 0.118,
+    SUBSTEPS: 6,
+    MAX_BALL_SPEED: 13.2,
+    PLUNGER_BASE_SPEED: 1.4,
+    PLUNGER_MAX_ADD_SPEED: 16.2,
+    SKILL_SHOT_MIN_RATIO: 0.70,
+    SKILL_SHOT_MAX_RATIO: 0.86,
+    NUDGE_IMPULSE: 6.2,
+    STUCK_REMIND_FRAMES: 85,
+    STUCK_KICK_FRAMES: 360,
+    SLINGSHOT_KICK_SPEED: 12.5,
+    SLINGSHOT_SCORE: 200,
+    SLINGSHOT_FEVER: 2,
+    FLIPPER_HIT_SCORE: 50,
+    KICKBACK_SAVE_SCORE: 3000
+  },
+
   TABLE_WALLS: [
     // Outer perimeter walls (Arc roof + straight sides)
     { x1: 16,  y1: 635, x2: 16,  y2: 95 },
@@ -145,8 +164,8 @@ window.Physics = {
 
     state.balls.forEach(b => {
       if (b._onWireRamp) return;
-      b.vx += nx * 6.2 * intensity;
-      b.vy += ny * 6.2 * intensity;
+      b.vx += nx * this.BALANCE.NUDGE_IMPULSE * intensity;
+      b.vy += ny * this.BALANCE.NUDGE_IMPULSE * intensity;
 
       // If ball was nearly stationary, give an extra impulse to break friction/traps
       if (Math.hypot(b.vx, b.vy) < 2.0) {
@@ -333,12 +352,12 @@ window.Physics = {
           cp.t < 0.94 &&
           (nx * w.kickDir.x + ny * w.kickDir.y) > 0.45;
         if (isActiveSlingshotFace) {
-          const kickSpd = 12.5;
+          const kickSpd = this.BALANCE.SLINGSHOT_KICK_SPEED;
           ball.vx = w.kickDir.x * kickSpd + (Math.random() - 0.5) * 1.5;
           ball.vy = w.kickDir.y * kickSpd - 2.0;
           if (window.sfx) window.sfx.slingshot();
-          if (window.Systems) window.Systems.addScore(state, 200, cp.x, cp.y, "SLINGSHOT");
-          if (window.Systems) window.Systems.addFever(state, 2);
+          if (window.Systems) window.Systems.addScore(state, this.BALANCE.SLINGSHOT_SCORE, cp.x, cp.y, "SLINGSHOT");
+          if (window.Systems) window.Systems.addFever(state, this.BALANCE.SLINGSHOT_FEVER);
           Particles.add(state, cp.x, cp.y, "#00f5d4", 12, 4.0);
         } else {
           const vn = ball.vx * nx + ball.vy * ny;
@@ -405,7 +424,7 @@ window.Physics = {
             ball.vx += nx * 4.2 * springMult;
             if (window.sfx) window.sfx.flip();
             Particles.add(state, cp.x, cp.y, "#ff1493", 10, 4.5);
-            if (window.Systems) window.Systems.addScore(state, 50, cp.x, cp.y, "FLIP");
+            if (window.Systems) window.Systems.addScore(state, this.BALANCE.FLIPPER_HIT_SCORE, cp.x, cp.y, "FLIP");
           } else {
             // 静止中のパドル：通路から流れてきた球が跳ねずにピタッと乗って転がるよう法線反発を抑え、接線転がりを維持
             const tx = -ny;
@@ -451,33 +470,30 @@ window.Physics = {
       }
 
       // Kickbacks (In the Outlanes)
-      if (state.perm.kickbackL > 0 && state.perm.kickbackL_charges > 0 && ball.x >= 14 && ball.x <= 52 && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
-        ball.vy = -15.2;
-        ball.vx = 4.2;
-        state.perm.kickbackL_charges = 0;
-        if (window.sfx) window.sfx.burstTrigger();
-        Particles.add(state, 33, 560, "#00f5d4", 18, 5.0);
-        Particles.add(state, 33, 560, "#e6ff00", 12, 4.0);
-        if (window.Systems) window.Systems.addScore(state, 3000, 33, 540, "⚡L-LASER SAVE!");
-        if (window.UI) window.UI.showCutin("🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！", 90);
-      }
-      if (state.perm.kickbackR > 0 && state.perm.kickbackR_charges > 0 && !ball.inShooterLane && ball.x >= 344 && ball.x <= 382 && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
-        ball.vy = -15.2;
-        ball.vx = -4.2;
-        state.perm.kickbackR_charges = 0;
-        if (window.sfx) window.sfx.burstTrigger();
-        Particles.add(state, 363, 560, "#00f5d4", 18, 5.0);
-        Particles.add(state, 363, 560, "#e6ff00", 12, 4.0);
-        if (window.Systems) window.Systems.addScore(state, 3000, 363, 540, "⚡R-LASER SAVE!");
-        if (window.UI) window.UI.showCutin("🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！", 90);
-      }
+      const kickbacks = [
+        { permKey: "kickbackL", chargeKey: "kickbackL_charges", minX: 14, maxX: 52, vx: 4.2, fxX: 33, checkLane: false, label: "⚡L-LASER SAVE!", cutin: "🛡️【LEFT KICKBACK SAVE!】<br>左アウトレーンから緊急レーザー射出！" },
+        { permKey: "kickbackR", chargeKey: "kickbackR_charges", minX: 344, maxX: 382, vx: -4.2, fxX: 363, checkLane: true, label: "⚡R-LASER SAVE!", cutin: "🛡️【RIGHT KICKBACK SAVE!】<br>右アウトレーンから緊急レーザー射出！" }
+      ];
+      kickbacks.forEach(kb => {
+        if (state.perm[kb.permKey] > 0 && state.perm[kb.chargeKey] > 0 && (!kb.checkLane || !ball.inShooterLane) &&
+            ball.x >= kb.minX && ball.x <= kb.maxX && ball.y >= 540 && ball.y <= 585 && ball.vy > 0) {
+          ball.vy = -15.2;
+          ball.vx = kb.vx;
+          state.perm[kb.chargeKey] = 0;
+          if (window.sfx) window.sfx.burstTrigger();
+          Particles.add(state, kb.fxX, 560, "#00f5d4", 18, 5.0);
+          Particles.add(state, kb.fxX, 560, "#e6ff00", 12, 4.0);
+          if (window.Systems) window.Systems.addScore(state, this.BALANCE.KICKBACK_SAVE_SCORE, kb.fxX, 540, kb.label);
+          if (window.UI) window.UI.showCutin(kb.cutin, 90);
+        }
+      });
     }
 
     // Velocity clamp
     const spd = Math.hypot(ball.vx, ball.vy);
-    if (spd > 13.2) {
-      ball.vx = (ball.vx / spd) * 13.2;
-      ball.vy = (ball.vy / spd) * 13.2;
+    if (spd > this.BALANCE.MAX_BALL_SPEED) {
+      ball.vx = (ball.vx / spd) * this.BALANCE.MAX_BALL_SPEED;
+      ball.vy = (ball.vy / spd) * this.BALANCE.MAX_BALL_SPEED;
     }
   }
 };

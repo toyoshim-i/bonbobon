@@ -180,6 +180,25 @@ Object.assign(window.Stage4, {
     const makeScaled = (img) =>
       StageCommon.createPixelBuffer(W, H, (cx) => cx.drawImage(img, 0, 0, W, H));
 
+    const computeOpaqueBounds = (buf, defY0, defY1) => {
+      const data = buf && buf.data;
+      if (!data) return { x: 0, w: W, y0: defY0, y1: defY1 };
+      let minX = W, maxX = -1, minY = H, maxY = -1;
+      for (let y = defY0; y < Math.min(H, defY1); y++) {
+        const row = y * W * 4;
+        for (let x = 0; x < W; x++) {
+          if (data[row + x * 4 + 3] > 2) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < minX) return { x: 0, w: 0, y0: defY0, y1: defY0 };
+      return { x: minX, w: maxX - minX + 1, y0: minY, y1: maxY + 1 };
+    };
+
     const charIntact_00 = makeBodyVariant(false, false);
     const charIntact_10 = makeBodyVariant(true, false);
     const charIntact_01 = makeBodyVariant(false, true);
@@ -188,6 +207,29 @@ Object.assign(window.Stage4, {
     const charSuitBroken = makeScaled(this.assets.charSuitBrokenImg);
     const stoleBackScaled = makeScaled(this.assets.stoleBackImg);
     const stoleFrontScaled = makeScaled(this.assets.stoleFrontImg);
+    stoleBackScaled.bounds = computeOpaqueBounds(stoleBackScaled, 164, 466);
+    stoleFrontScaled.bounds = computeOpaqueBounds(stoleFrontScaled, 214, 436);
+
+    // マトリックス 0/1 グリフの事前ベイク（fillText 200回/フレームの負荷を排除）
+    const makeGlyph = (ch, color) => {
+      const gc = document.createElement("canvas");
+      gc.width = 12;
+      gc.height = 14;
+      const gx = gc.getContext("2d");
+      gx.font = "bold 9.5px monospace";
+      gx.textAlign = "center";
+      gx.textBaseline = "middle";
+      gx.fillStyle = color;
+      gx.fillText(ch, 6, 7);
+      return gc;
+    };
+    const matrixGlyphs = {
+      hit:  { "0": makeGlyph("0", "#e6ff00"), "1": makeGlyph("1", "#e6ff00") },
+      headPink: { "0": makeGlyph("0", "#ffebfc"), "1": makeGlyph("1", "#ffebfc") },
+      headCyan: { "0": makeGlyph("0", "#dcffff"), "1": makeGlyph("1", "#dcffff") },
+      bodyPink: { "0": makeGlyph("0", "#ff52c3"), "1": makeGlyph("1", "#ff52c3") },
+      bodyCyan: { "0": makeGlyph("0", "#00f5dc"), "1": makeGlyph("1", "#00f5dc") }
+    };
 
     // 提灯スプライトの事前レンダリング (5基分 × 4バリエーション)
     const lanternSprites = {};
@@ -229,6 +271,7 @@ Object.assign(window.Stage4, {
       stoleFrontScaled,
       lanternSprites,
       bunshinSprites,
+      matrixGlyphs,
       warpSlots: {}
     };
     return this._srcCache;
@@ -250,21 +293,28 @@ Object.assign(window.Stage4, {
     }
   },
 
-  drawRasterStole(ctx, stoleCanvas, IMG_BOX, boss, isFront) {
+  drawRasterStole(ctx, stoleBuf, IMG_BOX, boss, isFront) {
+    const stoleCanvas = stoleBuf.canvas || stoleBuf;
     const W = IMG_BOX.w;
     const H = IMG_BOX.h;
+    const bounds = stoleBuf.bounds;
+    const cropX = bounds ? bounds.x : 0;
+    const cropW = bounds ? bounds.w : W;
+    if (cropW <= 0) return;
+
     const tick = boss.animTick || 0;
     const wind = boss.stoleWind || 0;
     const baseAmp = 3.6 + wind * 3.8;
     const speed = 0.08 + wind * 0.048;
 
-    const yStart = isFront ? 214 : 164;
-    const yEnd = Math.min(H, isFront ? 436 : 466);
-    const stripH = 4;
+    const yStart = bounds ? bounds.y0 : (isFront ? 214 : 164);
+    const yEnd = Math.min(H, bounds ? bounds.y1 : (isFront ? 436 : 466));
+    const stripH = 12;
 
     ctx.save();
     ctx.globalAlpha = isFront ? 0.92 : 0.96;
     for (let sy = yStart; sy < yEnd; sy += stripH) {
+      const sh = Math.min(stripH, yEnd - sy);
       let anchorWeight = 1.0;
       if (sy < 236) {
         anchorWeight = Math.max(0.08, (sy - 185) / 52);
@@ -276,8 +326,8 @@ Object.assign(window.Stage4, {
       const dx = (wave1 + wave2) * baseAmp * anchorWeight;
       ctx.drawImage(
         stoleCanvas,
-        0, sy, W, stripH,
-        IMG_BOX.x + dx, IMG_BOX.y + sy, W, stripH
+        cropX, sy, cropW, sh,
+        IMG_BOX.x + cropX + dx, IMG_BOX.y + sy, cropW, sh
       );
     }
     ctx.restore();
@@ -505,7 +555,7 @@ Object.assign(window.Stage4, {
           if (cl.active) this.drawBunshinHologram(ctx, cache, cl, b.animTick);
         });
 
-        this.drawRasterStole(ctx, cache.stoleBackScaled.canvas, IMG_BOX, b, false);
+        this.drawRasterStole(ctx, cache.stoleBackScaled, IMG_BOX, b, false);
 
         const activeChar = this.getActiveCharBuffer(cache, b);
         StageCommon.renderSoftWarp(ctx, IMG_BOX, activeChar, [b.bustL, b.bustR, b.hipL, b.hipR], {
@@ -521,7 +571,7 @@ Object.assign(window.Stage4, {
         const activePatchKey = StageCommon.getActiveFacePatchKey(b, state, { defaultExpr: "normal", halfBlink: true });
         StageCommon.drawFacePatch(ctx, this.assets.facePatchImgs, activePatchKey, IMG_BOX, { x: 312, y: 304, w: 144, h: 120 });
 
-        this.drawRasterStole(ctx, cache.stoleFrontScaled.canvas, IMG_BOX, b, true);
+        this.drawRasterStole(ctx, cache.stoleFrontScaled, IMG_BOX, b, true);
       } else if (this.assets.charBodyImg.complete) {
         ctx.drawImage(this.assets.charBodyImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
       }
@@ -755,36 +805,39 @@ Object.assign(window.Stage4, {
     const IMG_BOX = (engine && engine.IMG_BOX) ? engine.IMG_BOX : { x: 16, y: 16, w: 364, h: 644 };
 
     // 1. キャラより手前に降り注ぐ前景マトリックス 0/1 ストリーム（ボール接触中は白〜イエローに弾ける！）
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
-    ctx.clip();
-    ctx.font = "bold 9.5px monospace";
-    ctx.textAlign = "center";
+    const cache = this.ensureStageCanvases(IMG_BOX);
+    const glyphs = cache && cache.matrixGlyphs;
     const feverTint = state.fever.active || b.sakuraStormTimer > 0;
-    b.matrixCols.forEach(col => {
-      const isPink = feverTint || col.pink;
-      for (let k = 0; k < col.len; k++) {
-        const ht = col.hitTimers[k] || 0;
-        // 弾かれた直後は一瞬弾けて消え、少し経つとフェード復帰
-        if (ht > 14 && ht < 28) continue;
-        const cy = col.y - k * 12;
-        if (cy < 20 || cy > 654) continue;
-        const isHead = k === 0;
-        const fade = Math.max(0.18, 1 - k / col.len);
-        if (ht >= 28) {
-          ctx.fillStyle = "#e6ff00";
-        } else if (isHead) {
-          ctx.fillStyle = isPink ? "rgba(255, 235, 252, 0.95)" : "rgba(220, 255, 255, 0.95)";
-        } else {
-          ctx.fillStyle = isPink
-            ? `rgba(255, 82, 195, ${(fade * 0.72).toFixed(2)})`
-            : `rgba(0, 245, 220, ${(fade * 0.70).toFixed(2)})`;
+    if (glyphs) {
+      ctx.save();
+      for (let ci = 0; ci < b.matrixCols.length; ci++) {
+        const col = b.matrixCols[ci];
+        const isPink = feverTint || col.pink;
+        const headSet = isPink ? glyphs.headPink : glyphs.headCyan;
+        const bodySet = isPink ? glyphs.bodyPink : glyphs.bodyCyan;
+        const bodyAlphaBase = isPink ? 0.72 : 0.70;
+        const drawX = col.x - 6;
+        for (let k = 0; k < col.len; k++) {
+          const ht = col.hitTimers[k] || 0;
+          if (ht > 14 && ht < 28) continue;
+          const cy = col.y - k * 12;
+          if (cy < 25 || cy > 652) continue;
+          const ch = col.chars[k];
+          if (ht >= 28) {
+            ctx.globalAlpha = 1.0;
+            ctx.drawImage(glyphs.hit[ch], drawX, cy - 10);
+          } else if (k === 0) {
+            ctx.globalAlpha = 0.95;
+            ctx.drawImage(headSet[ch], drawX, cy - 10);
+          } else {
+            const fade = Math.max(0.18, 1 - k / col.len);
+            ctx.globalAlpha = fade * bodyAlphaBase;
+            ctx.drawImage(bodySet[ch], drawX, cy - 10);
+          }
         }
-        ctx.fillText(col.chars[k], col.x, cy);
       }
-    });
-    ctx.restore();
+      ctx.restore();
+    }
 
     // 2. 立体ワイヤーランプ上を滑走中の高架ボール（高速外枠グロー ＋ 内側ボール）
     StageCommon.renderWireRampBalls(ctx, state, this.WIRE_RAMPS);

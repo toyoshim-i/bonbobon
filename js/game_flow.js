@@ -288,12 +288,36 @@ window.GameFlow = {
 
       const endingModal = document.getElementById("endingModal");
       const isEndingVisible = endingModal && !endingModal.classList.contains("hidden");
-      if (isEndingVisible && (e.code === "Space" || e.code === "Enter")) {
-        e.preventDefault();
-        if (this.ending.act === 1) {
-          this.advanceEnding();
-        } else if (this.ending.act === 2) {
-          this.showEndingAct3();
+      if (isEndingVisible) {
+        if (this.ending.act === 3 && !this.ending.registered) {
+          if (/^[a-zA-Z0-9\-]$/.test(e.key)) {
+            e.preventDefault();
+            this.inputCallsignKey(e.key.toUpperCase());
+            return;
+          }
+          if (e.key === "Backspace") {
+            e.preventDefault();
+            this.inputCallsignKey("BS");
+            return;
+          }
+          if (e.code === "Space") {
+            e.preventDefault();
+            this.inputCallsignKey("SPC");
+            return;
+          }
+          if (e.code === "Enter") {
+            e.preventDefault();
+            this.registerEndingScore();
+            return;
+          }
+        }
+        if (e.code === "Space" || e.code === "Enter") {
+          e.preventDefault();
+          if (this.ending.act === 1) {
+            this.advanceEnding();
+          } else if (this.ending.act === 2) {
+            this.showEndingAct3();
+          }
         }
       }
     });
@@ -1307,16 +1331,100 @@ window.GameFlow = {
     }
 
     this.renderHighScoresTable("endingHighScoresTable");
+    this.initArcadeKeyboard();
+  },
+
+  initArcadeKeyboard() {
+    this.ending.registered = false;
+    if (typeof this.ending.callsign !== "string") {
+      this.ending.callsign = "ADMIRAL";
+    }
+    const kb = document.getElementById("endingArcadeKeyboard");
+    const regBtn = document.getElementById("btnEndingRegister");
+    if (regBtn) {
+      regBtn.disabled = false;
+      regBtn.textContent = "登録";
+      regBtn.className = "px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0";
+    }
+    if (kb) {
+      kb.classList.remove("hidden");
+      if (!kb.dataset.bound) {
+        const keys = [
+          ..."ABCDEFGHI",
+          ..."JKLMNOPQR",
+          ..."STUVWXYZ-",
+          ..."012345678",
+          { k: "9", label: "9", span: 1 },
+          { k: "SPC", label: "SPC", span: 2 },
+          { k: "BS", label: "⌫ BS", span: 3 },
+          { k: "CLR", label: "CLR", span: 3 }
+        ];
+        kb.innerHTML = keys.map(item => {
+          const obj = typeof item === "string" ? { k: item, label: item, span: 1 } : item;
+          const spanCls = obj.span > 1 ? `col-span-${obj.span}` : "";
+          const styleCls = obj.k === "CLR"
+            ? "bg-[#36092f] hover:bg-[#ff1493] text-[#ff66b2] hover:text-white border-[#ff1493]/70"
+            : obj.k === "BS"
+              ? "bg-[#2a124a] hover:bg-[#e6ff00] text-[#e6ff00] hover:text-black border-[#e6ff00]/60"
+              : "bg-[#150638] hover:bg-[#00f5d4] text-[#00f5d4] hover:text-black border-[#00f5d4]/50";
+          return `<button type="button" data-key="${obj.k}" class="${spanCls} h-7 rounded border font-mono font-black text-[11px] cursor-pointer active:scale-95 transition select-none flex items-center justify-center ${styleCls}">${obj.label}</button>`;
+        }).join("");
+        kb.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-key]");
+          if (!btn || this.ending.registered) return;
+          this.inputCallsignKey(btn.dataset.key);
+        });
+        kb.dataset.bound = "1";
+      }
+    }
+    this.updateCallsignDisplay();
+  },
+
+  inputCallsignKey(key) {
+    if (this.ending.registered) return;
+    let cur = this.ending.callsign || "";
+    if (key === "CLR") {
+      cur = "";
+    } else if (key === "BS") {
+      cur = cur.slice(0, -1);
+    } else if (key === "SPC") {
+      if (cur.length < 8) cur += " ";
+    } else if (cur.length < 8) {
+      cur += key;
+    }
+    this.ending.callsign = cur;
+    if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+    this.updateCallsignDisplay();
+  },
+
+  updateCallsignDisplay() {
+    const el = document.getElementById("endingCallsignDisplay");
+    if (!el) return;
+    const cur = this.ending.callsign || "";
+    const safe = cur.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/ /g, "&nbsp;");
+    if (!this.ending.registered && cur.length < 8) {
+      el.innerHTML = `${safe}<span class="text-[#e6ff00] animate-pulse">_</span>`;
+    } else {
+      el.innerHTML = safe || '<span class="text-gray-500">--------</span>';
+    }
   },
 
   registerEndingScore() {
-    const input = document.getElementById("endingCallsignInput");
-    const name = input ? input.value : "ADMIRAL";
+    if (this.ending.registered) return;
+    const raw = (this.ending.callsign || "").trim();
+    const name = raw || "ADMIRAL";
+    this.ending.callsign = name;
+    this.ending.registered = true;
+
     const state = (window.GameEngine && GameEngine.state) || {};
     const rank = this.computeRank(state.score || 0);
 
     const newIdx = this.saveHighScore(name, state.score || 0, rank);
     this.renderHighScoresTable("endingHighScoresTable", newIdx);
+    this.updateCallsignDisplay();
+
+    const kb = document.getElementById("endingArcadeKeyboard");
+    if (kb) kb.classList.add("hidden");
 
     const regBtn = document.getElementById("btnEndingRegister");
     if (regBtn) {
@@ -1324,7 +1432,7 @@ window.GameFlow = {
       regBtn.textContent = "登録完了 ✔";
       regBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-400 text-[9.5px] font-bold cursor-default shrink-0";
     }
-    if (input) input.disabled = true;
+    if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
   },
 
   // -------------------------------------------------------------------------

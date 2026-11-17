@@ -470,7 +470,7 @@
 
               <!-- RIGHT: SILVER BALL PORTRAIT -->
               <div id="codecRightBox" class="aspect-square w-full rounded border-2 border-[#34ff8a] bg-black/90 overflow-hidden flex flex-col relative shadow-[0_0_12px_rgba(52,255,138,0.28)] transition-opacity duration-150">
-                <img id="codecRightPortraitImg" src="./assets/ui/silver_ball.jpg?v=192" alt="Silver Ball" class="w-full h-full object-cover codec-crt-img" onerror="this.style.display='none'">
+                <img id="codecRightPortraitImg" src="./assets/ui/silver_ball.jpg?v=196" alt="Silver Ball" class="w-full h-full object-cover codec-crt-img" onerror="this.style.display='none'">
                 <div class="absolute inset-0 codec-scanlines"></div>
                 <div class="absolute bottom-0 inset-x-0 bg-black/90 text-center text-[9px] font-mono font-bold text-[#34ff8a] py-0.5 border-t border-[#125830] z-10">
                   [SILVER BALL]
@@ -516,27 +516,27 @@
               </div>
               <div class="grid grid-cols-5 gap-1">
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/stage1/centerpiece.jpg" class="w-full h-10 object-cover object-top rounded-xs" alt="Lilith">
+                  <img src="./assets/ui/portrait_1.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Lilith">
                   <span class="text-[7.5px] font-black text-white mt-0.5 truncate">01:リリス</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/stage2/centerpiece.jpg" class="w-full h-10 object-cover object-top rounded-xs" alt="Celty">
+                  <img src="./assets/ui/portrait_2.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Celty">
                   <span class="text-[7.5px] font-black text-white mt-0.5 truncate">02:セルティ</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/stage3/centerpiece.jpg" class="w-full h-10 object-cover object-top rounded-xs" alt="Noah">
+                  <img src="./assets/ui/portrait_3.jpg?v=195" class="w-full aspect-square object-cover rounded-xs" alt="Noah">
                   <span class="text-[7.5px] font-black text-white mt-0.5 truncate">03:ノア</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/stage4/centerpiece.jpg" class="w-full h-10 object-cover object-top rounded-xs" alt="Kasumi" style="object-position: 50% 16%;">
+                  <img src="./assets/ui/portrait_4.jpg?v=196" class="w-full aspect-square object-cover rounded-xs" alt="Kasumi">
                   <span class="text-[7.5px] font-black text-white mt-0.5 truncate">04:カスミ</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
                 <div class="flex flex-col items-center bg-[#150638] rounded p-0.5 border border-[#ff1493]/40">
-                  <img src="./assets/stage5/seraphia_intact.png" class="w-full h-10 object-cover rounded-xs" alt="Seraphia" style="object-position: 50% 14%;">
+                  <img src="./assets/ui/portrait_5.jpg?v=196" class="w-full aspect-square object-cover rounded-xs" alt="Seraphia">
                   <span class="text-[7.5px] font-black text-white mt-0.5 truncate">05:セラフィア</span>
                   <span class="text-[6.5px] font-mono text-[#00f5d4]">TUNED</span>
                 </div>
@@ -565,15 +565,19 @@
             </div>
 
             <!-- CALLSIGN REGISTRATION & LEADERBOARD -->
-            <div class="bg-black/75 border border-[#e6ff00]/40 rounded-lg p-2 flex-1 min-h-0 flex flex-col justify-between">
-              <div class="flex items-center gap-1.5 mb-1.5 shrink-0">
-                <span class="text-[9px] font-black text-[#e6ff00] shrink-0">CALLSIGN:</span>
-                <input id="endingCallsignInput" type="text" maxlength="8" value="ADMIRAL" class="flex-1 px-2 py-1 rounded bg-black/60 border border-[#00f5d4] text-[#00f5d4] font-mono font-black text-xs uppercase text-center focus:outline-none focus:border-[#e6ff00]">
+            <div class="bg-black/75 border border-[#e6ff00]/40 rounded-lg p-2 flex-1 min-h-0 flex flex-col gap-1.5">
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[9px] font-black text-[#e6ff00] shrink-0">NAME:</span>
+                <div id="endingCallsignDisplay" class="flex-1 px-2 py-1 rounded bg-black/80 border border-[#00f5d4] text-[#00f5d4] font-mono font-black text-sm tracking-[0.2em] uppercase text-center select-none min-h-[28px] flex items-center justify-center">
+                  ADMIRAL
+                </div>
                 <button id="btnEndingRegister" class="px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0">
                   登録
                 </button>
               </div>
-              <div id="endingHighScoresTable" class="space-y-1 flex-1 overflow-y-auto mb-1"></div>
+              <!-- ARCADE ON-SCREEN KEYBOARD (NO VIRTUAL KEYBOARD POPUP) -->
+              <div id="endingArcadeKeyboard" class="grid grid-cols-9 gap-1 shrink-0"></div>
+              <div id="endingHighScoresTable" class="space-y-1 flex-1 overflow-y-auto min-h-0"></div>
             </div>
           </div>
         </div>

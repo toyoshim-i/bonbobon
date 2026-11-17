@@ -22,6 +22,17 @@ window.Physics = {
     KICKBACK_SAVE_SCORE: 3000
   },
 
+  TABLE_GEOM: {
+    SHOOTER_MIN_X: 380,
+    SHOOTER_MAX_X: 405,
+    SHOOTER_CENTER_X: 393,
+    PLUNGER_REST_Y: 575,
+    PLUNGER_BOTTOM_Y: 635,
+    CENTER_POST_X: 198,
+    CENTER_POST_Y: 614,
+    KICKBACK_Y: 560
+  },
+
   TABLE_WALLS: [
     // Outer perimeter walls (Arc roof + straight sides)
     { x1: 16,  y1: 635, x2: 16,  y2: 95 },
@@ -298,9 +309,10 @@ window.Physics = {
     }
 
     // Plunger resting lock
+    const geom = this.TABLE_GEOM;
     if (ball.inShooterLane && state.plunger.waitingForLaunch) {
-      ball.x = 393;
-      const headY = (state.plunger.springY || 575) - 6;
+      ball.x = geom.SHOOTER_CENTER_X;
+      const headY = (state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
       ball.y = headY - ball.r;
       ball.vx = 0;
       ball.vy = 0;
@@ -312,8 +324,8 @@ window.Physics = {
     ball.y += ball.vy / SUBSTEPS;
 
     // Shooter lane plunger spring catch & re-arm
-    if (ball.inShooterLane && ball.x >= 380 && ball.x <= 405) {
-      const tipY = (state.plunger.springY || 575) - 6;
+    if (ball.inShooterLane && ball.x >= geom.SHOOTER_MIN_X && ball.x <= geom.SHOOTER_MAX_X) {
+      const tipY = (state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
       const contactDist = (ball.y + ball.r) - tipY;
 
       // 1. スプリング引き込み中にボールが落ちてきた場合：バネのヘッドに乗って一緒に引き下がる
@@ -472,8 +484,8 @@ window.Physics = {
     if (s === 0) {
       if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0 && !ball._crotchSpitActive) {
         const postR = 7 + state.perm.centerPost * 3.5;
-        const px = 198;
-        const py = 614;
+        const px = geom.CENTER_POST_X;
+        const py = geom.CENTER_POST_Y;
         const dx = ball.x - px;
         const dy = ball.y - py;
         const dist = Math.hypot(dx, dy);

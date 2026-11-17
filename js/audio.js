@@ -1,6 +1,7 @@
 // =========================================================================
 // FM SYNTHESIS SOUND ENGINE (Web Audio API)
 // =========================================================================
+(() => {
 class FMSoundEngine {
   constructor() {
     this.ctx = null;
@@ -380,3 +381,4 @@ window.sfx = new Proxy(rawSfx, {
     return () => {}; // Safe fallback for undefined audio methods
   }
 });
+})();

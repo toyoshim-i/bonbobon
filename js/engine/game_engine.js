@@ -292,9 +292,10 @@ window.GameEngine = {
     // Spring oscillation recoil impulse
     this.state.plunger.springVy = -p * 22;
 
-    const ballInLane = this.state.balls.find(b => b.inShooterLane && b.x >= 380 && b.x <= 405);
+    const geom = Physics.TABLE_GEOM;
+    const ballInLane = this.state.balls.find(b => b.inShooterLane && b.x >= geom.SHOOTER_MIN_X && b.x <= geom.SHOOTER_MAX_X);
     if (ballInLane) {
-      const tipY = (this.state.plunger.springY || 575) - 6;
+      const tipY = (this.state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
       // ボールがスプリングの可動範囲内（y: 280〜625）にあれば撃ち出し・カウンター判定
       if (ballInLane.y >= 280 && ballInLane.y <= 625) {
         if (window.sfx) window.sfx.plungerLaunch(currentPower);
@@ -742,18 +743,20 @@ window.GameEngine = {
       // Installed Center Post
       if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0) {
         const postR = 7 + state.perm.centerPost * 3.5;
+        const cpx = Physics.TABLE_GEOM.CENTER_POST_X;
+        const cpy = Physics.TABLE_GEOM.CENTER_POST_Y;
         ctx.save();
         ctx.fillStyle = "rgba(0, 245, 212, 0.35)";
         ctx.strokeStyle = "#e6ff00";
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(198, 614, postR, 0, Math.PI * 2);
+        ctx.arc(cpx, cpy, postR, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 9px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(`HP:${state.perm.centerPostHP}`, 198, 638);
+        ctx.fillText(`HP:${state.perm.centerPostHP}`, cpx, cpy + 24);
         ctx.restore();
       }
 

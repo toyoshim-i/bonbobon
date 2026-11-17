@@ -322,9 +322,10 @@ window.Systems = {
     state.plunger.pulling = false;
     state.skillShotEligible = false;
 
+    const geom = (window.Physics && Physics.TABLE_GEOM) || { SHOOTER_CENTER_X: 393, PLUNGER_REST_Y: 575 };
     state.balls.push({
-      x: 393,
-      y: 575,
+      x: geom.SHOOTER_CENTER_X,
+      y: geom.PLUNGER_REST_Y,
       vx: 0,
       vy: 0,
       r: 6.5,

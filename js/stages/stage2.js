@@ -297,21 +297,22 @@ window.Stage2 = {
     if (window.Systems && Systems.isNudgeJiggleEnabled()) {
       const b = state.boss;
       const mult = intensity || 1.0;
+      const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
       if (b.tipBust) {
-        b.tipBust.vx += nx * 3.5 * mult;
-        b.tipBust.vy += ny * 3.5 * mult;
+        b.tipBust.vx += sway * 5.5 * mult;
+        b.tipBust.vy += (ny - 0.6) * 5.5 * mult;
       }
       if (b.buttL) {
-        b.buttL.vx += nx * 3.0 * mult;
-        b.buttL.vy += ny * 3.0 * mult;
+        b.buttL.vx += sway * 5.2 * mult;
+        b.buttL.vy += (ny - 0.5) * 5.2 * mult;
       }
       if (b.buttR) {
-        b.buttR.vx -= nx * 1.5 * mult;
-        b.buttR.vy += ny * 3.0 * mult;
+        b.buttR.vx -= sway * 4.2 * mult;
+        b.buttR.vy += (ny - 0.5) * 5.2 * mult;
       }
       if (b.expression === "normal" || b.expression === "smug") {
         b.expression = "blush";
-        b.expressionTimer = 30;
+        b.expressionTimer = 35;
       }
       if (window.sfx && window.sfx.softPuru) {
         window.sfx.softPuru();

@@ -459,22 +459,23 @@ window.Stage3 = {
     const b = state.boss;
 
     if (window.Systems && Systems.isNudgeJiggleEnabled()) {
-      const mult = b.chestArmorBroken ? 3.5 : 1.8;
+      const mult = (b.chestArmorBroken ? 8.2 : 6.4) * (intensity || 1.0);
+      const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
       if (b.bustL && b.bustR) {
-        b.bustL.vx += nx * mult * intensity;
-        b.bustL.vy += ny * mult * intensity;
-        b.bustR.vx -= nx * mult * 0.4 * intensity;
-        b.bustR.vy += ny * mult * intensity;
+        b.bustL.vx += sway * mult;
+        b.bustL.vy += (ny - 0.65) * mult;
+        b.bustR.vx -= sway * mult * 0.75;
+        b.bustR.vy += (ny - 0.65) * mult;
       }
       if (b.hipButt && b.thigh) {
-        b.hipButt.vx += nx * 2.8 * intensity;
-        b.hipButt.vy += ny * 2.8 * intensity;
-        b.thigh.vx += nx * 2.0 * intensity;
-        b.thigh.vy += ny * 2.0 * intensity;
+        b.hipButt.vx += sway * 5.6 * (intensity || 1.0);
+        b.hipButt.vy += (ny - 0.5) * 5.6 * (intensity || 1.0);
+        b.thigh.vx += sway * 4.6 * (intensity || 1.0);
+        b.thigh.vy += (ny - 0.5) * 4.6 * (intensity || 1.0);
       }
       if (b.expression === "normal" || b.expression === "smug") {
         b.expression = "blush";
-        b.expressionTimer = 30;
+        b.expressionTimer = 35;
       }
       if (window.sfx && window.sfx.softPuru) {
         window.sfx.softPuru();
@@ -1333,7 +1334,7 @@ window.Stage3 = {
       part.vy = (part.vy - stiffness * part.dy) * damping;
       part.dx = Math.max(-maxDisp, Math.min(maxDisp, part.dx + part.vx));
       part.dy = Math.max(-maxDisp, Math.min(maxDisp, part.dy + part.vy));
-      if (Math.hypot(part.dx, part.dy) < 0.26 && Math.hypot(part.vx, part.vy) < 0.16) {
+      if (Math.hypot(part.dx, part.dy) < 0.10 && Math.hypot(part.vx, part.vy) < 0.08) {
         part.dx = 0;
         part.dy = 0;
         part.vx = 0;
@@ -1342,16 +1343,16 @@ window.Stage3 = {
       if (part.flash > 0) part.flash--;
       if (part.rot !== undefined) part.rot += 0.02;
     };
-    // ビスチェ装着中は弾むような軽い揺れ(max 4.4px)、パージ後は開放された大きな揺れ(max 8.2px)へ変化！
+    // ビスチェ装着中も弾むような揺れ(max 6.2px)、パージ後は開放された大きな揺れ(max 9.2px)へ変化！
     if (b.chestArmorBroken) {
-      updateSoftSpring(b.bustL, 0.15, 0.89, 8.2);
-      updateSoftSpring(b.bustR, 0.15, 0.89, 8.2);
+      updateSoftSpring(b.bustL, 0.15, 0.90, 9.2);
+      updateSoftSpring(b.bustR, 0.15, 0.90, 9.2);
     } else {
-      updateSoftSpring(b.bustL, 0.21, 0.86, 4.4);
-      updateSoftSpring(b.bustR, 0.21, 0.86, 4.4);
+      updateSoftSpring(b.bustL, 0.18, 0.89, 6.2);
+      updateSoftSpring(b.bustR, 0.18, 0.89, 6.2);
     }
-    updateSoftSpring(b.hipButt, 0.20, 0.82, 6.0);
-    updateSoftSpring(b.thigh, 0.21, 0.82, 5.5);
+    updateSoftSpring(b.hipButt, 0.18, 0.89, 6.0);
+    updateSoftSpring(b.thigh, 0.18, 0.89, 5.8);
 
     // 6. 各部位フラッシュ減衰
     [b.kneePad, b.hipPort, b.garterRibbon, b.bootKicker, b.core].forEach(t => {

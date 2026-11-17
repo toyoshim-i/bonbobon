@@ -502,30 +502,40 @@ window.Stage5 = {
     if (!b) return;
 
     if (state.phase < 3) {
-      b.elleSpring.vx += nx * 4.2 * intensity;
-      b.elleSpring.vy += ny * 4.0 * intensity;
-      b.noelSpring.vx += nx * 4.2 * intensity;
-      b.noelSpring.vy += ny * 4.0 * intensity;
       b.navelBeam.pluckAmp = Math.min(15, b.navelBeam.pluckAmp + 6.0 * intensity);
       if (window.Systems && Systems.isNudgeJiggleEnabled()) {
-        if (b.elleBelly) { b.elleBelly.vx += nx * 4.0 * intensity; b.elleBelly.vy += ny * 4.0 * intensity; }
-        if (b.noelBelly) { b.noelBelly.vx += nx * 4.0 * intensity; b.noelBelly.vy += ny * 4.0 * intensity; }
-        if (b.elleHip) { b.elleHip.vx += nx * 4.2 * intensity; b.elleHip.vy += ny * 4.0 * intensity; }
-        if (b.noelHip) { b.noelHip.vx += nx * 4.2 * intensity; b.noelHip.vy += ny * 4.0 * intensity; }
+        const mult = intensity || 1.0;
+        const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
+        b.elleSpring.vx += sway * 6.0 * mult;
+        b.elleSpring.vy += (ny - 0.6) * 6.0 * mult;
+        b.noelSpring.vx -= sway * 5.2 * mult;
+        b.noelSpring.vy += (ny - 0.6) * 6.0 * mult;
+        if (b.elleBelly) { b.elleBelly.vx += sway * 6.4 * mult; b.elleBelly.vy += (ny - 0.5) * 6.4 * mult; }
+        if (b.noelBelly) { b.noelBelly.vx -= sway * 5.4 * mult; b.noelBelly.vy += (ny - 0.5) * 6.4 * mult; }
+        if (b.elleHip) { b.elleHip.vx += sway * 6.4 * mult; b.elleHip.vy += (ny - 0.5) * 6.4 * mult; }
+        if (b.noelHip) { b.noelHip.vx -= sway * 5.4 * mult; b.noelHip.vy += (ny - 0.5) * 6.4 * mult; }
+        if (b.elle) b.elle.blushTimer = 32;
+        if (b.noel) b.noel.blushTimer = 32;
         if (window.sfx && window.sfx.softPuru) {
           window.sfx.softPuru();
         }
       }
     } else {
       if (window.Systems && Systems.isNudgeJiggleEnabled()) {
-        const bImp = (b.chestArmorBroken ? 7.5 : 4.5) * intensity;
-        b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
-        b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
-        b.hipL.vx += nx * 4.5 * intensity; b.hipL.vy += ny * 4.2 * intensity;
-        b.hipR.vx += nx * 4.5 * intensity; b.hipR.vy += ny * 4.2 * intensity;
+        const mult = intensity || 1.0;
+        const bImp = (b.chestArmorBroken ? 9.2 : 7.0) * mult;
+        const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
+        b.bustL.vx += sway * bImp;
+        b.bustL.vy += (ny - 0.65) * bImp;
+        b.bustR.vx -= sway * bImp * 0.75;
+        b.bustR.vy += (ny - 0.65) * bImp;
+        b.hipL.vx += sway * 6.5 * mult;
+        b.hipL.vy += (ny - 0.5) * 6.5 * mult;
+        b.hipR.vx -= sway * 5.2 * mult;
+        b.hipR.vy += (ny - 0.5) * 6.5 * mult;
         if (!b.faceAnim.sequence && b.expression === "normal") {
           b.expression = b.chestArmorBroken ? "open_blush" : "shock";
-          b.expressionTimer = 24;
+          b.expressionTimer = 28;
         }
         if (window.sfx && window.sfx.softPuru) {
           window.sfx.softPuru();
@@ -909,12 +919,12 @@ window.Stage5 = {
 
     // Soft spring & movement updates by Phase
     if (state.phase < 3) {
-      StageCommon.stepSoftSpring(b.elleSpring, 0.28, 0.82, 3.2);
-      StageCommon.stepSoftSpring(b.noelSpring, 0.28, 0.82, 3.2);
-      if (b.elleBelly) StageCommon.stepSoftSpring(b.elleBelly, 0.23, 0.86, b.elleBroken ? 5.4 : 4.0);
-      if (b.noelBelly) StageCommon.stepSoftSpring(b.noelBelly, 0.23, 0.86, b.noelBroken ? 5.4 : 4.0);
-      if (b.elleHip) StageCommon.stepSoftSpring(b.elleHip, 0.20, 0.87, 5.8);
-      if (b.noelHip) StageCommon.stepSoftSpring(b.noelHip, 0.20, 0.87, 5.8);
+      StageCommon.stepSoftSpring(b.elleSpring, 0.22, 0.87, 5.2);
+      StageCommon.stepSoftSpring(b.noelSpring, 0.22, 0.87, 5.2);
+      if (b.elleBelly) StageCommon.stepSoftSpring(b.elleBelly, 0.19, 0.88, b.elleBroken ? 6.4 : 6.2);
+      if (b.noelBelly) StageCommon.stepSoftSpring(b.noelBelly, 0.19, 0.88, b.noelBroken ? 6.4 : 6.2);
+      if (b.elleHip) StageCommon.stepSoftSpring(b.elleHip, 0.18, 0.88, 6.4);
+      if (b.noelHip) StageCommon.stepSoftSpring(b.noelHip, 0.18, 0.88, 6.4);
 
       // Independent movement per twin (broken twin immediately enters wide solo flight!)
       if (!b.elleBroken) {
@@ -1030,10 +1040,10 @@ window.Stage5 = {
         b.cherubOrbs[1].x = 198 + Math.cos(oAngle + Math.PI) * 96;
         b.cherubOrbs[1].y = 205 + Math.sin(oAngle + Math.PI) * 35;
       } else {
-        StageCommon.stepSoftSpring(b.bustL, 0.28, 0.82, 4.6);
-        StageCommon.stepSoftSpring(b.bustR, 0.28, 0.82, 4.6);
-        StageCommon.stepSoftSpring(b.hipL, 0.22, 0.85, 4.0);
-        StageCommon.stepSoftSpring(b.hipR, 0.22, 0.85, 4.0);
+        StageCommon.stepSoftSpring(b.bustL, 0.19, 0.88, 6.5);
+        StageCommon.stepSoftSpring(b.bustR, 0.19, 0.88, 6.5);
+        StageCommon.stepSoftSpring(b.hipL, 0.19, 0.88, 6.0);
+        StageCommon.stepSoftSpring(b.hipR, 0.19, 0.88, 6.0);
       }
 
       // Step 10-zone random glowing circuit traces on Seraphia's suit & thighs!

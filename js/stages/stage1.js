@@ -262,18 +262,20 @@ window.Stage1 = {
       const bL = state.boss.bustL;
       const bR = state.boss.bustR;
       if (bL && bR) {
-        const mult = state.boss.chestArmorBroken ? 3.6 : 1.6;
-        bL.vx += nx * mult * intensity;
-        bL.vy += ny * mult * intensity;
-        bR.vx -= nx * mult * 0.4 * intensity;
-        bR.vy += ny * mult * intensity;
-        if (state.boss.chestArmorBroken && window.sfx && window.sfx.softPuru) {
+        const broken = state.boss.chestArmorBroken;
+        const mult = (broken ? 6.2 : 3.4) * (intensity || 1.0);
+        const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
+        bL.vx += sway * mult;
+        bL.vy += (ny - 0.65) * mult;
+        bR.vx -= sway * mult * 0.75;
+        bR.vy += (ny - 0.65) * mult;
+        if (window.sfx && window.sfx.softPuru) {
           window.sfx.softPuru();
         }
       }
       if (state.boss.expression === "normal" || state.boss.expression === "smile") {
         state.boss.expression = "blush";
-        state.boss.expressionTimer = 30;
+        state.boss.expressionTimer = 35;
       }
     }
     this.impulseEar(state, "L", nx * 4.2 * intensity, ny * 4.2 * intensity);

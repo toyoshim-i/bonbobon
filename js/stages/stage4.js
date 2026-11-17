@@ -445,14 +445,19 @@ window.Stage4 = {
     });
 
     if (window.Systems && Systems.isNudgeJiggleEnabled()) {
-      const bImp = (b.chestArmorBroken ? 6.4 : 4.2) * intensity;
-      b.bustL.vx += nx * bImp; b.bustL.vy += ny * bImp;
-      b.bustR.vx += nx * bImp; b.bustR.vy += ny * bImp;
-      b.hipL.vx += nx * 4.0 * intensity; b.hipL.vy += ny * 3.8 * intensity;
-      b.hipR.vx += nx * 4.0 * intensity; b.hipR.vy += ny * 3.8 * intensity;
+      const bImp = (b.chestArmorBroken ? 8.8 : 6.8) * intensity;
+      const sway = Math.abs(nx) > 0.15 ? nx : 0.55;
+      b.bustL.vx += sway * bImp;
+      b.bustL.vy += (ny - 0.65) * bImp;
+      b.bustR.vx -= sway * bImp * 0.75;
+      b.bustR.vy += (ny - 0.65) * bImp;
+      b.hipL.vx += sway * 6.2 * intensity;
+      b.hipL.vy += (ny - 0.5) * 6.2 * intensity;
+      b.hipR.vx -= sway * 4.8 * intensity;
+      b.hipR.vy += (ny - 0.5) * 6.2 * intensity;
       if (!b.faceAnim.sequence && b.expression === "normal") {
         b.expression = b.chestArmorBroken ? "open_blush" : "shock";
-        b.expressionTimer = 24;
+        b.expressionTimer = 30;
       }
       if (window.sfx && window.sfx.softPuru) {
         window.sfx.softPuru();
@@ -1035,14 +1040,14 @@ window.Stage4 = {
 
     // 7. 胸・腰〜太ももの2段階ゴム膜スプリング更新
     if (b.chestArmorBroken) {
-      StageCommon.stepSoftSpring(b.bustL, 0.15, 0.89, 8.4);
-      StageCommon.stepSoftSpring(b.bustR, 0.15, 0.89, 8.4);
+      StageCommon.stepSoftSpring(b.bustL, 0.15, 0.90, 9.2);
+      StageCommon.stepSoftSpring(b.bustR, 0.15, 0.90, 9.2);
     } else {
-      StageCommon.stepSoftSpring(b.bustL, 0.21, 0.86, 4.6);
-      StageCommon.stepSoftSpring(b.bustR, 0.21, 0.86, 4.6);
+      StageCommon.stepSoftSpring(b.bustL, 0.18, 0.89, 6.4);
+      StageCommon.stepSoftSpring(b.bustR, 0.18, 0.89, 6.4);
     }
-    StageCommon.stepSoftSpring(b.hipL, 0.18, 0.87, 6.4);
-    StageCommon.stepSoftSpring(b.hipR, 0.18, 0.87, 6.4);
+    StageCommon.stepSoftSpring(b.hipL, 0.17, 0.89, 7.0);
+    StageCommon.stepSoftSpring(b.hipR, 0.17, 0.89, 7.0);
 
     [b.tekkoL, b.tekkoR, b.kneeL, b.kneeR, b.core, b.hairpinCore, ...b.waistSensors].forEach(t => {
       if (t.flash > 0) t.flash--;

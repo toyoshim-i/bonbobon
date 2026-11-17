@@ -22,33 +22,59 @@ class FMSoundEngine {
   }
 
   init() {
+    if (typeof navigator !== "undefined" && navigator.audioSession) {
+      try {
+        if (navigator.audioSession.type !== "playback") {
+          navigator.audioSession.type = "playback";
+        }
+      } catch (_) {}
+    }
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
-        this.compressor = this.ctx.createDynamicsCompressor();
-        this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
-        this.compressor.knee.setValueAtTime(18, this.ctx.currentTime);
-        this.compressor.ratio.setValueAtTime(6, this.ctx.currentTime);
-        this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-        this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
-
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(this._enabled ? 0.9 : 0, this.ctx.currentTime);
-
-        this.compressor.connect(this.masterGain);
         this.masterGain.connect(this.ctx.destination);
       }
     }
-    if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
+    if (this.ctx && this.ctx.state !== "running") {
+      try {
+        const p = this.ctx.resume();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch (_) {}
+    }
+    if (this.ctx && !this._bufUnlocked) {
+      try {
+        const buf = this.ctx.createBuffer(1, 1, 22050);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(this.ctx.destination);
+        src.start(0);
+        this._bufUnlocked = true;
+      } catch (_) {}
+    }
+    if (!this._htmlAudioUnlocked && typeof Audio !== "undefined") {
+      try {
+        if (!this._silentAudio) {
+          // 1-sample silent PCM WAV for iOS WebKit / iPhone Chrome media unlock
+          this._silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+          this._silentAudio.playsInline = true;
+        }
+        const ap = this._silentAudio.play();
+        if (ap && typeof ap.then === "function") {
+          ap.then(() => { this._htmlAudioUnlocked = true; }).catch(() => {});
+        } else {
+          this._htmlAudioUnlocked = true;
+        }
+      } catch (_) {}
     }
   }
 
   playFM(carrierFreq, modFreq, modDepth, duration, type = "square", slideTo = null, gainVal = 0.14, delaySec = 0) {
     if (!this._enabled) return;
     this.init();
-    if (!this.ctx || !this.compressor) return;
+    if (!this.ctx || !this.masterGain) return;
     const now = this.ctx.currentTime + delaySec;
     const osc = this.ctx.createOscillator();
     const mod = this.ctx.createOscillator();
@@ -65,14 +91,13 @@ class FMSoundEngine {
     modGain.gain.setValueAtTime(modDepth, now);
     modGain.gain.exponentialRampToValueAtTime(1, now + duration);
 
-    envGain.gain.setValueAtTime(0.0001, now);
-    envGain.gain.linearRampToValueAtTime(gainVal, now + 0.003);
+    envGain.gain.setValueAtTime(gainVal, now);
     envGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     mod.connect(modGain);
     modGain.connect(osc.frequency);
     osc.connect(envGain);
-    envGain.connect(this.compressor);
+    envGain.connect(this.masterGain);
 
     osc.start(now);
     mod.start(now);
@@ -372,20 +397,28 @@ class FMSoundEngine {
 
   // Character-specific CODEC typewriter voice blip
   codecSpeakBlip(speaker) {
-    if (this.muted || !this.ctx) return;
+    if (!this._enabled) return;
     const jitter = (Math.random() - 0.5) * 28;
     if (speaker === "colonel") {
-      this.playFM(215 + jitter, 108, 25, 0.026, "square", null, 0.06);
+      this.playFM(215 + jitter, 108, 25, 0.030, "square", null, 0.11);
     } else if (speaker === "elon") {
-      this.playFM(640 + jitter * 1.4, 320, 20, 0.024, "sine", null, 0.07);
+      this.playFM(640 + jitter * 1.4, 320, 20, 0.028, "triangle", null, 0.12);
     } else {
       // silver ball / player
-      this.playFM(390 + jitter, 195, 22, 0.025, "triangle", null, 0.075);
+      this.playFM(390 + jitter, 195, 22, 0.028, "triangle", null, 0.12);
     }
   }
 }
 
 const rawSfx = new FMSoundEngine();
+const unlockOnGesture = () => {
+  if (rawSfx.enabled) rawSfx.init();
+};
+if (typeof window !== "undefined") {
+  ["touchend", "pointerup", "click", "keydown"].forEach(ev => {
+    window.addEventListener(ev, unlockOnGesture, { capture: true, passive: true });
+  });
+}
 window.sfx = new Proxy(rawSfx, {
   get(target, prop) {
     if (prop in target) {

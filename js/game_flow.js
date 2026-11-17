@@ -156,6 +156,7 @@ window.GameFlow = {
     const btnTitleStart = document.getElementById("btnTitleStart");
     if (btnTitleStart) {
       btnTitleStart.addEventListener("click", () => {
+        if (window.sfx && window.sfx.init) window.sfx.init();
         this.stopAttractDemo();
         this.hideAllModals();
         if (window.GameEngine) GameEngine.startArcadeCampaign();
@@ -401,12 +402,19 @@ window.GameFlow = {
   },
 
   buildAttractCutHtml(cut) {
+    const isEn = window.I18N && I18N.lang === "en";
+    const bodyCls = isEn
+      ? "text-[16px] sm:text-[18px] font-black leading-[1.6] tracking-wide text-[#f8f2ff]"
+      : "text-[19px] sm:text-[21px] font-black leading-[1.65] tracking-wide text-[#f8f2ff] whitespace-nowrap";
+    const punchClsBase = isEn
+      ? "text-[18px] sm:text-[20px] font-black leading-[1.5] tracking-wider"
+      : "text-[21px] sm:text-[23px] font-black leading-[1.55] tracking-wider whitespace-nowrap";
     let html = '';
     if (cut.body) {
       const paras = cut.body.split("\n\n");
       const bodyHtml = paras.map(p => {
         const lines = p.split("\n").join("<br>");
-        return `<p class="text-[19px] sm:text-[21px] font-black leading-[1.65] tracking-wide text-[#f8f2ff] whitespace-nowrap" style="text-shadow: 0 2px 4px #000, 0 0 10px #000, 0 1px 0 #000;">${lines}</p>`;
+        return `<p class="${bodyCls}" style="text-shadow: 0 2px 4px #000, 0 0 10px #000, 0 1px 0 #000;">${lines}</p>`;
       }).join('<div class="h-4"></div>');
       html += bodyHtml;
     }
@@ -414,7 +422,7 @@ window.GameFlow = {
       const punchLines = cut.punch.split("\n").join("<br>");
       const mtClass = cut.punchMargin || "mt-5";
       const color = cut.punchColor || "#ff66cc";
-      html += `<p class="text-[21px] sm:text-[23px] font-black leading-[1.55] tracking-wider ${mtClass} whitespace-nowrap" style="color: ${color}; text-shadow: 0 2px 6px #000, 0 0 12px ${color}b0, 0 1px 0 #000;">${punchLines}</p>`;
+      html += `<p class="${punchClsBase} ${mtClass}" style="color: ${color}; text-shadow: 0 2px 6px #000, 0 0 12px ${color}b0, 0 1px 0 #000;">${punchLines}</p>`;
     }
     return html;
   },
@@ -436,8 +444,6 @@ window.GameFlow = {
       fxCanvas.style.transform = "scale(1)";
     }
 
-    this.setupAttractCut(0);
-
     if (titleModal) {
       titleModal.classList.remove("opacity-100");
       titleModal.classList.add("opacity-0");
@@ -456,6 +462,7 @@ window.GameFlow = {
       attractModal.classList.add("opacity-100");
     }
 
+    this.setupAttractCut(0);
     this.runAttractLoop();
   },
 
@@ -901,13 +908,16 @@ window.GameFlow = {
   },
 
   wrapCodecSegments(segments, maxW = 22) {
+    const locale = (window.I18N && I18N.lang === "en") ? "en" : "ja";
+    if (locale === "en") {
+      return segments.map(seg => ({ ...seg }));
+    }
     const charW = (ch) => (/[\x00-\x7F]/.test(ch) ? 0.55 : 1.0);
     const strW = (s) => {
       let w = 0;
       for (const ch of s) w += charW(ch);
       return w;
     };
-    const locale = (window.I18N && I18N.lang === "en") ? "en" : "ja";
     const segInst = (typeof Intl !== "undefined" && Intl.Segmenter)
       ? new Intl.Segmenter(locale, { granularity: "word" })
       : null;
@@ -1194,7 +1204,7 @@ window.GameFlow = {
     return lines.map(l => {
       const outline = "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px #000, 0 0 10px #000";
       const glow = l.shadow ? `${outline}, 0 0 14px ${l.shadow}` : outline;
-      return `<p class="${l.cls}" style="text-shadow: ${glow};">${l.text}</p>`;
+      return `<p class="${l.cls}" style="text-shadow: ${glow};">${l.text.replace(/\n/g, "<br>")}</p>`;
     }).join("");
   },
 
@@ -1416,15 +1426,31 @@ window.GameFlow = {
 
   refreshLanguage() {
     if (this.attract && this.attract.active) {
-      this.renderAttractCut(this.attract.cutIdx || 0);
+      this.setupAttractCut(this.attract.cutIdx || 0);
+    }
+    const gameOverModal = document.getElementById("gameOverModal");
+    if (gameOverModal && !gameOverModal.classList.contains("hidden") && window.GameEngine && GameEngine.state) {
+      const state = GameEngine.state;
+      const idx = state.stageIndex || 1;
+      const meta = GameEngine.getStageMeta ? GameEngine.getStageMeta(idx) : null;
+      const curStageName = (idx === 5 && state.phase === 3)
+        ? t("engine.stage5.finalDisplayName")
+        : (meta ? meta.displayName : `STAGE ${idx}`);
+      const stageEl = document.getElementById("gameOverStage");
+      if (stageEl) stageEl.textContent = `STAGE ${idx}: ${curStageName}`;
     }
     const endingModal = document.getElementById("endingModal");
     if (endingModal && !endingModal.classList.contains("hidden")) {
       if (this.ending.act === 1) {
-        this.loadEndingBeat(this.ending.beat || 0);
+        const wasTyping = this.ending.isTyping;
+        this.showEndingAct1Beat(this.ending.beat || 0);
+        if (!wasTyping) this.finishEndingTyping();
       } else if (this.ending.act === 2) {
         const track = document.getElementById("endingAct2ScrollTrack");
-        if (track) track.innerHTML = this.buildEndingAct2Html();
+        if (track) {
+          track.innerHTML = this.buildEndingAct2Html();
+          this.ending.act2ScrollMinY = -(track.offsetHeight + 24);
+        }
         this.updateEndingBottomButton(t("ending.toResultsBtn"), "launch");
       } else if (this.ending.act === 3) {
         this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");

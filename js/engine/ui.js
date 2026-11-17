@@ -287,7 +287,8 @@ window.UI = {
     // Buff Slots - only rebuild when key string changes
     const slotsContainer = this.el("buffSlots");
     if (slotsContainer && state.keptBuffs) {
-      const buffKey = state.keptBuffs.map(slot => slot ? `${slot.id}:${slot.tier}` : "empty").join("|");
+      const lang = (window.I18N && I18N.lang) || "ja";
+      const buffKey = `${lang}|` + state.keptBuffs.map(slot => slot ? `${slot.id}:${slot.tier}` : "empty").join("|");
       if (slotsContainer._lastBuffKey !== buffKey) {
         slotsContainer._lastBuffKey = buffKey;
         slotsContainer.innerHTML = "";
@@ -311,10 +312,8 @@ window.UI = {
 
     // Permanent Upgrades List (Rendered dynamically when menu is open)
     if (this.isMenuOpen && state.perm && window.Systems && Systems.PERM_DEFS) {
-      const permKey = Object.keys(Systems.PERM_DEFS).map(id => `${id}:${state.perm[id] || 0}`).join("|") +
-        `|${state.perm.centerPostHP || 0}|${state.perm.kickbackL_charges || 0}|${state.perm.kickbackR_charges || 0}`;
+      const permKey = this.getPermKey(state);
       if (this._lastPermKey !== permKey) {
-        this._lastPermKey = permKey;
         this.renderPermUpgrades(state);
       }
     }
@@ -379,9 +378,19 @@ window.UI = {
     }
   },
 
+  getPermKey(state) {
+    const lang = (window.I18N && I18N.lang) || "ja";
+    const inTitle = state && state.inTitle ? 1 : 0;
+    const perm = (state && state.perm) || {};
+    const defs = (window.Systems && Systems.PERM_DEFS) || {};
+    return `${lang}|${inTitle}|` + Object.keys(defs).map(id => `${id}:${perm[id] || 0}`).join("|") +
+      `|${perm.centerPostHP || 0}|${perm.kickbackL_charges || 0}|${perm.kickbackR_charges || 0}`;
+  },
+
   renderPermUpgrades(state) {
     const permContainer = document.getElementById("permUpgradesList");
     if (!permContainer || !window.Systems || !Systems.PERM_DEFS) return;
+    this._lastPermKey = this.getPermKey(state);
     const dp = (window.Systems && Systems.settings && Systems.settings.debugPerm) || {};
     permContainer.innerHTML = "";
     Object.values(Systems.PERM_DEFS).forEach(def => {
@@ -834,7 +843,7 @@ window.UI = {
     const btnSelEnding = document.getElementById("btnSelectEnding");
     if (btnSelEnding) {
       btnSelEnding.addEventListener("click", () => {
-        if (window.sfx && window.sfx.ensureInit) window.sfx.ensureInit();
+        if (window.sfx && window.sfx.init) window.sfx.init();
         const menuModal = document.getElementById("menuModal");
         if (menuModal) UI.closeModal(menuModal);
         if (window.GameFlow && window.GameFlow.startEnding) {
@@ -883,6 +892,16 @@ window.UI = {
         if (engine && engine.state) {
           this.renderPermUpgrades(engine.state);
           this.updateHUD(engine.state);
+        }
+        const clearModal = document.getElementById("clearModal");
+        if (clearModal && !clearModal.classList.contains("hidden") && this._lastClearStageIdx) {
+          const idx = this._lastClearStageIdx;
+          const nameEl = clearModal.querySelector(".text-\\[\\#ff66b2\\]");
+          const quoteEl = clearModal.querySelector("p");
+          const nextBtn = document.getElementById("btnClearNext");
+          if (nameEl) nameEl.textContent = idx === 5 ? t("engine.stage5.finalDisplayName") : t(`stage${idx}.bossName`);
+          if (quoteEl) quoteEl.innerHTML = t(`stage${idx}.defeatQuote`);
+          if (nextBtn) nextBtn.innerHTML = idx === 5 ? t("clear.toEnding") : t("clear.nextStage");
         }
         if (window.GameFlow && typeof GameFlow.refreshLanguage === "function") {
           GameFlow.refreshLanguage();
@@ -1129,6 +1148,7 @@ window.UI = {
 
     const modal = document.getElementById("clearModal");
     if (!modal) return;
+    this._lastClearStageIdx = stageIdx;
 
     // Update clear bonus banner
     const bonusText = document.getElementById("clearBonusText");

@@ -493,42 +493,53 @@ Object.assign(window.Stage5, {
       const vpY = 324;
       const t = b.animTick;
 
-      // Horizon glow around y = 324
-      const horizonGrad = ctx.createRadialGradient(vpX, vpY, 10, vpX, vpY, 180);
-      if (state.phase === 1) {
-        horizonGrad.addColorStop(0, "rgba(0, 184, 212, 0.40)");
-        horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
-      } else if (state.phase === 2) {
-        horizonGrad.addColorStop(0, "rgba(255, 42, 212, 0.35)");
-        horizonGrad.addColorStop(0.5, "rgba(0, 245, 232, 0.20)");
-        horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
-      } else {
-        horizonGrad.addColorStop(0, "rgba(230, 255, 0, 0.35)");
-        horizonGrad.addColorStop(0.5, "rgba(0, 245, 212, 0.25)");
-        horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
-      }
-      ctx.fillStyle = horizonGrad;
-      ctx.fillRect(IMG_BOX.x, 220, IMG_BOX.w, 208);
+      // Horizon glow + static radial wireframe grids (pre-baked per phase)
+      if (!this._bgPhaseCanvases) this._bgPhaseCanvases = {};
+      const phaseKey = state.phase === 1 ? 1 : (state.phase === 2 ? 2 : 3);
+      let phaseBg = this._bgPhaseCanvases[phaseKey];
+      if (!phaseBg) {
+        phaseBg = document.createElement("canvas");
+        phaseBg.width = IMG_BOX.w;
+        phaseBg.height = IMG_BOX.h;
+        const pctx = phaseBg.getContext("2d");
+        const lvpX = vpX - IMG_BOX.x;
+        const lvpY = vpY - IMG_BOX.y;
 
-      // 3D Perspective Wireframe Grids
-      const gridColor = state.phase === 1 ? "rgba(0, 184, 212, 0.35)" : (state.phase === 2 ? "rgba(255, 42, 212, 0.35)" : "rgba(0, 245, 212, 0.40)");
+        const horizonGrad = pctx.createRadialGradient(lvpX, lvpY, 10, lvpX, lvpY, 180);
+        if (phaseKey === 1) {
+          horizonGrad.addColorStop(0, "rgba(0, 184, 212, 0.40)");
+          horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
+        } else if (phaseKey === 2) {
+          horizonGrad.addColorStop(0, "rgba(255, 42, 212, 0.35)");
+          horizonGrad.addColorStop(0.5, "rgba(0, 245, 232, 0.20)");
+          horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
+        } else {
+          horizonGrad.addColorStop(0, "rgba(230, 255, 0, 0.35)");
+          horizonGrad.addColorStop(0.5, "rgba(0, 245, 212, 0.25)");
+          horizonGrad.addColorStop(1, "rgba(7, 3, 28, 0)");
+        }
+        pctx.fillStyle = horizonGrad;
+        pctx.fillRect(0, 220 - IMG_BOX.y, IMG_BOX.w, 208);
+
+        const gridColor = phaseKey === 1 ? "rgba(0, 184, 212, 0.35)" : (phaseKey === 2 ? "rgba(255, 42, 212, 0.35)" : "rgba(0, 245, 212, 0.40)");
+        pctx.strokeStyle = gridColor;
+        pctx.lineWidth = 1.0;
+        pctx.beginPath();
+        for (let x = IMG_BOX.x; x <= IMG_BOX.x + IMG_BOX.w; x += 28) {
+          const lx = x - IMG_BOX.x;
+          pctx.moveTo(lx, 16 - IMG_BOX.y);
+          pctx.lineTo(lvpX + (lx - lvpX) * 0.45, 182 - IMG_BOX.y);
+          pctx.moveTo(lx, 660 - IMG_BOX.y);
+          pctx.lineTo(lvpX + (lx - lvpX) * 0.45, 434 - IMG_BOX.y);
+        }
+        pctx.stroke();
+        this._bgPhaseCanvases[phaseKey] = phaseBg;
+      }
+      ctx.drawImage(phaseBg, IMG_BOX.x, IMG_BOX.y);
+
       const crossColor = state.phase === 1 ? "rgba(0, 245, 232, 0.50)" : (state.phase === 2 ? "rgba(0, 245, 232, 0.50)" : "rgba(230, 255, 0, 0.50)");
 
       ctx.save();
-      // Ceiling radial lines
-      ctx.strokeStyle = gridColor;
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      for (let x = IMG_BOX.x; x <= IMG_BOX.x + IMG_BOX.w; x += 28) {
-        ctx.moveTo(x, 16);
-        ctx.lineTo(vpX + (x - vpX) * 0.45, 182);
-      }
-      // Floor radial lines
-      for (let x = IMG_BOX.x; x <= IMG_BOX.x + IMG_BOX.w; x += 28) {
-        ctx.moveTo(x, 660);
-        ctx.lineTo(vpX + (x - vpX) * 0.45, 434);
-      }
-      ctx.stroke();
 
       // Scrolling horizontal cross-lines
       const gridScroll = (t * 0.015) % 1;
@@ -953,26 +964,39 @@ Object.assign(window.Stage5, {
             ctx.restore();
           }
 
-          // 26 Rising Neon Feather Particles across the sanctuary
+          // 26 Rising Neon Feather Particles across the sanctuary (pre-baked sprites)
           if (b.sanctuaryFeathers) {
+            if (!this._featherSpriteCache) this._featherSpriteCache = {};
             ctx.save();
-            b.sanctuaryFeathers.forEach(f => {
+            ctx.globalAlpha = 0.45;
+            for (let fi = 0; fi < b.sanctuaryFeathers.length; fi++) {
+              const f = b.sanctuaryFeathers[fi];
+              let fs = this._featherSpriteCache[f.col];
+              if (!fs) {
+                fs = document.createElement("canvas");
+                fs.width = 16;
+                fs.height = 30;
+                const fctx = fs.getContext("2d");
+                fctx.translate(8, 15);
+                fctx.fillStyle = f.col;
+                fctx.beginPath();
+                fctx.ellipse(0, 0, 4.5, 12, 0.1, 0, Math.PI * 2);
+                fctx.fill();
+                fctx.strokeStyle = "#ffffff";
+                fctx.lineWidth = 0.8;
+                fctx.beginPath();
+                fctx.moveTo(0, -11);
+                fctx.lineTo(0, 11);
+                fctx.stroke();
+                this._featherSpriteCache[f.col] = fs;
+              }
               ctx.save();
               ctx.translate(f.x, f.y);
               ctx.rotate(Math.sin(t * 0.05 + f.phase) * 0.35);
-              ctx.fillStyle = f.col;
-              ctx.globalAlpha = 0.45;
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 4.5 * f.scale, 12 * f.scale, 0.1, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = 0.8 * f.scale;
-              ctx.beginPath();
-              ctx.moveTo(0, -11 * f.scale);
-              ctx.lineTo(0, 11 * f.scale);
-              ctx.stroke();
+              if (f.scale !== 1) ctx.scale(f.scale, f.scale);
+              ctx.drawImage(fs, -8, -15);
               ctx.restore();
-            });
+            }
             ctx.restore();
           }
 

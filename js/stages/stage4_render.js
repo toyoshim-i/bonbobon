@@ -471,13 +471,26 @@ Object.assign(window.Stage4, {
     ctx.drawImage(this.assets.bgAlleyImg, IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
 
     if (b) {
+      if (!this._bgGlowCanvas) {
+        const gc = document.createElement("canvas");
+        gc.width = IMG_BOX.w;
+        gc.height = IMG_BOX.h;
+        const gctx = gc.getContext("2d");
+        const cx = 198 - IMG_BOX.x;
+        const cy = 285 - IMG_BOX.y;
+        const bgGlow = gctx.createRadialGradient(cx, cy, 25, cx, cy, 275);
+        bgGlow.addColorStop(0, "rgba(255, 42, 157, 1)");
+        bgGlow.addColorStop(0.55, "rgba(110, 20, 210, 0.65)");
+        bgGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        gctx.fillStyle = bgGlow;
+        gctx.fillRect(0, 0, gc.width, gc.height);
+        this._bgGlowCanvas = gc;
+      }
       const horizonPulse = 0.20 + 0.08 * Math.sin(b.animTick * 0.05) + (state.fever.active || b.sakuraStormTimer > 0 ? 0.16 : 0);
-      const bgGlow = ctx.createRadialGradient(198, 285, 25, 198, 285, 275);
-      bgGlow.addColorStop(0, `rgba(255, 42, 157, ${horizonPulse.toFixed(2)})`);
-      bgGlow.addColorStop(0.55, `rgba(110, 20, 210, ${(horizonPulse * 0.65).toFixed(2)})`);
-      bgGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
-      ctx.fillStyle = bgGlow;
-      ctx.fillRect(IMG_BOX.x, IMG_BOX.y, IMG_BOX.w, IMG_BOX.h);
+      ctx.save();
+      ctx.globalAlpha = horizonPulse;
+      ctx.drawImage(this._bgGlowCanvas, IMG_BOX.x, IMG_BOX.y);
+      ctx.restore();
 
       // 2. 奥レイヤーの夜桜吹雪
       b.backPetals.forEach(p => this.drawSakuraPetal(ctx, p));

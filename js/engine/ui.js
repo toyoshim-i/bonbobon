@@ -80,14 +80,18 @@ window.UI = {
     }, durationFrames * 16);
   },
 
+  isMenuOpen: false,
+
   updateScreenMode(state) {
     const isTitle = !!(state && state.inTitle);
     const hudBar = document.getElementById("inGameHudBar");
     const buffBar = document.getElementById("inGameBuffBar");
     const titleControls = document.getElementById("titleControlsBar");
     const gameControls = document.getElementById("gameControlsBar");
+    const menuControls = document.getElementById("menuControlsBar");
     const playfieldFrame = document.getElementById("playfieldFrame");
     const objectivePill = document.getElementById("hudObjectivePill");
+    const btnHudDebugSettings = document.getElementById("btnHudDebugSettings");
 
     if (playfieldFrame) {
       playfieldFrame.classList.toggle("title-screen-mode", isTitle);
@@ -101,26 +105,58 @@ window.UI = {
       if (isTitle) hudBar.classList.add("hidden");
       else hudBar.classList.remove("hidden");
     }
+    if (btnHudDebugSettings) {
+      const isDbg = window.Systems && typeof Systems.isDebugMenuEnabled === "function" && Systems.isDebugMenuEnabled();
+      if (!isTitle && isDbg) {
+        btnHudDebugSettings.classList.remove("hidden");
+        btnHudDebugSettings.classList.add("flex");
+      } else {
+        btnHudDebugSettings.classList.add("hidden");
+        btnHudDebugSettings.classList.remove("flex");
+      }
+    }
     if (buffBar) {
       if (isTitle) buffBar.classList.add("hidden");
       else buffBar.classList.remove("hidden");
     }
-    if (titleControls) {
-      if (isTitle) {
-        titleControls.classList.remove("hidden");
-        titleControls.classList.add("grid");
-      } else {
+
+    // Bottom Controls Deck Switcher:
+    // When Settings Modal is open, transform bottom bar into full-width CLOSE SETTINGS deck!
+    if (this.isMenuOpen) {
+      if (menuControls) {
+        menuControls.classList.remove("hidden");
+        menuControls.classList.add("block");
+      }
+      if (titleControls) {
         titleControls.classList.add("hidden");
         titleControls.classList.remove("grid");
       }
-    }
-    if (gameControls) {
-      if (isTitle) {
+      if (gameControls) {
         gameControls.classList.add("hidden");
         gameControls.classList.remove("grid");
-      } else {
-        gameControls.classList.remove("hidden");
-        gameControls.classList.add("grid");
+      }
+    } else {
+      if (menuControls) {
+        menuControls.classList.add("hidden");
+        menuControls.classList.remove("block");
+      }
+      if (titleControls) {
+        if (isTitle) {
+          titleControls.classList.remove("hidden");
+          titleControls.classList.add("grid");
+        } else {
+          titleControls.classList.add("hidden");
+          titleControls.classList.remove("grid");
+        }
+      }
+      if (gameControls) {
+        if (isTitle) {
+          gameControls.classList.add("hidden");
+          gameControls.classList.remove("grid");
+        } else {
+          gameControls.classList.remove("hidden");
+          gameControls.classList.add("grid");
+        }
       }
     }
   },
@@ -204,32 +240,13 @@ window.UI = {
       }
     }
 
-    // Permanent Upgrades List - only rebuild when key string changes
-    const permContainer = this.el("permUpgradesList");
-    if (permContainer && state.perm && window.Systems && Systems.PERM_DEFS) {
+    // Permanent Upgrades List (Rendered dynamically when menu is open)
+    if (this.isMenuOpen && state.perm && window.Systems && Systems.PERM_DEFS) {
       const permKey = Object.keys(Systems.PERM_DEFS).map(id => `${id}:${state.perm[id] || 0}`).join("|") +
         `|${state.perm.centerPostHP || 0}|${state.perm.kickbackL_charges || 0}|${state.perm.kickbackR_charges || 0}`;
-      if (permContainer._lastPermKey !== permKey) {
-        permContainer._lastPermKey = permKey;
-        permContainer.innerHTML = "";
-        Object.values(Systems.PERM_DEFS).forEach(def => {
-          const lv = state.perm[def.id] || 0;
-          let extraStatus = "";
-          if (def.id === "centerPost") extraStatus = ` (残HP: ${state.perm.centerPostHP})`;
-          if (def.id === "kickbackL") extraStatus = ` (残弾: ${state.perm.kickbackL_charges})`;
-          if (def.id === "kickbackR") extraStatus = ` (残弾: ${state.perm.kickbackR_charges})`;
-
-          const row = document.createElement("div");
-          row.className = `p-2 rounded border ${lv > 0 ? "bg-[#00f5d4]/10 border-[#00f5d4]/60" : "bg-black/20 border-[#00f5d4]/30 opacity-70"}`;
-          row.innerHTML = `
-            <div class="flex items-center justify-between font-bold">
-              <span class="${lv > 0 ? "text-[#00f5d4]" : ""}">${def.name}</span>
-              <span class="text-[#e6ff00]">Lv.${lv}/${def.maxLv}${extraStatus}</span>
-            </div>
-            <div class="text-xs text-[#b59ce6] mt-0.5">${def.desc}</div>
-          `;
-          permContainer.appendChild(row);
-        });
+      if (this._lastPermKey !== permKey) {
+        this._lastPermKey = permKey;
+        this.renderPermUpgrades(state);
       }
     }
 
@@ -316,6 +333,56 @@ window.UI = {
         }
       }
     }
+  },
+
+  renderPermUpgrades(state) {
+    const permContainer = document.getElementById("permUpgradesList");
+    if (!permContainer || !window.Systems || !Systems.PERM_DEFS) return;
+    const dp = (window.Systems && Systems.settings && Systems.settings.debugPerm) || {};
+    permContainer.innerHTML = "";
+    Object.values(Systems.PERM_DEFS).forEach(def => {
+      const lv = (state && state.perm && typeof state.perm[def.id] === "number")
+        ? state.perm[def.id]
+        : (dp[def.id] || 0);
+      let extraStatus = "";
+      if (state && state.perm && !state.inTitle) {
+        if (def.id === "centerPost") extraStatus = ` [残HP:${state.perm.centerPostHP || 0}]`;
+        if (def.id === "kickbackL") extraStatus = ` [残弾:${state.perm.kickbackL_charges || 0}]`;
+        if (def.id === "kickbackR") extraStatus = ` [残弾:${state.perm.kickbackR_charges || 0}]`;
+      }
+      const row = document.createElement("div");
+      row.className = "flex items-center justify-between p-1.5 rounded-lg border bg-black/30 border-[#00f5d4]/30 text-xs";
+      row.innerHTML = `
+        <div class="flex flex-col min-w-0 pr-1">
+          <span class="font-bold text-[10px] text-white truncate ${lv > 0 ? "text-[#00f5d4]" : ""}">${def.name}</span>
+          <span class="text-[7.5px] text-[#b59ce6] leading-tight">${def.desc}${extraStatus}</span>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button data-perm-down="${def.id}" class="w-5 h-5 rounded bg-[#281058] hover:bg-[#ff1493] text-white font-black text-[10px] flex items-center justify-center cursor-pointer transition select-none leading-none border border-[#00f5d4]/40">-</button>
+          <span class="w-10 text-center font-mono font-bold text-[9.5px] text-[#e6ff00] tabular-nums">Lv.${lv}/${def.maxLv}</span>
+          <button data-perm-up="${def.id}" class="w-5 h-5 rounded bg-[#281058] hover:bg-[#00f5d4] hover:text-black text-white font-black text-[10px] flex items-center justify-center cursor-pointer transition select-none leading-none border border-[#00f5d4]/40">+</button>
+        </div>
+      `;
+      const btnDown = row.querySelector(`[data-perm-down="${def.id}"]`);
+      if (btnDown) {
+        btnDown.addEventListener("click", (e) => {
+          e.stopPropagation();
+          Systems.setDebugPermLevel(def.id, lv - 1, state);
+          if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+          this.renderPermUpgrades(state);
+        });
+      }
+      const btnUp = row.querySelector(`[data-perm-up="${def.id}"]`);
+      if (btnUp) {
+        btnUp.addEventListener("click", (e) => {
+          e.stopPropagation();
+          Systems.setDebugPermLevel(def.id, lv + 1, state);
+          if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+          this.renderPermUpgrades(state);
+        });
+      }
+      permContainer.appendChild(row);
+    });
   },
 
   initControls(engine) {
@@ -529,31 +596,40 @@ window.UI = {
 
     // System Menu Modal Open & Close
     const menuModal = document.getElementById("menuModal");
-    const openMenu = () => {
+    UI.openMenu = (st = null) => {
+      const state = st || engine.state;
       if (!menuModal) return;
       if (window.sfx) window.sfx.flipperClick();
       if (window.GameFlow && window.GameFlow.stopAttractDemo) {
         window.GameFlow.stopAttractDemo();
       }
-      const isInGame = engine.state && !engine.state.inTitle;
+      const isInGame = state && !state.inTitle;
       const inGameActions = document.getElementById("menuInGameActions");
       if (inGameActions) {
         if (isInGame) inGameActions.classList.remove("hidden");
         else inGameActions.classList.add("hidden");
       }
-      const btnResume = document.getElementById("btnMenuResume");
-      if (btnResume) {
-        btnResume.textContent = isInGame ? "RESUME GAME (ゲームに戻る)" : "閉じる (CLOSE)";
-      }
+      UI.isMenuOpen = true;
+      UI.updateScreenMode(state);
+      UI.renderPermUpgrades(state);
+      updateDebugHudUI(window.Systems && Systems.isDebugMenuEnabled());
+      updateNudgeJiggleUI(window.Systems && Systems.isNudgeJiggleEnabled());
+      updateAudioUI(window.Systems ? Systems.isSfxEnabled() : true);
+
       menuModal.classList.remove("hidden");
       menuModal.classList.add("flex");
       void menuModal.offsetWidth;
       menuModal.classList.remove("opacity-0");
       menuModal.classList.add("opacity-100");
     };
-    const closeMenu = () => {
+
+    UI.closeMenu = (st = null) => {
+      const state = st || engine.state;
       if (!menuModal) return;
       if (window.sfx) window.sfx.flipperClick();
+      UI.isMenuOpen = false;
+      UI.updateScreenMode(state);
+
       menuModal.classList.remove("opacity-100");
       menuModal.classList.add("opacity-0");
       setTimeout(() => {
@@ -562,20 +638,27 @@ window.UI = {
       }, 200);
     };
 
-    const btnMenu = document.getElementById("btnMenu");
-    if (btnMenu) btnMenu.addEventListener("click", openMenu);
-
-    const btnHudSettings = document.getElementById("btnHudSettings");
-    if (btnHudSettings) btnHudSettings.addEventListener("click", openMenu);
+    const openMenu = () => UI.openMenu(engine.state);
+    const closeMenu = () => UI.closeMenu(engine.state);
 
     const btnTitleSettings = document.getElementById("btnTitleSettings");
     if (btnTitleSettings) btnTitleSettings.addEventListener("click", openMenu);
 
-    const btnMenuClose = document.getElementById("btnMenuClose");
-    if (btnMenuClose) btnMenuClose.addEventListener("click", closeMenu);
+    const btnHudDebugSettings = document.getElementById("btnHudDebugSettings");
+    if (btnHudDebugSettings) btnHudDebugSettings.addEventListener("click", openMenu);
 
-    const btnMenuResume = document.getElementById("btnMenuResume");
-    if (btnMenuResume) btnMenuResume.addEventListener("click", closeMenu);
+    const btnBottomMenuClose = document.getElementById("btnBottomMenuClose");
+    if (btnBottomMenuClose) btnBottomMenuClose.addEventListener("click", closeMenu);
+
+    const btnReturnToTitleFromMenu = document.getElementById("btnReturnToTitleFromMenu");
+    if (btnReturnToTitleFromMenu) {
+      btnReturnToTitleFromMenu.addEventListener("click", () => {
+        closeMenu();
+        if (window.GameFlow && window.GameFlow.showTitle) {
+          window.GameFlow.showTitle();
+        }
+      });
+    }
 
     // Stage Selection (Header Button, Menu Modal Stage Cards)
     const loadStageFromUI = (stage) => {
@@ -608,45 +691,58 @@ window.UI = {
     }
 
     const btnSelS1 = document.getElementById("btnSelectStage1");
-    if (btnSelS1) {
-      btnSelS1.addEventListener("click", () => loadStageFromUI(window.Stage1));
-    }
+    if (btnSelS1) btnSelS1.addEventListener("click", () => loadStageFromUI(window.Stage1));
     const btnSelS2 = document.getElementById("btnSelectStage2");
-    if (btnSelS2) {
-      btnSelS2.addEventListener("click", () => loadStageFromUI(window.Stage2));
-    }
+    if (btnSelS2) btnSelS2.addEventListener("click", () => loadStageFromUI(window.Stage2));
     const btnSelS3 = document.getElementById("btnSelectStage3");
-    if (btnSelS3) {
-      btnSelS3.addEventListener("click", () => loadStageFromUI(window.Stage3));
-    }
+    if (btnSelS3) btnSelS3.addEventListener("click", () => loadStageFromUI(window.Stage3));
     const btnSelS4 = document.getElementById("btnSelectStage4");
-    if (btnSelS4) {
-      btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
-    }
+    if (btnSelS4) btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
     const btnSelS5 = document.getElementById("btnSelectStage5");
-    if (btnSelS5) {
-      btnSelS5.addEventListener("click", () => loadStageFromUI(window.Stage5));
+    if (btnSelS5) btnSelS5.addEventListener("click", () => loadStageFromUI(window.Stage5));
+
+    // Permanent Upgrades Quick Presets
+    const btnPermAllReset = document.getElementById("btnPermAllReset");
+    if (btnPermAllReset) {
+      btnPermAllReset.addEventListener("click", () => {
+        if (!window.Systems) return;
+        Systems.resetDebugPermLevels(engine.state);
+        if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+        UI.renderPermUpgrades(engine.state);
+      });
+    }
+    const btnPermAllMax = document.getElementById("btnPermAllMax");
+    if (btnPermAllMax) {
+      btnPermAllMax.addEventListener("click", () => {
+        if (!window.Systems) return;
+        Systems.maxAllDebugPermLevels(engine.state);
+        if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+        UI.renderPermUpgrades(engine.state);
+      });
     }
 
-    // Audio Mute / Unmute Toggle
-    const toggleAudio = () => {
-      if (!window.sfx) return;
-      const isEnabled = window.sfx.enabled !== false;
-      const nextState = !isEnabled;
-      window.sfx.enabled = nextState;
-
+    // Audio Mute / Unmute Toggle (Persisted via Systems)
+    const updateAudioUI = (enabled) => {
       const btnAudio = document.getElementById("btnAudio");
       if (btnAudio) {
-        btnAudio.textContent = nextState ? "SFX:ON" : "SFX:MUTE";
-        btnAudio.className = nextState 
+        btnAudio.textContent = enabled ? "SFX:ON" : "SFX:MUTE";
+        btnAudio.className = enabled 
           ? "px-1.5 py-0.5 rounded bg-[#281058] hover:bg-[#3a187c] text-[#e6ff00] border border-[#e6ff00]/50 text-[9px] sm:text-[10px] cursor-pointer transition"
           : "px-1.5 py-0.5 rounded bg-[#180828] text-gray-400 border border-gray-600 text-[9px] sm:text-[10px] cursor-pointer transition";
       }
       const txtMenuStatus = document.getElementById("txtMenuAudioStatus");
-      if (txtMenuStatus) txtMenuStatus.textContent = nextState ? "SFX: ON" : "SFX: MUTE";
+      if (txtMenuStatus) txtMenuStatus.textContent = enabled ? "SFX: ON" : "SFX: MUTE";
       const txtMenuIcon = document.getElementById("txtMenuAudioIcon");
-      if (txtMenuIcon) txtMenuIcon.textContent = nextState ? "🔊" : "🔇";
-      if (nextState && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+      if (txtMenuIcon) txtMenuIcon.textContent = enabled ? "🔊" : "🔇";
+    };
+
+    const toggleAudio = () => {
+      if (!window.Systems) return;
+      const isEnabled = Systems.isSfxEnabled();
+      const nextState = !isEnabled;
+      Systems.setSfxEnabled(nextState);
+      updateAudioUI(nextState);
+      if (nextState && window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
     };
 
     const btnAudio = document.getElementById("btnAudio");
@@ -655,11 +751,9 @@ window.UI = {
     const btnMenuAudio = document.getElementById("btnMenuToggleAudio");
     if (btnMenuAudio) btnMenuAudio.addEventListener("click", toggleAudio);
 
-    // Nudge Body Jiggle Setting Toggle
-    if (window.Systems && typeof Systems.loadSettings === "function") {
-      Systems.loadSettings();
-    }
+    updateAudioUI(window.Systems ? Systems.isSfxEnabled() : true);
 
+    // Nudge Body Jiggle Setting Toggle
     const updateNudgeJiggleUI = (enabled) => {
       const btn = document.getElementById("btnMenuToggleNudgeJiggle");
       const icon = document.getElementById("txtMenuNudgeJiggleIcon");
@@ -693,6 +787,44 @@ window.UI = {
             window.sfx.capsuleCatch();
           }
         }
+      });
+    }
+
+    // In-Game Debug HUD Icon Toggle
+    const updateDebugHudUI = (enabled) => {
+      const btn = document.getElementById("btnMenuToggleDebugHud");
+      const icon = document.getElementById("txtMenuDebugHudIcon");
+      const status = document.getElementById("txtMenuDebugHudStatus");
+      if (icon) icon.textContent = enabled ? "🛠️" : "🔒";
+      if (status) status.textContent = enabled ? "ON" : "OFF";
+      if (btn) {
+        btn.className = enabled
+          ? "px-3 py-1.5 rounded-lg bg-[#3d2400] hover:bg-[#593500] border border-[#e6ff00]/80 text-[#e6ff00] font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0"
+          : "px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0";
+      }
+      const btnHudDebug = document.getElementById("btnHudDebugSettings");
+      if (btnHudDebug) {
+        const inGame = engine.state && !engine.state.inTitle;
+        if (inGame && enabled) {
+          btnHudDebug.classList.remove("hidden");
+          btnHudDebug.classList.add("flex");
+        } else {
+          btnHudDebug.classList.add("hidden");
+          btnHudDebug.classList.remove("flex");
+        }
+      }
+    };
+    updateDebugHudUI(window.Systems && Systems.isDebugMenuEnabled());
+
+    const btnToggleDebugHud = document.getElementById("btnMenuToggleDebugHud");
+    if (btnToggleDebugHud) {
+      btnToggleDebugHud.addEventListener("click", () => {
+        if (!window.Systems) return;
+        const current = Systems.isDebugMenuEnabled();
+        const next = !current;
+        Systems.setDebugMenuEnabled(next);
+        updateDebugHudUI(next);
+        if (next && window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
       });
     }
   },

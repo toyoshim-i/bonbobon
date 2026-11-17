@@ -97,10 +97,11 @@
         <span id="hudBurstTimer" class="whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] font-bold text-[#00f5d4]">0%</span>
       </div>
 
-      <!-- RIGHT: SHIELD & PHASE -->
+      <!-- RIGHT: SHIELD & PHASE & IN-GAME DEBUG SETTINGS -->
       <div class="flex items-center gap-1 shrink-0">
         <span id="hudShield" class="px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0">🛡️SAFE</span>
         <span id="hudPhase" class="px-1 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[8px] font-extrabold text-[#ff1493] whitespace-nowrap shrink-0">PH.1</span>
+        <button id="btnHudDebugSettings" class="hidden h-5 px-1.5 rounded bg-[#2a0e4a] hover:bg-[#ff1493] border border-[#e6ff00]/70 text-[#e6ff00] text-[10px] font-bold leading-none shrink-0 cursor-pointer items-center justify-center transition" title="SETTINGS">⚙️</button>
       </div>
     </div>
 
@@ -178,130 +179,154 @@
 
         <!-- UNIFIED SETTINGS & DEBUG MENU MODAL -->
         <div id="menuModal" class="absolute inset-0 z-50 hidden items-center justify-center p-3 bg-black/85 backdrop-blur-md pointer-events-auto transition-opacity duration-200 opacity-0">
-          <div class="relative bg-[#11052c] cyber-border rounded-2xl max-w-sm w-full max-h-[92dvh] p-3 text-center shadow-2xl flex flex-col gap-2.5 overflow-hidden">
-            <!-- MODAL HEADER -->
-            <div class="flex items-center justify-between border-b border-[#00f5d4]/30 pb-1.5 shrink-0">
+          <div class="relative bg-[#11052c] cyber-border rounded-2xl max-w-sm w-full max-h-[92dvh] p-3 text-center shadow-2xl flex flex-col gap-2 overflow-hidden">
+            <!-- MODAL HEADER (TITLE ONLY, NO CLOSE BUTTON HERE!) -->
+            <div class="flex items-center justify-center border-b border-[#00f5d4]/30 pb-1.5 shrink-0">
               <div class="text-xs font-black text-white tracking-widest flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-[#00f5d4] animate-ping"></span>
-                <span>⚙️ 設定＆システム (SETTINGS)</span>
+                <span>⚙️ 設定 (SETTINGS)</span>
               </div>
-              <button id="btnMenuClose" class="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-[#ff1493] text-white font-bold text-xs cursor-pointer transition">
-                ✕
-              </button>
             </div>
 
             <!-- SCROLLABLE CONTENT BODY -->
-            <div class="overflow-y-auto space-y-2.5 pr-1 text-left flex-1 min-h-0">
-              <!-- AUDIO SETTINGS -->
-              <div class="bg-[#180838] border border-[#00f5d4]/40 rounded-xl p-2 flex items-center justify-between">
-                <div>
-                  <div class="font-bold text-[11px] text-white">効果音 (SFX AUDIO)</div>
-                  <div class="text-[8.5px] text-[#b59ce6]">シンセサイザー効果音</div>
+            <div class="overflow-y-auto space-y-3 pr-1 text-left flex-1 min-h-0">
+              <!-- SECTION 1: GENERAL SETTINGS -->
+              <div class="space-y-1.5">
+                <div class="text-[9.5px] font-black text-[#00f5d4] tracking-wider uppercase flex items-center gap-1">
+                  <span>🎛️ 一般設定 (GENERAL SETTINGS)</span>
                 </div>
-                <button id="btnMenuToggleAudio" class="px-3 py-1.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] border border-[#00f5d4]/60 text-white font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
-                  <span id="txtMenuAudioIcon">🔊</span>
-                  <span id="txtMenuAudioStatus">SFX: ON</span>
-                </button>
-              </div>
 
-              <!-- NUDGE JIGGLE SETTINGS -->
-              <div class="bg-[#180838] border border-[#ff66b2]/40 rounded-xl p-2 flex items-center justify-between">
-                <div>
-                  <div class="font-bold text-[11px] text-white">台揺らし連動ぷるんっ (NUDGE JIGGLE)</div>
-                  <div class="text-[8.5px] text-[#b59ce6]">台揺らし時のボディ振動演出</div>
+                <!-- AUDIO SETTINGS -->
+                <div class="bg-[#180838] border border-[#00f5d4]/40 rounded-xl p-2 flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-[11px] text-white">効果音 (SFX AUDIO)</div>
+                    <div class="text-[8.5px] text-[#b59ce6]">シンセサイザー効果音</div>
+                  </div>
+                  <button id="btnMenuToggleAudio" class="px-3 py-1.5 rounded-lg bg-[#281058] hover:bg-[#3d1885] border border-[#00f5d4]/60 text-white font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
+                    <span id="txtMenuAudioIcon">🔊</span>
+                    <span id="txtMenuAudioStatus">SFX: ON</span>
+                  </button>
                 </div>
-                <button id="btnMenuToggleNudgeJiggle" class="px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
-                  <span id="txtMenuNudgeJiggleIcon">🔒</span>
-                  <span id="txtMenuNudgeJiggleStatus">OFF</span>
-                </button>
-              </div>
 
-              <!-- IN-GAME ACTIONS (HIDDEN ON TITLE SCREEN) -->
-              <div id="menuInGameActions" class="space-y-1.5">
-                <div class="text-[9.5px] font-black text-[#ff1493] tracking-wider uppercase flex items-center gap-1">
-                  <span>🎮 IN-GAME COMMANDS (進行操作)</span>
+                <!-- NUDGE JIGGLE SETTINGS -->
+                <div class="bg-[#180838] border border-[#ff66b2]/40 rounded-xl p-2 flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-[11px] text-white">台揺らし連動ぷるんっ (NUDGE JIGGLE)</div>
+                    <div class="text-[8.5px] text-[#b59ce6]">台揺らし時のボディ振動演出</div>
+                  </div>
+                  <button id="btnMenuToggleNudgeJiggle" class="px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
+                    <span id="txtMenuNudgeJiggleIcon">🔒</span>
+                    <span id="txtMenuNudgeJiggleStatus">OFF</span>
+                  </button>
                 </div>
-                <div class="w-full">
-                  <button id="btnReturnToTitleFromMenu" class="w-full p-2.5 rounded-xl bg-[#1c083e] hover:bg-[#ff1493]/30 border border-[#ff1493]/60 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+
+                <!-- IN-GAME ACTIONS (HIDDEN ON TITLE SCREEN) -->
+                <div id="menuInGameActions" class="hidden w-full pt-0.5">
+                  <button id="btnReturnToTitleFromMenu" class="w-full p-2 rounded-xl bg-[#1c083e] hover:bg-[#ff1493]/30 border border-[#ff1493]/60 text-white font-bold text-[10.5px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                     <span>🏠</span>
                     <span>タイトル画面へ戻る (RETURN TO TITLE)</span>
                   </button>
                 </div>
               </div>
 
-              <!-- STAGE SELECT SECTION -->
-              <div class="space-y-1.5">
+              <!-- SECTION 2: DEBUG & PRACTICE SETTINGS -->
+              <div class="space-y-2 pt-1 border-t border-[#00f5d4]/20">
                 <div class="text-[9.5px] font-black text-[#e6ff00] tracking-wider uppercase flex items-center gap-1">
-                  <span>🚀 デバッグ・練習用ステージ選択 (STAGE SELECT)</span>
+                  <span>🛠️ デバッグ＆検証設定 (DEBUG & PRACTICE)</span>
                 </div>
-                <div class="grid grid-cols-2 gap-1.5">
-                  <button id="btnSelectStage1" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
-                    <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
-                    <span class="text-[9px] font-bold text-white leading-tight">桃色装甲リリス</span>
-                    <span class="text-[7px] text-gray-400 leading-tight">正面装甲・重力罠</span>
-                  </button>
-                  <button id="btnSelectStage2" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
-                    <span class="text-[9.5px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
-                    <span class="text-[9px] font-bold text-white leading-tight">疾風紫電セルティ</span>
-                    <span class="text-[7px] text-gray-400 leading-tight">見返り・電撃＆砲</span>
-                  </button>
-                  <button id="btnSelectStage3" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#e6ff00]/20 border-2 border-[#e6ff00] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
-                    <span class="text-[9.5px] font-black text-[#e6ff00] group-hover:text-white">STAGE 3</span>
-                    <span class="text-[9px] font-bold text-white leading-tight">電脳空間ノア</span>
-                    <span class="text-[7px] text-gray-400 leading-tight">浮遊ビット・転送手</span>
-                  </button>
-                  <button id="btnSelectStage4" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#b84dff]/25 border-2 border-[#b84dff] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
-                    <span class="text-[9.5px] font-black text-[#b84dff] group-hover:text-white">STAGE 4</span>
-                    <span class="text-[9px] font-bold text-white leading-tight">電脳夜桜カスミ</span>
-                    <span class="text-[7px] text-gray-400 leading-tight">立体レール・手裏剣</span>
-                  </button>
-                  <button id="btnSelectStage5" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
-                    <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">FINAL STAGE</span>
-                    <span class="text-[9px] font-bold text-white leading-tight">双子電脳天使 エル＆ノエル</span>
-                    <span class="text-[7px] text-gray-400 leading-tight">へそシンクロ光線・クロスランプ・ツインビット</span>
-                  </button>
-                </div>
-              </div>
 
-              <!-- PERMANENT TABLE UPGRADES -->
-              <div class="bg-[#180838] border border-[#00f5d4]/30 rounded-xl p-2 space-y-1">
-                <div class="font-bold text-[10px] text-[#00f5d4] flex justify-between">
-                  <span>常設ビルド状態 (TABLE UPGRADES)</span>
-                  <span class="text-[8px] text-[#b59ce6]">CYAN CAPSULE</span>
+                <!-- 1) IN-GAME DEBUG HUD ICON TOGGLE -->
+                <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-[11px] text-white">プレイ中の設定ボタン表示</div>
+                    <div class="text-[8.5px] text-[#b59ce6]">画面右上に⚙️ボタンを常時表示（検証用）</div>
+                  </div>
+                  <button id="btnMenuToggleDebugHud" class="px-3 py-1.5 rounded-lg bg-[#180828] hover:bg-[#281048] border border-gray-600 text-gray-400 font-bold text-[10.5px] flex items-center gap-1.5 cursor-pointer transition shrink-0">
+                    <span id="txtMenuDebugHudIcon">🔒</span>
+                    <span id="txtMenuDebugHudStatus">OFF</span>
+                  </button>
                 </div>
-                <div id="permUpgradesList" class="flex flex-col gap-1"></div>
-              </div>
 
-              <!-- DEBUG SHORTCUTS -->
-              <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 space-y-1">
-                <div class="font-bold text-[10px] text-[#e6ff00]">プロトタイプ検証用ショートカット</div>
-                <div class="grid grid-cols-2 gap-1 text-[10px]">
-                  <button id="dbgDropPerm" class="p-1.5 rounded bg-[#00f5d4]/15 hover:bg-[#00f5d4]/30 text-[#00f5d4] border border-[#00f5d4]/50 font-bold cursor-pointer transition">
-                    ＋常設カプセル
-                  </button>
-                  <button id="dbgDropBuff" class="p-1.5 rounded bg-[#ff1493]/15 hover:bg-[#ff1493]/30 text-[#ff1493] border border-[#ff1493]/50 font-bold cursor-pointer transition">
-                    ＋バフカプセル
-                  </button>
-                  <button id="dbgPuruTest" class="p-1.5 rounded bg-[#ff66b2]/15 hover:bg-[#ff66b2]/30 text-[#ff66b2] border border-[#ff66b2]/50 font-bold cursor-pointer transition">
-                    ♥ 胸部ぷるぷる
-                  </button>
-                  <button id="dbgMultiball" class="p-1.5 rounded bg-[#e6ff00]/15 hover:bg-[#e6ff00]/30 text-[#e6ff00] border border-[#e6ff00]/50 font-bold cursor-pointer transition">
-                    ★ FEVER突入
-                  </button>
-                  <button id="dbgFaceAnim" class="p-1.5 rounded bg-[#b84dff]/20 hover:bg-[#b84dff]/35 text-[#e6ff00] border border-[#b84dff]/60 font-bold cursor-pointer transition">
-                    👁 表情切替
-                  </button>
-                  <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition">
-                    ⚡ STAGE切替
-                  </button>
+                <!-- 2) STAGE SELECT SECTION -->
+                <div class="space-y-1">
+                  <div class="text-[9px] font-bold text-gray-300">開始ステージ選択 (STAGE SELECT)</div>
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <button id="btnSelectStage1" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">STAGE 1</span>
+                      <span class="text-[9px] font-bold text-white leading-tight">桃色装甲リリス</span>
+                      <span class="text-[7px] text-gray-400 leading-tight">正面装甲・重力罠</span>
+                    </button>
+                    <button id="btnSelectStage2" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#ff1493] group-hover:text-white">STAGE 2</span>
+                      <span class="text-[9px] font-bold text-white leading-tight">疾風紫電セルティ</span>
+                      <span class="text-[7px] text-gray-400 leading-tight">見返り・電撃＆砲</span>
+                    </button>
+                    <button id="btnSelectStage3" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#e6ff00]/20 border-2 border-[#e6ff00] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#e6ff00] group-hover:text-white">STAGE 3</span>
+                      <span class="text-[9px] font-bold text-white leading-tight">電脳空間ノア</span>
+                      <span class="text-[7px] text-gray-400 leading-tight">浮遊ビット・転送手</span>
+                    </button>
+                    <button id="btnSelectStage4" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#b84dff]/25 border-2 border-[#b84dff] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#b84dff] group-hover:text-white">STAGE 4</span>
+                      <span class="text-[9px] font-bold text-white leading-tight">電脳夜桜カスミ</span>
+                      <span class="text-[7px] text-gray-400 leading-tight">立体レール・手裏剣</span>
+                    </button>
+                    <button id="btnSelectStage5" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
+                      <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">FINAL STAGE</span>
+                      <span class="text-[9px] font-bold text-white leading-tight">双子電脳天使 エル＆ノエル</span>
+                      <span class="text-[7px] text-gray-400 leading-tight">へそシンクロ光線・クロスランプ・ツインビット</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 3) PERMANENT TABLE UPGRADES (DEBUG / INITIAL BUILD) -->
+                <div class="bg-[#180838] border border-[#00f5d4]/40 rounded-xl p-2 space-y-1.5">
+                  <div class="flex items-center justify-between border-b border-[#00f5d4]/20 pb-1">
+                    <div>
+                      <div class="font-bold text-[10.5px] text-[#00f5d4]">常設ビルド設定 (INITIAL UPGRADES)</div>
+                      <div class="text-[7.5px] text-[#b59ce6]">開始時およびプレイ中の強化レベル</div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button id="btnPermAllReset" class="px-1.5 py-0.5 rounded bg-black/40 hover:bg-red-900/60 border border-gray-600 text-gray-300 text-[8px] font-bold cursor-pointer transition">
+                        RESET
+                      </button>
+                      <button id="btnPermAllMax" class="px-1.5 py-0.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/40 border border-[#00f5d4]/60 text-[#00f5d4] text-[8px] font-bold cursor-pointer transition">
+                        ALL MAX
+                      </button>
+                    </div>
+                  </div>
+                  <div id="permUpgradesList" class="flex flex-col gap-1"></div>
+                </div>
+
+                <!-- 4) LIVE DEBUG SHORTCUTS -->
+                <div class="bg-[#180838] border border-[#e6ff00]/40 rounded-xl p-2 space-y-1">
+                  <div class="flex items-baseline justify-between">
+                    <span class="font-bold text-[10px] text-[#e6ff00]">プロトタイプ検証用ショートカット</span>
+                    <span class="text-[7.5px] text-gray-400">※即時反映</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-1 text-[10px]">
+                    <button id="dbgDropPerm" class="p-1.5 rounded bg-[#00f5d4]/15 hover:bg-[#00f5d4]/30 text-[#00f5d4] border border-[#00f5d4]/50 font-bold cursor-pointer transition">
+                      ＋常設カプセル
+                    </button>
+                    <button id="dbgDropBuff" class="p-1.5 rounded bg-[#ff1493]/15 hover:bg-[#ff1493]/30 text-[#ff1493] border border-[#ff1493]/50 font-bold cursor-pointer transition">
+                      ＋バフカプセル
+                    </button>
+                    <button id="dbgPuruTest" class="p-1.5 rounded bg-[#ff66b2]/15 hover:bg-[#ff66b2]/30 text-[#ff66b2] border border-[#ff66b2]/50 font-bold cursor-pointer transition">
+                      ♥ ぷるぷるテスト
+                    </button>
+                    <button id="dbgMultiball" class="p-1.5 rounded bg-[#e6ff00]/15 hover:bg-[#e6ff00]/30 text-[#e6ff00] border border-[#e6ff00]/50 font-bold cursor-pointer transition">
+                      ★ FEVER突入
+                    </button>
+                    <button id="dbgFaceAnim" class="p-1.5 rounded bg-[#b84dff]/20 hover:bg-[#b84dff]/35 text-[#e6ff00] border border-[#b84dff]/60 font-bold cursor-pointer transition">
+                      👁 表情切替
+                    </button>
+                    <button id="dbgStageToggle" class="p-1.5 rounded bg-[#00f5d4]/20 hover:bg-[#00f5d4]/35 text-[#00f5d4] border border-[#00f5d4]/60 font-bold cursor-pointer transition">
+                      ⚡ 次ステージ
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <!-- RESUME BUTTON -->
-            <button id="btnMenuResume" class="w-full py-2 rounded-xl bg-gradient-to-r from-[#00f5d4] via-[#ff66b2] to-[#e6ff00] text-black font-black text-xs tracking-wider shadow-lg active:scale-95 transition cursor-pointer shrink-0">
-              閉じる (CLOSE)
-            </button>
           </div>
         </div>
 
@@ -309,12 +334,12 @@
         <div id="titleModal" class="absolute inset-0 z-40 flex flex-col justify-between pt-1.5 px-2 pb-2 bg-[#070214] pointer-events-auto transition-opacity duration-500">
           <!-- BACKDROP KEY ART (100% FULL-FRAME VIEW) -->
           <div class="absolute inset-0 pointer-events-none overflow-hidden">
-            <img src="./assets/ui/title_key.jpg?v=189" class="w-full h-full object-cover" style="object-position: 50% 50%;" alt="Title Key Art" onerror="this.style.display='none'">
+            <img src="./assets/ui/title_key.jpg?v=190" class="w-full h-full object-cover" style="object-position: 50% 50%;" alt="Title Key Art" onerror="this.style.display='none'">
           </div>
 
           <!-- STANDALONE PIXEL-ART TITLE LOGO -->
           <div class="relative z-10 w-full flex justify-center pt-0.5 pointer-events-none select-none shrink-0">
-            <img src="./assets/ui/title_logo.png?v=189" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
+            <img src="./assets/ui/title_logo.png?v=190" alt="桃色装甲ボンぼや〜ジュッ！" class="w-[88%] max-w-[356px] h-auto object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]">
           </div>
 
           <!-- OPEN CENTER (SHOWCASES ALL HEROINES & FLIPPERS AT 100% OPACITY) -->
@@ -324,7 +349,7 @@
         <!-- IDLE ATTRACT-MODE STORY DEMO MODAL (MSX GRADIUS 2 / SPACE MANBOW STYLE) -->
         <div id="attractModal" class="absolute inset-0 z-40 hidden flex-col justify-end overflow-hidden bg-black pointer-events-auto transition-opacity duration-500 opacity-0 cursor-pointer select-none">
           <!-- CUT IMAGE BACKGROUND -->
-          <img id="attractBgImg" src="./assets/ui/story_1.jpg?v=189" class="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" alt="Attract Story">
+          <img id="attractBgImg" src="./assets/ui/story_1.jpg?v=190" class="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" alt="Attract Story">
 
           <!-- RETRO 16-BIT ELECTROMAGNETIC CRACKLE FX CANVAS (CUT 3) -->
           <canvas id="attractFxCanvas" width="768" height="1376" class="absolute inset-0 w-full h-full object-cover pointer-events-none"></canvas>
@@ -432,7 +457,7 @@
             <div class="flex items-center justify-between gap-1 my-auto">
               <!-- LEFT: COMMANDER PORTRAIT -->
               <div class="w-[96px] h-[120px] rounded border-2 border-[#34ff8a] bg-black/80 overflow-hidden flex flex-col shrink-0 relative">
-                <img src="./assets/ui/commander.jpg?v=189" alt="Commander" class="w-full h-full object-cover" style="filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(320%) contrast(125%);" onerror="this.style.display='none'">
+                <img src="./assets/ui/commander.jpg?v=190" alt="Commander" class="w-full h-full object-cover" style="filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(320%) contrast(125%);" onerror="this.style.display='none'">
                 <div class="absolute bottom-0 inset-x-0 bg-black/90 text-center text-[7.5px] font-mono font-bold text-[#34ff8a] py-0.5 border-t border-[#125830]">
                   [COMMANDER]
                 </div>
@@ -613,6 +638,14 @@
         <span class="text-[9px] text-[#00f5d4]/70 leading-none mt-0.5">R-FLIP</span>
       </button>
     </div>
+
+    <!-- SETTINGS CLOSE DECK (SHOWN WHENEVER #menuModal IS OPEN) -->
+    <div id="menuControlsBar" class="hidden w-full mt-1 shrink-0">
+      <button id="btnBottomMenuClose" class="h-12 w-full rounded-lg bg-gradient-to-r from-[#00f5d4] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
+        <span class="text-sm font-black leading-tight tracking-wider">✕ 閉じる</span>
+        <span class="text-[8.5px] text-black/80 font-bold leading-none mt-0.5">CLOSE SETTINGS</span>
+      </button>
+    </div>
   </div>
 
   <!-- DESKTOP RIGHT SIDEBAR: MECHA TELEMETRY & TARGET SPECS -->
@@ -690,24 +723,24 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
-  <script src="./js/stage1_assets.js?v=189"></script>
-  <script src="./js/stage2_assets.js?v=189"></script>
-  <script src="./js/stage3_assets.js?v=189"></script>
-  <script src="./js/stage4_assets.js?v=189"></script>
-  <script src="./js/stage5_assets.js?v=189"></script>
-  <script src="./js/audio.js?v=189"></script>
-  <script src="./js/engine/particles.js?v=189"></script>
-  <script src="./js/engine/physics.js?v=189"></script>
-  <script src="./js/engine/systems.js?v=189"></script>
-  <script src="./js/engine/stage_common.js?v=189"></script>
-  <script src="./js/engine/ui.js?v=189"></script>
-  <script src="./js/stages/stage1.js?v=189"></script>
-  <script src="./js/stages/stage2.js?v=189"></script>
-  <script src="./js/stages/stage3.js?v=189"></script>
-  <script src="./js/stages/stage4.js?v=189"></script>
-  <script src="./js/stages/stage5.js?v=189"></script>
-  <script src="./js/engine/game_engine.js?v=189"></script>
-  <script src="./js/game_flow.js?v=189"></script>
-  <script src="./js/main.js?v=189"></script>
+  <script src="./js/stage1_assets.js?v=190"></script>
+  <script src="./js/stage2_assets.js?v=190"></script>
+  <script src="./js/stage3_assets.js?v=190"></script>
+  <script src="./js/stage4_assets.js?v=190"></script>
+  <script src="./js/stage5_assets.js?v=190"></script>
+  <script src="./js/audio.js?v=190"></script>
+  <script src="./js/engine/particles.js?v=190"></script>
+  <script src="./js/engine/physics.js?v=190"></script>
+  <script src="./js/engine/systems.js?v=190"></script>
+  <script src="./js/engine/stage_common.js?v=190"></script>
+  <script src="./js/engine/ui.js?v=190"></script>
+  <script src="./js/stages/stage1.js?v=190"></script>
+  <script src="./js/stages/stage2.js?v=190"></script>
+  <script src="./js/stages/stage3.js?v=190"></script>
+  <script src="./js/stages/stage4.js?v=190"></script>
+  <script src="./js/stages/stage5.js?v=190"></script>
+  <script src="./js/engine/game_engine.js?v=190"></script>
+  <script src="./js/game_flow.js?v=190"></script>
+  <script src="./js/main.js?v=190"></script>
 </body>
 </html>

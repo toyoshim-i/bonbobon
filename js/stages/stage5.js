@@ -26,7 +26,7 @@ window.Stage5 = {
   },
 
   initAssets() {
-    const v = "?v=189";
+    const v = "?v=190";
     this.assets.twinLIntactImg.src = "./assets/stage5/twin_l_intact.png" + v;
     this.assets.twinLBrokenImg.src = "./assets/stage5/twin_l_broken.png" + v;
     this.assets.twinRIntactImg.src = "./assets/stage5/twin_r_intact.png" + v;

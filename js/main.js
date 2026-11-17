@@ -81,14 +81,27 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Debug Buttons
+  const closeMenuIfInGame = () => {
+    if (GameEngine.state && !GameEngine.state.inTitle && window.UI && typeof UI.closeMenu === "function") {
+      UI.closeMenu(GameEngine.state);
+    }
+  };
+
   const dbgDropPerm = document.getElementById("dbgDropPerm");
-  if (dbgDropPerm) dbgDropPerm.addEventListener("click", () => Systems.spawnFloatingCapsule(GameEngine.state, null, "perm"));
+  if (dbgDropPerm) dbgDropPerm.addEventListener("click", () => {
+    closeMenuIfInGame();
+    Systems.spawnFloatingCapsule(GameEngine.state, null, "perm");
+  });
 
   const dbgDropBuff = document.getElementById("dbgDropBuff");
-  if (dbgDropBuff) dbgDropBuff.addEventListener("click", () => Systems.spawnFloatingCapsule(GameEngine.state, null, "buff"));
+  if (dbgDropBuff) dbgDropBuff.addEventListener("click", () => {
+    closeMenuIfInGame();
+    Systems.spawnFloatingCapsule(GameEngine.state, null, "buff");
+  });
 
   const dbgPuruTest = document.getElementById("dbgPuruTest");
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
+    closeMenuIfInGame();
     const cur = GameEngine.currentStage;
     if (cur && cur.id === "stage5" && window.Stage5) {
       Stage5.triggerDebugJiggle(GameEngine.state);
@@ -118,10 +131,14 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   const dbgMultiball = document.getElementById("dbgMultiball");
-  if (dbgMultiball) dbgMultiball.addEventListener("click", () => Systems.startFeverMode(GameEngine.state));
+  if (dbgMultiball) dbgMultiball.addEventListener("click", () => {
+    closeMenuIfInGame();
+    Systems.startFeverMode(GameEngine.state);
+  });
 
   const dbgFaceAnim = document.getElementById("dbgFaceAnim");
   if (dbgFaceAnim) dbgFaceAnim.addEventListener("click", () => {
+    closeMenuIfInGame();
     if (window.sfx) window.sfx.capsuleCatch();
     const modes = ["wink", "open_blush", "shock", "wince", "blink", "talk"];
     window._faceIdx = ((window._faceIdx || 0) + 1) % modes.length;

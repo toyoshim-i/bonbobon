@@ -46,13 +46,13 @@ window.GameFlow = {
   attractImages: [],
   attractCuts: [
     {
-      image: "./assets/ui/story_1.jpg?v=189",
+      image: "./assets/ui/story_1.jpg?v=190",
       zoom: true,
       body: "西暦2098年――\n\n太陽系外縁・冥王星軌道上に\n謎の超重力反応が出現。\n\n迎え撃った地球統合防衛艦隊は\nわずか数時間で壊滅した。",
       punch: ""
     },
     {
-      image: "./assets/ui/story_2.jpg?v=189",
+      image: "./assets/ui/story_2.jpg?v=190",
       zoom: false,
       body: "人類を恐怖のどん底へ\n叩き落とした謎の勢力……",
       punch: "侵略者は、\n桃色装甲艦隊であった。",
@@ -60,13 +60,13 @@ window.GameFlow = {
       punchMargin: "mt-6"
     },
     {
-      image: "./assets/ui/story_3.jpg?v=189",
+      image: "./assets/ui/story_3.jpg?v=190",
       zoom: true,
       body: "艦隊を包む\n『柔軟位相フィールド』は\nあらゆるレーザーや\n核ミサイルを無効化。\n\n障壁を貫けるのは、超運動量による\n「直接打撃」のみであった。",
       punch: ""
     },
     {
-      image: "./assets/ui/story_4.jpg?v=189",
+      image: "./assets/ui/story_4.jpg?v=190",
       zoom: true,
       body: "残された唯一の希望――\n単座弾道戦闘艇\n《シルバーボール》！\n\n２基の電磁パドルで機体を弾き\n敵中枢コアを撃ち抜け！",
       punch: "人類の存亡を懸けた特攻作戦が\nいま幕を開ける――！！",
@@ -85,7 +85,7 @@ window.GameFlow = {
   preloadAttractAssets() {
     this.attractImages = [1, 2, 3, 4].map(idx => {
       const img = new Image();
-      img.src = `./assets/ui/story_${idx}.jpg?v=189`;
+      img.src = `./assets/ui/story_${idx}.jpg?v=190`;
       return img;
     });
   },
@@ -797,7 +797,7 @@ window.GameFlow = {
     }
 
     this.ending.launchImg = new Image();
-    this.ending.launchImg.src = "./assets/ui/ending_launch.jpg?v=189";
+    this.ending.launchImg.src = "./assets/ui/ending_launch.jpg?v=190";
     this.ending.launchImg.onload = () => {
       this.ending.launchImgLoaded = true;
     };
@@ -1134,5 +1134,11 @@ window.GameFlow = {
       }
     });
     cancelAnimationFrame(this.ending.rafId);
+    if (window.UI) {
+      UI.isMenuOpen = false;
+      if (window.GameEngine && GameEngine.state) {
+        UI.updateScreenMode(GameEngine.state);
+      }
+    }
   }
 };

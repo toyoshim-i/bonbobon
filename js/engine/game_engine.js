@@ -57,15 +57,17 @@ window.GameEngine = {
         springVy: 0
       },
 
-      perm: {
-        centerPost: 0,
-        centerPostHP: 0,
-        kickbackL: 0,
-        kickbackL_charges: 0,
-        kickbackR: 0,
-        kickbackR_charges: 0,
-        wideFlipper: 0
-      },
+      perm: (window.Systems && typeof Systems.getInitialPermState === "function")
+        ? Systems.getInitialPermState()
+        : {
+            centerPost: 0,
+            centerPostHP: 0,
+            kickbackL: 0,
+            kickbackL_charges: 0,
+            kickbackR: 0,
+            kickbackR_charges: 0,
+            wideFlipper: 0
+          },
 
       keptBuffs: [
         { id: "mult2x", tier: 1 },

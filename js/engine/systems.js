@@ -349,7 +349,15 @@ window.Systems = {
   // -------------------------------------------------------------------------
   settingsKey: "bonbobon_settings_v1",
   settings: {
-    nudgeJiggle: false // デフォルトはOFF（台揺らし時の身体ぷるんっ抑制）
+    sfxEnabled: true,
+    nudgeJiggle: false, // デフォルトはOFF（台揺らし時の身体ぷるんっ抑制）
+    debugMenuEnabled: false, // デフォルトはOFF（プレイ中の設定アイコン常時表示）
+    debugPerm: {
+      centerPost: 0,
+      kickbackL: 0,
+      kickbackR: 0,
+      wideFlipper: 0
+    }
   },
 
   loadSettings() {
@@ -357,24 +365,131 @@ window.Systems = {
       const raw = localStorage.getItem(this.settingsKey);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed.nudgeJiggle === "boolean") {
-          this.settings.nudgeJiggle = parsed.nudgeJiggle;
+        if (parsed && typeof parsed === "object") {
+          if (typeof parsed.sfxEnabled === "boolean") this.settings.sfxEnabled = parsed.sfxEnabled;
+          if (typeof parsed.nudgeJiggle === "boolean") this.settings.nudgeJiggle = parsed.nudgeJiggle;
+          if (typeof parsed.debugMenuEnabled === "boolean") this.settings.debugMenuEnabled = parsed.debugMenuEnabled;
+          if (parsed.debugPerm && typeof parsed.debugPerm === "object") {
+            ["centerPost", "kickbackL", "kickbackR", "wideFlipper"].forEach(k => {
+              if (typeof parsed.debugPerm[k] === "number") {
+                const max = this.PERM_DEFS[k] ? this.PERM_DEFS[k].maxLv : 2;
+                this.settings.debugPerm[k] = Math.max(0, Math.min(max, parsed.debugPerm[k]));
+              }
+            });
+          }
         }
       }
     } catch (_) {}
+    if (window.sfx) {
+      window.sfx.enabled = this.settings.sfxEnabled;
+    }
     return this.settings;
+  },
+
+  saveSettings() {
+    try {
+      localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
+    } catch (_) {}
+  },
+
+  setSfxEnabled(enabled) {
+    this.settings.sfxEnabled = !!enabled;
+    if (window.sfx) window.sfx.enabled = this.settings.sfxEnabled;
+    this.saveSettings();
+    return this.settings.sfxEnabled;
+  },
+
+  isSfxEnabled() {
+    return this.settings.sfxEnabled !== false;
   },
 
   setNudgeJiggle(enabled) {
     this.settings.nudgeJiggle = !!enabled;
-    try {
-      localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
-    } catch (_) {}
+    this.saveSettings();
     return this.settings.nudgeJiggle;
   },
 
   isNudgeJiggleEnabled() {
     return !!(this.settings && this.settings.nudgeJiggle);
+  },
+
+  setDebugMenuEnabled(enabled) {
+    this.settings.debugMenuEnabled = !!enabled;
+    this.saveSettings();
+    return this.settings.debugMenuEnabled;
+  },
+
+  isDebugMenuEnabled() {
+    return !!(this.settings && this.settings.debugMenuEnabled);
+  },
+
+  getInitialPermState() {
+    const p = {
+      centerPost: 0,
+      centerPostHP: 0,
+      kickbackL: 0,
+      kickbackL_charges: 0,
+      kickbackR: 0,
+      kickbackR_charges: 0,
+      wideFlipper: 0
+    };
+    if (this.settings && this.settings.debugPerm) {
+      const dp = this.settings.debugPerm;
+      p.centerPost = dp.centerPost || 0;
+      p.centerPostHP = p.centerPost > 0 ? 3 : 0;
+      p.kickbackL = dp.kickbackL || 0;
+      p.kickbackL_charges = p.kickbackL > 0 ? 1 : 0;
+      p.kickbackR = dp.kickbackR || 0;
+      p.kickbackR_charges = p.kickbackR > 0 ? 1 : 0;
+      p.wideFlipper = dp.wideFlipper || 0;
+    }
+    return p;
+  },
+
+  applyDebugPermToState(state) {
+    if (!state) return;
+    if (!state.perm) state.perm = {};
+    const dp = this.settings.debugPerm;
+    state.perm.centerPost = dp.centerPost || 0;
+    state.perm.centerPostHP = state.perm.centerPost > 0 ? 3 : 0;
+    state.perm.kickbackL = dp.kickbackL || 0;
+    state.perm.kickbackL_charges = state.perm.kickbackL > 0 ? 1 : 0;
+    state.perm.kickbackR = dp.kickbackR || 0;
+    state.perm.kickbackR_charges = state.perm.kickbackR > 0 ? 1 : 0;
+    state.perm.wideFlipper = dp.wideFlipper || 0;
+  },
+
+  setDebugPermLevel(key, lv, state = null) {
+    const max = this.PERM_DEFS[key] ? this.PERM_DEFS[key].maxLv : 2;
+    const clamped = Math.max(0, Math.min(max, lv));
+    this.settings.debugPerm[key] = clamped;
+    this.saveSettings();
+    if (state) this.applyDebugPermToState(state);
+    return clamped;
+  },
+
+  cycleDebugPermLevel(key, state = null) {
+    const max = this.PERM_DEFS[key] ? this.PERM_DEFS[key].maxLv : 2;
+    const current = (this.settings.debugPerm && this.settings.debugPerm[key]) || 0;
+    const next = current >= max ? 0 : current + 1;
+    return this.setDebugPermLevel(key, next, state);
+  },
+
+  resetDebugPermLevels(state = null) {
+    ["centerPost", "kickbackL", "kickbackR", "wideFlipper"].forEach(k => {
+      this.settings.debugPerm[k] = 0;
+    });
+    this.saveSettings();
+    if (state) this.applyDebugPermToState(state);
+  },
+
+  maxAllDebugPermLevels(state = null) {
+    ["centerPost", "kickbackL", "kickbackR", "wideFlipper"].forEach(k => {
+      const max = this.PERM_DEFS[k] ? this.PERM_DEFS[k].maxLv : 2;
+      this.settings.debugPerm[k] = max;
+    });
+    this.saveSettings();
+    if (state) this.applyDebugPermToState(state);
   }
 };
 

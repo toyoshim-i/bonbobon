@@ -53,10 +53,6 @@ window.Stage5 = {
     this._rampMetrics = null;
   },
 
-  setExpressionSequence(state, seq) {
-    StageCommon.setExpressionSequence(state, seq);
-  },
-
   // 3D立体ワイヤーランプ軌道定義 (Pinball Cross-Over Twin Skyway: NOEL RAMP & ELLE RAMP)
   WIRE_RAMPS: {
     left: {
@@ -419,7 +415,7 @@ window.Stage5 = {
       b.navelBeam.pluckAmp = 12;
       b.blushGauge = Math.min(100, (b.blushGauge || 0) + 15);
       Particles.spawnHeart(state, 198, 260, false);
-      this.setExpressionSequence(state, [
+      StageCommon.setExpressionSequence(state, [
         { expr: "open_blush", frames: 30 },
         { expr: "wince", frames: 20 }
       ]);
@@ -431,7 +427,7 @@ window.Stage5 = {
       b.hipR.vx += 6.5; b.hipR.vy -= 5.5;
       b.blushGauge = Math.min(100, (b.blushGauge || 0) + 20);
       Particles.spawnHeart(state, 198, 220, false);
-      this.setExpressionSequence(state, [
+      StageCommon.setExpressionSequence(state, [
         { expr: "open_blush", frames: 36 },
         { expr: "wince", frames: 20 }
       ]);
@@ -706,7 +702,7 @@ window.Stage5 = {
     UI.showCutin("💖【熾天使装甲ブレイク！】💖<br>「くっ…聖なる衣が…！ 精霊オーブよ、結界を張りなさい！」", 220);
     Systems.addScore(state, 100000, 198, 208, "💖ARMOR PURGED!!");
     Systems.dropReward(state, "major", { x: 198, y: 208 });
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 30 },
       { expr: "wince", frames: 40 },
       { expr: "open_blush", frames: 60 }
@@ -829,7 +825,7 @@ window.Stage5 = {
         // Beat 3 (frame 161..195) — Odd-Eye Awakening & Release
         if (fs.frame === 161) {
           fs.seraOffsetY = 0;
-          this.setExpressionSequence(state, [
+          StageCommon.setExpressionSequence(state, [
             { expr: "shout", frames: 34 },
             { expr: "wink", frames: 30 }
           ]);

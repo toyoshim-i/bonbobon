@@ -42,10 +42,6 @@ window.Stage4 = {
     this._shurikenCache = {};
   },
 
-  setExpressionSequence(state, seq) {
-    StageCommon.setExpressionSequence(state, seq);
-  },
-
   LANTERN_DEFS: [
     { id: "L1", kanji: "夜", idx: 0, cordX: 73.3,  cordY: 16, x: 73.3,  y: 90.0,  rx: 28, ry: 48, r: 22, tassel: 26, color: "#00f5d4" },
     { id: "L2", kanji: "桜", idx: 1, cordX: 126.2, cordY: 16, x: 126.2, y: 66.0,  rx: 17, ry: 34, r: 16, tassel: 18, color: "#ff2a9d" },
@@ -365,7 +361,7 @@ window.Stage4 = {
     b.stoleWind = Math.max(b.stoleWind, 1.0);
     b.blushGauge = Math.min(100, (b.blushGauge || 0) + 18);
     Particles.spawnHeart(state, 198, 250, false);
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "open_blush", frames: 36 },
       { expr: "wince", frames: 18 }
     ]);
@@ -460,7 +456,7 @@ window.Stage4 = {
     b.lanternCelebrationTimer = 120;
     b.sakuraStormTimer = 280;
     b.stoleWind = 1.6;
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 32 },
       { expr: "wince", frames: 36 }
     ]);
@@ -507,7 +503,7 @@ window.Stage4 = {
 
   damageActiveArmor(state, dmg, hitX, hitY, label = "⚡SHURIKEN COUNTER!!") {
     const b = state.boss;
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 20 },
       { expr: "wince", frames: 28 }
     ]);
@@ -588,7 +584,7 @@ window.Stage4 = {
       b.sakuraStormTimer = 200;
       b.stoleWind = 1.6;
       this.summonBunshinClones(state);
-      this.setExpressionSequence(state, [
+      StageCommon.setExpressionSequence(state, [
         { expr: "shock", frames: 35 },
         { expr: "wince", frames: 40 },
         { expr: "shout", frames: 35 }
@@ -619,7 +615,7 @@ window.Stage4 = {
     b.bustL.vx += 7.8; b.bustL.vy -= 8.2;
     b.bustR.vx -= 7.8; b.bustR.vy -= 8.2;
     this.summonBunshinClones(state);
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 30 },
       { expr: "wince", frames: 45 },
       { expr: "open_blush", frames: 65 }
@@ -1207,7 +1203,7 @@ window.Stage4 = {
           Particles.triggerArmorBreakEffect(state, "shoulder", obj.x, obj.y);
           Systems.addScore(state, 22000, obj.x, obj.y, `★${title} BROKEN!★`);
           Systems.dropReward(state, "minor", { x: obj.x, y: obj.y });
-          this.setExpressionSequence(state, [
+          StageCommon.setExpressionSequence(state, [
             { expr: "shock", frames: 22 },
             { expr: "wince", frames: 26 }
           ]);
@@ -1327,7 +1323,7 @@ window.Stage4 = {
       if (state.phase >= 3 && b.core.unlocked && !this.isCoreShieldedByBunshin(state)) {
         b.core.hp = Math.max(0, b.core.hp - 2);
         b.core.flash = 22;
-        this.setExpressionSequence(state, [
+        StageCommon.setExpressionSequence(state, [
           { expr: "shock", frames: 20 },
           { expr: "wince", frames: 26 }
         ]);

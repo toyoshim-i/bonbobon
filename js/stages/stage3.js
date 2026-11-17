@@ -59,10 +59,6 @@ window.Stage3 = {
     }
   },
 
-  setExpressionSequence(state, seq) {
-    StageCommon.setExpressionSequence(state, seq);
-  },
-
   getAllBits(b) {
     if (!b) return [];
     return [b.bitTopL, b.bitTopR, b.bitMidL, b.bitMidR].filter(Boolean);
@@ -257,15 +253,7 @@ window.Stage3 = {
       },
 
       // 9. 表情アニメーション制御ステート
-      faceAnim: {
-        idleTimer: 75,
-        blinkFrame: 0,
-        talkFrame: 0,
-        winkFrame: 0,
-        sequence: null,
-        seqIdx: 0,
-        seqTimer: 0
-      }
+      faceAnim: StageCommon.createFaceAnim(75)
     };
   },
 
@@ -367,7 +355,7 @@ window.Stage3 = {
   triggerBlushOverflow(state) {
     const b = state.boss;
     b.blushGauge = 0;
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shout", frames: 38 },
       { expr: "open_blush", frames: 65 }
     ]);
@@ -402,7 +390,7 @@ window.Stage3 = {
     b.blushGauge = Math.min(100, (b.blushGauge || 0) + 10);
     b.bustExcitement = Math.min(100, (b.bustExcitement || 0) + 26);
     b.talkTimer = 32;
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 12 },
       { expr: "wince", frames: 18 },
       { expr: "open_blush", frames: 50 }
@@ -437,7 +425,7 @@ window.Stage3 = {
     state.boss.blushGauge = Math.min(100, (state.boss.blushGauge || 0) + 14);
     state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 34);
     state.boss.talkTimer = 36;
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 12 },
       { expr: "wince", frames: 16 },
       { expr: "open_blush", frames: 56 }
@@ -748,7 +736,7 @@ window.Stage3 = {
     Particles.add(state, bx, by, "#ffffff", 14, 4.6);
     Particles.addPopup(state, bx, Math.max(46, by - 16), "💥BALL SHATTERED!!", "#ff1744", 1.24);
 
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "wink", frames: 28 },
       { expr: "talk", frames: 28 }
     ]);
@@ -1122,7 +1110,7 @@ window.Stage3 = {
             Particles.add(state, h.x, h.y, "#ff1493", 20, 4.8);
             Particles.add(state, h.x, h.y, "#00f5d4", 14, 4.0);
             Systems.addScore(state, 4000 + spec.level * 1200, h.x, h.y - 16, `🌀${h.side}-HAND CATCH LV.${spec.level}!`);
-            this.setExpressionSequence(state, [
+            StageCommon.setExpressionSequence(state, [
               { expr: spec.level >= 3 ? "wince" : "wink", frames: 20 },
               { expr: spec.level >= 4 ? "open_blush" : "talk", frames: 22 }
             ]);
@@ -1232,7 +1220,7 @@ window.Stage3 = {
         Particles.add(state, exitHand.x, exitHand.y, "#e6ff00", 14 + spec.level * 2, 5.0);
         Systems.addScore(state, 7000 + spec.level * 1500, exitHand.x, exitHand.y - 18, `⚡${exitHand.side}-HAND THROW!`);
 
-        this.setExpressionSequence(state, [
+        StageCommon.setExpressionSequence(state, [
           { expr: "shout", frames: 22 },
           { expr: spec.level >= 4 ? "open_blush" : "wink", frames: 36 }
         ]);
@@ -1261,51 +1249,14 @@ window.Stage3 = {
     b.animTick = (b.animTick || 0) + 1;
 
     // 1. 表情アニメーション制御
-    const fa = b.faceAnim || (b.faceAnim = {});
-    if (fa.sequence && fa.sequence.length > 0) {
-      fa.seqTimer--;
-      if (fa.seqTimer <= 0) {
-        fa.seqIdx++;
-        if (fa.seqIdx < fa.sequence.length) {
-          const step = fa.sequence[fa.seqIdx];
-          b.expression = step.expr;
-          fa.seqTimer = step.frames;
-        } else {
-          fa.sequence = null;
-          b.expression = "normal";
-        }
-      }
-    } else {
-      if (b.expressionTimer > 0) {
-        b.expressionTimer--;
-        if (b.expressionTimer <= 0) b.expression = "normal";
-      }
-      if (b.expression === "normal") {
-        fa.idleTimer = (fa.idleTimer || 0) - 1;
-        if (fa.idleTimer <= 0) {
-          const r = Math.random();
-          if (r < 0.56) {
-            fa.blinkFrame = 16;
-            fa.idleTimer = 125 + Math.floor(Math.random() * 110);
-          } else if (r < 0.82) {
-            fa.winkFrame = 44;
-            fa.idleTimer = 165 + Math.floor(Math.random() * 115);
-          } else {
-            fa.talkFrame = 24;
-            fa.idleTimer = 140 + Math.floor(Math.random() * 100);
-          }
-        }
-      }
-    }
-
-    if (fa.blinkFrame > 0) fa.blinkFrame--;
-    if (fa.winkFrame > 0) fa.winkFrame--;
-    if (fa.talkFrame > 0) fa.talkFrame--;
-    if (b.winkTimer > 0) {
-      b.winkTimer--;
-      fa.winkFrame = Math.max(fa.winkFrame || 0, b.winkTimer);
-    }
-    if (b.talkTimer > 0) b.talkTimer--;
+    StageCommon.updateFaceAnim(b, "normal", {
+      idleRandom: true,
+      blinkProb: 0.56,
+      blinkFrames: 16,
+      winkProb: 0.82,
+      winkFrames: 44,
+      talkFrames: 24
+    });
     if (b.bustExcitement > 0) b.bustExcitement = Math.max(0, b.bustExcitement - 0.22);
 
     // 2. 浮遊ビット4機の移動＆一時停止サイクル ＆ ビットレーザー更新
@@ -1487,7 +1438,7 @@ window.Stage3 = {
         Particles.add(state, hit.qx, hit.qy, "#00f5d4", 14, 4.5);
         Particles.add(state, hit.qx, hit.qy, "#ff66b2", 10, 3.8);
 
-        this.setExpressionSequence(state, [
+        StageCommon.setExpressionSequence(state, [
           { expr: "wink", frames: 36 }
         ]);
 
@@ -1520,7 +1471,7 @@ window.Stage3 = {
 
         if (bit.hp > 0) {
           bit.hp--;
-          this.setExpressionSequence(state, [
+          StageCommon.setExpressionSequence(state, [
             { expr: "wince", frames: 20 },
             { expr: "talk_sm", frames: 18 }
           ]);
@@ -1529,7 +1480,7 @@ window.Stage3 = {
           if (bit.hp === 0) {
             bit.broken = true;
             Particles.triggerArmorBreakEffect(state, "bit_unit", dynBit.x, dynBit.y);
-            this.setExpressionSequence(state, [
+            StageCommon.setExpressionSequence(state, [
               { expr: "shock", frames: 24 },
               { expr: "shout", frames: 28 },
               { expr: "wince", frames: 32 }
@@ -1573,7 +1524,7 @@ window.Stage3 = {
           if (window.sfx) window.sfx.slingshot();
           Particles.add(state, h.x, h.y, "#ff1493", 14, 4.5);
           Particles.add(state, h.x, h.y, "#00f5d4", 8, 3.5);
-          this.setExpressionSequence(state, [{ expr: "wink", frames: 30 }]);
+          StageCommon.setExpressionSequence(state, [{ expr: "wink", frames: 30 }]);
           Systems.addScore(state, 2800, h.x, h.y - 14, `🖐️${h.label} BOUNCE!`);
         });
       });
@@ -1675,7 +1626,7 @@ window.Stage3 = {
           knee.hp--;
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, knee.x, knee.y, "#b84dff", 16, 4.8);
-          this.setExpressionSequence(state, [
+          StageCommon.setExpressionSequence(state, [
             { expr: "wince", frames: 24 },
             { expr: "talk_sm", frames: 18 }
           ]);
@@ -1684,7 +1635,7 @@ window.Stage3 = {
           if (knee.hp === 0) {
             knee.broken = true;
             Particles.triggerArmorBreakEffect(state, "knee_armor", knee.x, knee.y);
-            this.setExpressionSequence(state, [
+            StageCommon.setExpressionSequence(state, [
               { expr: "shock", frames: 26 },
               { expr: "shout", frames: 28 },
               { expr: "open_blush", frames: 48 }
@@ -1740,7 +1691,7 @@ window.Stage3 = {
             b.chestArmorHP--;
             if (window.sfx) window.sfx.metalBumper();
             Particles.add(state, cup.x, cup.y, "#ff1493", 18, 5.0);
-            this.setExpressionSequence(state, [
+            StageCommon.setExpressionSequence(state, [
               { expr: "shock", frames: 18 },
               { expr: "wince", frames: 24 },
               { expr: "open_blush", frames: 40 }
@@ -1824,7 +1775,7 @@ window.Stage3 = {
         if (window.sfx) window.sfx.metalBumper();
         Particles.add(state, core.x, core.y, "#00f5d4", 26, 6.0);
         Particles.add(state, core.x, core.y, "#e6ff00", 18, 5.0);
-        this.setExpressionSequence(state, [
+        StageCommon.setExpressionSequence(state, [
           { expr: "shock", frames: 22 },
           { expr: "shout", frames: 28 },
           { expr: "open_blush", frames: 55 }
@@ -1848,7 +1799,7 @@ window.Stage3 = {
       if (window.sfx) window.sfx.burstTrigger();
       Particles.add(state, 198, 260, "#00f5d4", 36, 7.0);
       Particles.add(state, 198, 260, "#ff1493", 32, 6.5);
-      this.setExpressionSequence(state, [
+      StageCommon.setExpressionSequence(state, [
         { expr: "shock", frames: 30 },
         { expr: "shout", frames: 36 },
         { expr: "wince", frames: 48 }
@@ -1878,7 +1829,7 @@ window.Stage3 = {
     b.bustR.vy = -8.5;
     b.hipButt.vy = -5.0;
 
-    this.setExpressionSequence(state, [
+    StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 32 },
       { expr: "shout", frames: 36 },
       { expr: "open_blush", frames: 999 }

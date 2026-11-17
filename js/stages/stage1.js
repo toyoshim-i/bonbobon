@@ -39,10 +39,6 @@ window.Stage1 = {
   },
 
   // 表情アニメーションシーケンス開始ヘルパー
-  setExpressionSequence(state, seq) {
-    StageCommon.setExpressionSequence(state, seq);
-  },
-
   createBossState() {
     return {
       droneL_HP: 3,
@@ -74,15 +70,7 @@ window.Stage1 = {
       blinkTimer: 120,
       winkTimer: 0,
       talkTimer: 0,
-      faceAnim: {
-        idleTimer: 70,
-        blinkFrame: 0,
-        talkFrame: 0,
-        winkFrame: 0,
-        sequence: null,
-        seqIdx: 0,
-        seqTimer: 0
-      },
+      faceAnim: StageCommon.createFaceAnim(70),
       animTick: 0,
       hairSpring: { dx: 0, dy: 0, vx: 0, vy: 0, phase: 0 },
       gaze: { x: 0, y: 0 },
@@ -352,61 +340,14 @@ window.Stage1 = {
     state.boss.animTick++;
 
     // 生き生きとした表情アニメーション・リップシンク制御
-    const fa = state.boss.faceAnim || (state.boss.faceAnim = {});
-    const isTalking = (state.boss.talkTimer > 0) || (state.cutin && state.cutin.timer > 0);
-
-    // 感情遷移アニメーションシーケンス実行中
-    if (fa.sequence && fa.sequence.length > 0) {
-      fa.seqTimer--;
-      if (fa.seqTimer <= 0) {
-        fa.seqIdx++;
-        if (fa.seqIdx < fa.sequence.length) {
-          const step = fa.sequence[fa.seqIdx];
-          state.boss.expression = step.expr;
-          fa.seqTimer = step.frames;
-        } else {
-          fa.sequence = null;
-          state.boss.expression = "smile";
-        }
-      }
-    } else {
-      if (state.boss.expressionTimer > 0) {
-        state.boss.expressionTimer--;
-        if (state.boss.expressionTimer <= 0) {
-          state.boss.expression = "smile";
-        }
-      }
-
-      // アイドル時の自然な表情アニメーション（瞬き・ダブル瞬き・ウインク・吐息）
-      if (state.boss.expression === "smile") {
-        fa.idleTimer = (fa.idleTimer || 0) - 1;
-        if (fa.idleTimer <= 0) {
-          const r = Math.random();
-          if (r < 0.45) {
-            // パチッ（単発瞬き 9フレーム）
-            fa.blinkFrame = 9;
-            fa.idleTimer = 80 + Math.floor(Math.random() * 85);
-          } else if (r < 0.72) {
-            // パチパチッ（ダブル瞬き 20フレーム）
-            fa.blinkFrame = 20;
-            fa.idleTimer = 110 + Math.floor(Math.random() * 95);
-          } else if (r < 0.88) {
-            // ウインク（28フレーム）
-            fa.winkFrame = 28;
-            fa.idleTimer = 135 + Math.floor(Math.random() * 110);
-          } else {
-            // 吐息・囁き口パク（16フレーム）
-            fa.talkFrame = 16;
-            fa.idleTimer = 90 + Math.floor(Math.random() * 85);
-          }
-        }
-      }
-    }
-
-    if (fa.blinkFrame > 0) fa.blinkFrame--;
-    if (fa.winkFrame > 0) fa.winkFrame--;
-    if (fa.talkFrame > 0) fa.talkFrame--;
-    if (state.boss.talkTimer > 0) state.boss.talkTimer--;
+    StageCommon.updateFaceAnim(state.boss, "smile", {
+      idleRandom: true,
+      blinkProb: 0.72,
+      blinkFrames: 14,
+      winkProb: 0.88,
+      winkFrames: 28,
+      talkFrames: 16
+    });
 
     // Target reticles rotation and flash decay
     [
@@ -453,7 +394,7 @@ window.Stage1 = {
             state.boss.chestArmorHP = (state.boss.ventL ? state.boss.ventL.hp : 0) + (state.boss.ventR ? state.boss.ventR.hp : 0);
             Systems.addFever(state, 8);
             Systems.addScore(state, 4000, v.x, v.y, `${sideLabel}-VENT HIT! HP:${v.hp}`);
-            this.setExpressionSequence(state, [
+            StageCommon.setExpressionSequence(state, [
               { expr: "shock", frames: 14 },
               { expr: "wince", frames: 20 },
               { expr: "open_blush", frames: 35 }
@@ -462,7 +403,7 @@ window.Stage1 = {
             if (state.boss.chestArmorHP === 0) {
               state.boss.chestArmorBroken = true;
               Particles.triggerArmorBreakEffect(state, "chest", 198, 353);
-              this.setExpressionSequence(state, [
+              StageCommon.setExpressionSequence(state, [
                 { expr: "shock", frames: 22 },
                 { expr: "shout", frames: 28 },
                 { expr: "open_blush", frames: 70 }
@@ -565,7 +506,7 @@ window.Stage1 = {
           b.flash = 22;
           if (window.sfx) window.sfx.softPuru();
 
-          this.setExpressionSequence(state, [
+          StageCommon.setExpressionSequence(state, [
             { expr: "shock", frames: 12 },
             { expr: "wince", frames: 16 },
             { expr: "open_blush", frames: 60 }

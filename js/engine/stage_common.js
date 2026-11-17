@@ -5,8 +5,9 @@
 window.StageCommon = {
   _defaultSlots: {},
 
-  createFaceAnim() {
+  createFaceAnim(idleTimer = 0) {
     return {
+      idleTimer,
       blinkFrame: 0,
       winkFrame: 0,
       talkFrame: 0,
@@ -26,7 +27,7 @@ window.StageCommon = {
     state.boss.expressionTimer = seq.reduce((a, s) => a + (s.frames || 0), 0);
   },
 
-  updateFaceAnim(boss, defaultExpr = "normal") {
+  updateFaceAnim(boss, defaultExpr = "normal", opts = {}) {
     if (!boss) return;
     if (!boss.faceAnim) boss.faceAnim = this.createFaceAnim();
     const fa = boss.faceAnim;
@@ -44,32 +45,52 @@ window.StageCommon = {
           boss.expressionTimer = 0;
         }
       }
-    } else if (boss.expressionTimer > 0) {
-      boss.expressionTimer--;
-      if (boss.expressionTimer <= 0) {
-        boss.expression = defaultExpr;
+    } else {
+      if (boss.expressionTimer > 0) {
+        boss.expressionTimer--;
+        if (boss.expressionTimer <= 0) {
+          boss.expression = defaultExpr;
+        }
+      }
+      if (opts.idleRandom && boss.expression === defaultExpr) {
+        fa.idleTimer = (fa.idleTimer || 0) - 1;
+        if (fa.idleTimer <= 0) {
+          const r = Math.random();
+          if (r < (opts.blinkProb ?? 0.55)) {
+            fa.blinkFrame = opts.blinkFrames ?? 16;
+            fa.idleTimer = 125 + Math.floor(Math.random() * 110);
+          } else if (r < (opts.winkProb ?? 0.82)) {
+            fa.winkFrame = opts.winkFrames ?? 45;
+            fa.idleTimer = 160 + Math.floor(Math.random() * 120);
+          } else {
+            fa.talkFrame = opts.talkFrames ?? 24;
+            fa.idleTimer = 140 + Math.floor(Math.random() * 100);
+          }
+        }
       }
     }
 
+    if (fa.blinkFrame > 0) fa.blinkFrame--;
+    if (fa.winkFrame > 0) fa.winkFrame--;
+    if (fa.talkFrame > 0) fa.talkFrame--;
+
     if (boss.winkTimer > 0) {
       boss.winkTimer--;
-      fa.winkFrame = boss.winkTimer;
-    } else {
-      fa.winkFrame = 0;
+      fa.winkFrame = Math.max(fa.winkFrame || 0, boss.winkTimer);
     }
 
     if (boss.talkTimer > 0) boss.talkTimer--;
 
-    if (fa.blinkFrame > 0) {
-      fa.blinkFrame--;
-    } else {
-      if (typeof boss.blinkTimer !== "number") {
-        boss.blinkTimer = 110 + Math.floor(Math.random() * 120);
-      }
-      boss.blinkTimer--;
-      if (boss.blinkTimer <= 0) {
-        fa.blinkFrame = 16;
-        boss.blinkTimer = 110 + Math.floor(Math.random() * 120);
+    if (!opts.idleRandom) {
+      if (fa.blinkFrame <= 0) {
+        if (typeof boss.blinkTimer !== "number") {
+          boss.blinkTimer = 110 + Math.floor(Math.random() * 120);
+        }
+        boss.blinkTimer--;
+        if (boss.blinkTimer <= 0) {
+          fa.blinkFrame = 16;
+          boss.blinkTimer = 110 + Math.floor(Math.random() * 120);
+        }
       }
     }
   },

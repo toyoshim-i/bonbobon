@@ -783,63 +783,15 @@ Object.assign(window.Stage5, {
 
     const SUBSTEPS = 6;
 
-    // A. 3D Wireform Ramp Riding
-    if (ball._onWireRamp) {
-      const rs = ball._onWireRamp;
-      rs.dist += rs.speed / SUBSTEPS;
-      const samp = this.sampleRamp(rs.rampId, rs.dist);
-      ball.x = samp.x;
-      ball.y = samp.y;
-      rs.elev = samp.elev;
-
-      if (substep === 0) {
-        rs.tick = (rs.tick || 0) + 1;
-        if (rs.tick % 5 === 0 && window.sfx && window.sfx.rampRailTick) {
-          window.sfx.rampRailTick(rs.tick / 5);
-        }
-        if (rs.tick % 2 === 0) {
-          const rampDef = this.WIRE_RAMPS[rs.rampId];
-          Particles.add(state, ball.x, ball.y, rampDef.color, 3, 2.2);
-        }
-      }
-
-      if (rs.dist >= samp.totalLen) {
-        const rampDef = this.WIRE_RAMPS[rs.rampId];
-        ball._onWireRamp = null;
-        ball._rampExitCooldown = 28;
-        ball.vx = rampDef.exitVx;
-        ball.vy = rampDef.exitVy;
-        Particles.addPopup(state, ball.x, ball.y - 12, "⚡SKYWAY DROP!", rampDef.color, 1.05);
-      }
+    // A & B. 3D Wireform Ramp Riding & Gate Entry (active only in Phases 1 & 2 before fusion!)
+    if (StageCommon.stepWireRampBall(ball, state, this, substep, SUBSTEPS, {
+      canEnter: state.phase < 3 && !(b.fusionSeq && b.fusionSeq.active),
+      minVy: -2.6,
+      minSpeed: 9.5,
+      maxSpeed: 14.8,
+      entryScore: 6000
+    })) {
       return;
-    }
-
-    if (substep === 0 && ball._rampExitCooldown > 0) {
-      ball._rampExitCooldown--;
-    }
-
-    // B. Wire Ramp Gate Entry (active only in Phases 1 & 2 before fusion!)
-    if (state.phase < 3 && !(b.fusionSeq && b.fusionSeq.active) && !ball._rampExitCooldown && ball.vy < -2.6 && b.lastFlipActiveTimer > 0) {
-      for (const rampKey of ["left", "right"]) {
-        const rd = this.WIRE_RAMPS[rampKey];
-        const dGate = Math.hypot(ball.x - rd.entryX, ball.y - rd.entryY);
-        if (dGate < ball.r + rd.entryR) {
-          const entrySpd = Math.max(9.5, Math.min(14.8, Math.hypot(ball.vx, ball.vy) * 1.18));
-          ball._onWireRamp = {
-            rampId: rampKey,
-            dist: 2,
-            speed: entrySpd,
-            elev: 0.15,
-            tick: 0
-          };
-          ball.trail = [];
-          if (window.sfx && window.sfx.rampEnter) window.sfx.rampEnter();
-          state.shockwaves.push({ x: rd.entryX, y: rd.entryY, r: 6, maxR: 44, speed: 3.8, color: rd.color, lineWidth: 2.8, alpha: 1.0 });
-          Systems.addScore(state, 6000, rd.entryX, rd.entryY - 12, `⚡${rd.name} IN!!`);
-          Particles.add(state, rd.entryX, rd.entryY, rd.color, 16, 4.4);
-          return;
-        }
-      }
     }
 
     if (!ball.hitCooldowns) ball.hitCooldowns = {};

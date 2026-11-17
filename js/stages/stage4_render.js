@@ -842,23 +842,7 @@ Object.assign(window.Stage4, {
       const rd = this.WIRE_RAMPS[rampKey];
       const totalLen = this._rampMetrics[rampKey].totalLen;
 
-      const chaseOffset = (b.animTick * 3.2) % 44;
-      for (let d = chaseOffset; d < totalLen - 12; d += 44) {
-        const s = this.sampleRamp(rampKey, d);
-        const ang = Math.atan2(s.ty, s.tx);
-        ctx.save();
-        ctx.translate(s.x, s.y);
-        ctx.rotate(ang);
-        ctx.strokeStyle = "#e6ff00";
-        ctx.globalAlpha = 0.85;
-        ctx.lineWidth = 2.0;
-        ctx.beginPath();
-        ctx.moveTo(-4, -4.5);
-        ctx.lineTo(3.5, 0);
-        ctx.lineTo(-4, 4.5);
-        ctx.stroke();
-        ctx.restore();
-      }
+      StageCommon.renderWireRampChasers(ctx, this, rampKey, totalLen, b.animTick);
 
       const pulse = 0.65 + 0.35 * Math.sin(b.animTick * 0.16 + (rampKey === "left" ? 0 : 2));
       ctx.save();
@@ -924,30 +908,7 @@ Object.assign(window.Stage4, {
     ctx.restore();
 
     // 2. 立体ワイヤーランプ上を滑走中の高架ボール（高速外枠グロー ＋ 内側ボール）
-    state.balls.forEach(ball => {
-      if (!ball._onWireRamp) return;
-      const elev = ball._onWireRamp.elev || 1.0;
-      const rScaled = ball.r * (1.0 + elev * 0.28);
-      const rd = this.WIRE_RAMPS[ball._onWireRamp.rampId];
-
-      ctx.save();
-      ctx.strokeStyle = rd.color;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 5.5;
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, rScaled + 1.2, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.globalAlpha = 1.0;
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = rd.color;
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, rScaled, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    });
+    StageCommon.renderWireRampBalls(ctx, state, this.WIRE_RAMPS);
 
     // 3. ワイヤーランプの上部リングアーチ
     this.renderWireRampRails(ctx, b, true);

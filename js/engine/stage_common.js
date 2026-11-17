@@ -571,5 +571,124 @@ window.StageCommon = {
       // file:// 等でキャンバスが汚染される環境では変形を諦める（原画のまま表示）
       return { canvas: null, ctx: null, key, w: 0, h: 0, data: null };
     }
+  },
+
+  stepWireRampBall(ball, state, stage, substep, substeps = 6, opts = {}) {
+    const b = state.boss;
+    if (ball._onWireRamp) {
+      const rs = ball._onWireRamp;
+      rs.dist += rs.speed / substeps;
+      const samp = stage.sampleRamp(rs.rampId, rs.dist);
+      ball.x = samp.x;
+      ball.y = samp.y;
+      rs.elev = samp.elev;
+
+      if (substep === 0) {
+        rs.tick = (rs.tick || 0) + 1;
+        if (rs.tick % 5 === 0 && window.sfx && window.sfx.rampRailTick) {
+          window.sfx.rampRailTick(rs.tick / 5);
+        }
+        if (rs.tick % 2 === 0) {
+          const rampDef = stage.WIRE_RAMPS[rs.rampId];
+          Particles.add(state, ball.x, ball.y, rampDef.color, 3, 2.2);
+        }
+      }
+
+      if (typeof opts.onRide === "function") {
+        opts.onRide(ball, rs, state, substep);
+      }
+
+      if (rs.dist >= samp.totalLen) {
+        const rampDef = stage.WIRE_RAMPS[rs.rampId];
+        ball._onWireRamp = null;
+        ball._rampExitCooldown = 28;
+        ball.vx = rampDef.exitVx;
+        ball.vy = rampDef.exitVy;
+        Particles.addPopup(state, ball.x, ball.y - 12, "⚡SKYWAY DROP!", rampDef.color, 1.05);
+      }
+      return true;
+    }
+
+    if (substep === 0 && ball._rampExitCooldown > 0) {
+      ball._rampExitCooldown--;
+    }
+
+    const canEnter = opts.canEnter !== undefined ? opts.canEnter : true;
+    const minVy = opts.minVy ?? -2.5;
+    if (canEnter && !ball._rampExitCooldown && ball.vy < minVy && b && b.lastFlipActiveTimer > 0) {
+      const minSpeed = opts.minSpeed ?? 9.2;
+      const maxSpeed = opts.maxSpeed ?? 14.5;
+      const entryScore = opts.entryScore ?? 5500;
+      for (const rampKey of ["left", "right"]) {
+        const rd = stage.WIRE_RAMPS[rampKey];
+        if (!rd) continue;
+        const dGate = Math.hypot(ball.x - rd.entryX, ball.y - rd.entryY);
+        if (dGate < ball.r + rd.entryR) {
+          const entrySpd = Math.max(minSpeed, Math.min(maxSpeed, Math.hypot(ball.vx, ball.vy) * 1.18));
+          ball._onWireRamp = {
+            rampId: rampKey,
+            dist: 2,
+            speed: entrySpd,
+            elev: 0.15,
+            tick: 0,
+            visitedLanterns: {}
+          };
+          ball.trail = [];
+          if (window.sfx && window.sfx.rampEnter) window.sfx.rampEnter();
+          state.shockwaves.push({ x: rd.entryX, y: rd.entryY, r: 6, maxR: 44, speed: 3.8, color: rd.color, lineWidth: 2.8, alpha: 1.0 });
+          Systems.addScore(state, entryScore, rd.entryX, rd.entryY - 12, `⚡${rd.name} IN!!`);
+          Particles.add(state, rd.entryX, rd.entryY, rd.color, 16, 4.4);
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+
+  renderWireRampChasers(ctx, stage, rampKey, totalLen, animTick) {
+    const chaseOffset = (animTick * 3.2) % 44;
+    for (let d = chaseOffset; d < totalLen - 12; d += 44) {
+      const s = stage.sampleRamp(rampKey, d);
+      const ang = Math.atan2(s.ty, s.tx);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(ang);
+      ctx.strokeStyle = "#e6ff00";
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(-4, -4.5);
+      ctx.lineTo(3.5, 0);
+      ctx.lineTo(-4, 4.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+  },
+
+  renderWireRampBalls(ctx, state, wireRamps) {
+    state.balls.forEach(ball => {
+      if (!ball._onWireRamp) return;
+      const elev = ball._onWireRamp.elev || 1.0;
+      const rScaled = ball.r * (1.0 + elev * 0.28);
+      const rd = wireRamps[ball._onWireRamp.rampId];
+
+      ctx.save();
+      ctx.strokeStyle = rd.color;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 5.5;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, rScaled + 1.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = rd.color;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, rScaled, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 };

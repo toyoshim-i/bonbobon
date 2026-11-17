@@ -360,79 +360,31 @@ Object.assign(window.Stage4, {
     const SUBSTEPS = 6;
 
     // -----------------------------------------------------------------
-    // A. 空中立体ワイヤーランプ滑走中のサブステップ進行
+    // A & B. 空中立体ワイヤーランプ滑走 ＆ 入口ゲート突入判定
     // -----------------------------------------------------------------
-    if (ball._onWireRamp) {
-      const rs = ball._onWireRamp;
-      rs.dist += rs.speed / SUBSTEPS;
-      const samp = this.sampleRamp(rs.rampId, rs.dist);
-      ball.x = samp.x;
-      ball.y = samp.y;
-      rs.elev = samp.elev;
-      b.stoleWind = Math.max(b.stoleWind, 0.55);
-
-      if (substep === 0) {
-        rs.tick = (rs.tick || 0) + 1;
-        if (rs.tick % 5 === 0 && window.sfx && window.sfx.rampRailTick) {
-          window.sfx.rampRailTick(rs.tick / 5);
+    if (StageCommon.stepWireRampBall(ball, state, this, substep, SUBSTEPS, {
+      minVy: -2.5,
+      minSpeed: 9.2,
+      maxSpeed: 14.5,
+      entryScore: 5500,
+      onRide: (rideBall, rs, st, ss) => {
+        b.stoleWind = Math.max(b.stoleWind, 0.55);
+        if (ss === 0) {
+          b.lanterns.forEach(lt => {
+            if (!rs.visitedLanterns[lt.id] && Math.hypot(rideBall.x - lt.x, rideBall.y - lt.y) < lt.r + 18) {
+              rs.visitedLanterns[lt.id] = true;
+              this.lightLantern(st, lt, rs.rampId === "left" ? 1 : -1);
+            }
+          });
         }
-        if (rs.tick % 2 === 0) {
-          const rampDef = this.WIRE_RAMPS[rs.rampId];
-          Particles.add(state, ball.x, ball.y, rampDef.color, 3, 2.2);
-        }
-        b.lanterns.forEach(lt => {
-          if (!rs.visitedLanterns[lt.id] && Math.hypot(ball.x - lt.x, ball.y - lt.y) < lt.r + 18) {
-            rs.visitedLanterns[lt.id] = true;
-            this.lightLantern(state, lt, rs.rampId === "left" ? 1 : -1);
-          }
-        });
       }
-
-      if (rs.dist >= samp.totalLen) {
-        const rampDef = this.WIRE_RAMPS[rs.rampId];
-        ball._onWireRamp = null;
-        ball._rampExitCooldown = 28;
-        ball.vx = rampDef.exitVx;
-        ball.vy = rampDef.exitVy;
-        Particles.addPopup(state, ball.x, ball.y - 12, "⚡SKYWAY DROP!", rampDef.color, 1.05);
-      }
+    })) {
       return;
-    }
-
-    if (substep === 0 && ball._rampExitCooldown > 0) {
-      ball._rampExitCooldown--;
     }
 
     if (substep === 0 && ball.y > 170 && ball.y < 460 && (ball.x < 145 || ball.x > 255)) {
       const spd = Math.hypot(ball.vx, ball.vy);
       if (spd > 4.5) b.stoleWind = Math.min(1.6, b.stoleWind + spd * 0.04);
-    }
-
-    // -----------------------------------------------------------------
-    // B. 左右の立体ワイヤーランプ入口ゲート突入判定
-    // -----------------------------------------------------------------
-    if (!ball._rampExitCooldown && ball.vy < -2.5 && b.lastFlipActiveTimer > 0) {
-      for (const rampKey of ["left", "right"]) {
-        const rd = this.WIRE_RAMPS[rampKey];
-        const dGate = Math.hypot(ball.x - rd.entryX, ball.y - rd.entryY);
-        if (dGate < ball.r + rd.entryR) {
-          const entrySpd = Math.max(9.2, Math.min(14.5, Math.hypot(ball.vx, ball.vy) * 1.18));
-          ball._onWireRamp = {
-            rampId: rampKey,
-            dist: 2,
-            speed: entrySpd,
-            elev: 0.15,
-            tick: 0,
-            visitedLanterns: {}
-          };
-          ball.trail = [];
-          if (window.sfx && window.sfx.rampEnter) window.sfx.rampEnter();
-          state.shockwaves.push({ x: rd.entryX, y: rd.entryY, r: 6, maxR: 44, speed: 3.8, color: rd.color, lineWidth: 2.8, alpha: 1.0 });
-          Systems.addScore(state, 5500, rd.entryX, rd.entryY - 12, `⚡${rd.name} IN!!`);
-          Particles.add(state, rd.entryX, rd.entryY, rd.color, 16, 4.4);
-          return;
-        }
-      }
     }
 
     if (!ball.hitCooldowns) ball.hitCooldowns = {};

@@ -13,6 +13,11 @@ window.GameEngine = {
   currentStage: null,
   isSimulationRunning: false,
   rafId: null,
+  FIXED_STEP_MS: 1000 / 60,
+  _lastFrameTime: 0,
+  _accumulator: 0,
+  _needsRender: true,
+  _boundLoop: null,
 
   STAGE_REGISTRY: [
     {
@@ -928,21 +933,44 @@ window.GameEngine = {
     ctx.restore();
   },
 
-  loop() {
+  loop(now) {
     if (!this.isSimulationRunning) return;
+    const curTime = typeof now === "number" ? now : performance.now();
+    if (!this._lastFrameTime) this._lastFrameTime = curTime;
+    const dt = Math.min(100, Math.max(0, curTime - this._lastFrameTime));
+    this._lastFrameTime = curTime;
+    this._accumulator += dt;
+
+    let steps = 0;
     try {
-      this.stepPhysics();
-      this.renderTable();
+      while (this._accumulator >= this.FIXED_STEP_MS && steps < 4) {
+        this.stepPhysics();
+        this._accumulator -= this.FIXED_STEP_MS;
+        steps++;
+      }
+      if (this._accumulator >= this.FIXED_STEP_MS) {
+        this._accumulator = 0;
+      }
+
+      const st = this.state;
+      const isCovered = st && (st.inTitle || st.inEnding);
+      if (!isCovered && (steps > 0 || this._needsRender)) {
+        this.renderTable();
+        this._needsRender = false;
+      }
     } catch (err) {
       console.error("GameEngine loop error:", err);
     }
-    this.rafId = requestAnimationFrame(() => this.loop());
+    this.rafId = requestAnimationFrame(this._boundLoop || (this._boundLoop = (t) => this.loop(t)));
   },
 
   start() {
     if (this.isSimulationRunning) return;
     this.isSimulationRunning = true;
-    this.loop();
+    this._lastFrameTime = performance.now();
+    this._accumulator = this.FIXED_STEP_MS;
+    this._needsRender = true;
+    this.rafId = requestAnimationFrame(this._boundLoop || (this._boundLoop = (t) => this.loop(t)));
   },
 
   pause() {

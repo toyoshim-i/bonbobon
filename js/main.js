@@ -26,12 +26,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const replayBtn = document.getElementById("btnClearReplay");
     if (replayBtn) {
       replayBtn.addEventListener("click", () => {
-        modal.classList.remove("opacity-100");
-        modal.classList.add("opacity-0");
-        setTimeout(() => {
-          modal.classList.add("hidden");
-          modal.classList.remove("flex");
-        }, 200);
+        if (window.UI && UI.closeModal) UI.closeModal(modal);
         const curIdx = (GameEngine.state && GameEngine.state.stageIndex) || 1;
         if (GameEngine.state && GameEngine.state.gameMode === "practice") {
           GameEngine.startPracticeStage(curIdx);
@@ -44,12 +39,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const nextBtn = document.getElementById("btnClearNext");
     if (nextBtn) {
       nextBtn.addEventListener("click", () => {
-        modal.classList.remove("opacity-100");
-        modal.classList.add("opacity-0");
-        setTimeout(() => {
-          modal.classList.add("hidden");
-          modal.classList.remove("flex");
-        }, 200);
+        if (window.UI && UI.closeModal) UI.closeModal(modal);
 
         const curId = GameEngine.currentStage ? GameEngine.currentStage.id : "stage1";
         if (curId === "stage5") {
@@ -103,30 +93,8 @@ window.addEventListener("DOMContentLoaded", () => {
   if (dbgPuruTest) dbgPuruTest.addEventListener("click", () => {
     closeMenuIfInGame();
     const cur = GameEngine.currentStage;
-    if (cur && cur.id === "stage5" && window.Stage5) {
-      Stage5.triggerDebugJiggle(GameEngine.state);
-    } else if (cur && cur.id === "stage4" && window.Stage4) {
-      Stage4.triggerDebugJiggle(GameEngine.state);
-    } else if (cur && cur.id === "stage3" && window.Stage3) {
-      const b = GameEngine.state.boss;
-      if (b.chestArmorBroken) {
-        Stage3.impulseBust(GameEngine.state, "L", 7.2, -7.8);
-        Stage3.impulseBust(GameEngine.state, "R", -7.2, -7.8);
-      } else {
-        if (window.sfx) window.sfx.softPuru();
-        b.bustL.vx += 5.2; b.bustL.vy -= 5.6;
-        b.bustR.vx -= 5.2; b.bustR.vy -= 5.6;
-      }
-      Stage3.impulseHip(GameEngine.state, 6.0, -6.5, false);
-    } else if (cur && cur.id === "stage2" && GameEngine.state.boss.tipBust) {
-      GameEngine.state.boss.tipBust.vx += 8.0;
-      GameEngine.state.boss.tipBust.vy -= 8.0;
-      if (GameEngine.state.boss.buttL) GameEngine.state.boss.buttL.vy += 8.0;
-      if (GameEngine.state.boss.buttR) GameEngine.state.boss.buttR.vy += 8.0;
-    } else {
-      GameEngine.state.boss.chestArmorBroken = true;
-      Stage1.impulseBust(GameEngine.state, "L", 6.5, -7.5);
-      Stage1.impulseBust(GameEngine.state, "R", -6.5, -7.5);
+    if (cur && typeof cur.triggerDebugJiggle === "function") {
+      cur.triggerDebugJiggle(GameEngine.state);
     }
   });
 

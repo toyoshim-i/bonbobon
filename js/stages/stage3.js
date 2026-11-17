@@ -442,6 +442,20 @@ window.Stage3 = {
     UI.updateHUD(state);
   },
 
+  triggerDebugJiggle(state) {
+    if (!state || !state.boss) return;
+    const b = state.boss;
+    if (b.chestArmorBroken) {
+      this.impulseBust(state, "L", 7.2, -7.8);
+      this.impulseBust(state, "R", -7.2, -7.8);
+    } else {
+      if (window.sfx) window.sfx.softPuru();
+      b.bustL.vx += 5.2; b.bustL.vy -= 5.6;
+      b.bustR.vx -= 5.2; b.bustR.vy -= 5.6;
+    }
+    this.impulseHip(state, 6.0, -6.5, false);
+  },
+
   onNudge(state, nx, ny, intensity) {
     if (!state.boss) return;
     const b = state.boss;

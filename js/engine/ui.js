@@ -11,6 +11,27 @@ window.UI = {
     return this._elCache[id] || (this._elCache[id] = document.getElementById(id));
   },
 
+  openModal(idOrEl) {
+    const modal = typeof idOrEl === "string" ? this.el(idOrEl) : idOrEl;
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    void modal.offsetWidth;
+    modal.classList.remove("opacity-0");
+    modal.classList.add("opacity-100");
+  },
+
+  closeModal(idOrEl, delayMs = 200) {
+    const modal = typeof idOrEl === "string" ? this.el(idOrEl) : idOrEl;
+    if (!modal) return;
+    modal.classList.remove("opacity-100");
+    modal.classList.add("opacity-0");
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }, delayMs);
+  },
+
   isCutinVisible() {
     return !!this._cutinVisible;
   },
@@ -84,14 +105,14 @@ window.UI = {
 
   updateScreenMode(state) {
     const isTitle = !!(state && state.inTitle);
-    const hudBar = document.getElementById("inGameHudBar");
-    const buffBar = document.getElementById("inGameBuffBar");
-    const titleControls = document.getElementById("titleControlsBar");
-    const gameControls = document.getElementById("gameControlsBar");
-    const menuControls = document.getElementById("menuControlsBar");
-    const playfieldFrame = document.getElementById("playfieldFrame");
-    const objectivePill = document.getElementById("hudObjectivePill");
-    const btnHudDebugSettings = document.getElementById("btnHudDebugSettings");
+    const hudBar = this.el("inGameHudBar");
+    const buffBar = this.el("inGameBuffBar");
+    const titleControls = this.el("titleControlsBar");
+    const gameControls = this.el("gameControlsBar");
+    const menuControls = this.el("menuControlsBar");
+    const playfieldFrame = this.el("playfieldFrame");
+    const objectivePill = this.el("hudObjectivePill");
+    const btnHudDebugSettings = this.el("btnHudDebugSettings");
 
     if (playfieldFrame) {
       playfieldFrame.classList.toggle("title-screen-mode", isTitle);
@@ -158,6 +179,34 @@ window.UI = {
           gameControls.classList.add("grid");
         }
       }
+    }
+  },
+
+  updatePlungerHint(state) {
+    const pBtn = this.el("btnPlunger");
+    const pHint = this.el("plungerBtnHint");
+    if (!pBtn || !pHint) return;
+    if (state.plunger.waitingForLaunch) {
+      if (pBtn._lastWaiting !== true) {
+        pBtn._lastWaiting = true;
+        pBtn.classList.remove("opacity-40", "grayscale");
+        pBtn.classList.add("cursor-pointer");
+      }
+      if (state.plunger.pulling) {
+        this.setText(pHint, `POWER ${Math.round(state.plunger.power)}%`);
+        this.setClass(pHint, "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse");
+      } else {
+        this.setText(pHint, "引いて離す");
+        this.setClass(pHint, "text-[9px] text-[#00f5d4] leading-none mt-0.5");
+      }
+    } else {
+      if (pBtn._lastWaiting !== false) {
+        pBtn._lastWaiting = false;
+        pBtn.classList.add("opacity-40", "grayscale");
+        pBtn.classList.remove("cursor-pointer");
+      }
+      this.setText(pHint, "発射済み");
+      this.setClass(pHint, "text-[9px] text-gray-400 leading-none mt-0.5");
     }
   },
 
@@ -251,32 +300,7 @@ window.UI = {
     }
 
     // Plunger Button Status
-    const pBtn = this.el("btnPlunger");
-    const pHint = this.el("plungerBtnHint");
-    if (pBtn && pHint) {
-      if (state.plunger.waitingForLaunch) {
-        if (pBtn._lastWaiting !== true) {
-          pBtn._lastWaiting = true;
-          pBtn.classList.remove("opacity-40", "grayscale");
-          pBtn.classList.add("cursor-pointer");
-        }
-        if (state.plunger.pulling) {
-          this.setText(pHint, `POWER ${Math.round(state.plunger.power)}%`);
-          this.setClass(pHint, "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse");
-        } else {
-          this.setText(pHint, "引いて離す");
-          this.setClass(pHint, "text-[9px] text-[#00f5d4] leading-none mt-0.5");
-        }
-      } else {
-        if (pBtn._lastWaiting !== false) {
-          pBtn._lastWaiting = false;
-          pBtn.classList.add("opacity-40", "grayscale");
-          pBtn.classList.remove("cursor-pointer");
-        }
-        this.setText(pHint, "発射済み");
-        this.setClass(pHint, "text-[9px] text-gray-400 leading-none mt-0.5");
-      }
-    }
+    this.updatePlungerHint(state);
 
     // Desktop Right Sidebar Telemetry Sync
     const dtShield = this.el("dtBallCount");
@@ -616,11 +640,7 @@ window.UI = {
       updateNudgeJiggleUI(window.Systems && Systems.isNudgeJiggleEnabled());
       updateAudioUI(window.Systems ? Systems.isSfxEnabled() : true);
 
-      menuModal.classList.remove("hidden");
-      menuModal.classList.add("flex");
-      void menuModal.offsetWidth;
-      menuModal.classList.remove("opacity-0");
-      menuModal.classList.add("opacity-100");
+      UI.openModal(menuModal);
     };
 
     UI.closeMenu = (st = null) => {
@@ -629,13 +649,7 @@ window.UI = {
       if (window.sfx) window.sfx.flipperClick();
       UI.isMenuOpen = false;
       UI.updateScreenMode(state);
-
-      menuModal.classList.remove("opacity-100");
-      menuModal.classList.add("opacity-0");
-      setTimeout(() => {
-        menuModal.classList.add("hidden");
-        menuModal.classList.remove("flex");
-      }, 200);
+      UI.closeModal(menuModal);
     };
 
     const openMenu = () => UI.openMenu(engine.state);
@@ -882,11 +896,7 @@ window.UI = {
       }
     }
 
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-    void modal.offsetWidth;
-    modal.classList.remove("opacity-0");
-    modal.classList.add("opacity-100");
+    this.openModal(modal);
 
     this.updateHUD(state);
   }

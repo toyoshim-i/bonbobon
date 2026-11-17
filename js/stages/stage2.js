@@ -280,6 +280,14 @@ window.Stage2 = {
     };
   },
 
+  triggerDebugJiggle(state) {
+    if (!state || !state.boss || !state.boss.tipBust) return;
+    state.boss.tipBust.vx += 8.0;
+    state.boss.tipBust.vy -= 8.0;
+    if (state.boss.buttL) state.boss.buttL.vy += 8.0;
+    if (state.boss.buttR) state.boss.buttR.vy += 8.0;
+  },
+
   onNudge(state, nx, ny, intensity) {
     if (!state.boss) return;
     if (window.Systems && Systems.isNudgeJiggleEnabled()) {

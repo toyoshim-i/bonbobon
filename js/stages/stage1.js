@@ -245,6 +245,13 @@ window.Stage1 = {
     ear.flash = 18;
   },
 
+  triggerDebugJiggle(state) {
+    if (!state || !state.boss) return;
+    state.boss.chestArmorBroken = true;
+    this.impulseBust(state, "L", 6.5, -7.5);
+    this.impulseBust(state, "R", -6.5, -7.5);
+  },
+
   onNudge(state, nx, ny, intensity) {
     if (window.Systems && Systems.isNudgeJiggleEnabled() && state.boss) {
       const bL = state.boss.bustL;

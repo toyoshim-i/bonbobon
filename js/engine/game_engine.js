@@ -389,10 +389,8 @@ window.GameEngine = {
       state.plunger.springY = 575 + (state.plunger.power / 100) * 36;
       state.plunger.springVy = 0;
 
-      const pHint = document.getElementById("plungerBtnHint");
-      if (pHint) {
-        pHint.textContent = `POWER ${Math.round(state.plunger.power)}%`;
-        pHint.className = "text-[9px] text-[#e6ff00] font-bold leading-none mt-0.5 animate-pulse";
+      if (window.UI && typeof UI.updatePlungerHint === "function") {
+        UI.updatePlungerHint(state);
       }
     } else {
       // Natural spring-damper oscillation back to rest position (575)

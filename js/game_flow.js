@@ -698,25 +698,13 @@ window.GameFlow = {
     const modal = document.getElementById("rankingModal");
     if (modal) {
       this.renderHighScoresTable("rankingHighScoresTable");
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      void modal.offsetWidth;
-      modal.classList.remove("opacity-0");
-      modal.classList.add("opacity-100");
+      if (window.UI && UI.openModal) UI.openModal(modal);
     }
   },
 
   closeRankingModal() {
     this.resetIdleTimer();
-    const modal = document.getElementById("rankingModal");
-    if (modal) {
-      modal.classList.remove("opacity-100");
-      modal.classList.add("opacity-0");
-      setTimeout(() => {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-      }, 200);
-    }
+    if (window.UI && UI.closeModal) UI.closeModal("rankingModal");
   },
 
   renderHighScoresTable(tableId, highlightIdx = -1) {
@@ -781,11 +769,7 @@ window.GameFlow = {
       }
     }
 
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-    void modal.offsetWidth;
-    modal.classList.remove("opacity-0");
-    modal.classList.add("opacity-100");
+    if (window.UI && UI.openModal) UI.openModal(modal);
   },
 
   // -------------------------------------------------------------------------
@@ -814,14 +798,7 @@ window.GameFlow = {
     const skipBtn = document.getElementById("btnEndingSkip");
     if (skipBtn) skipBtn.classList.remove("hidden");
 
-    const modal = document.getElementById("endingModal");
-    if (modal) {
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      void modal.offsetWidth;
-      modal.classList.remove("opacity-0");
-      modal.classList.add("opacity-100");
-    }
+    if (window.UI && UI.openModal) UI.openModal("endingModal");
 
     this.ending.act = 1;
     this.ending.beat = 0;

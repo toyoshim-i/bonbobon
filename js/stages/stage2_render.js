@@ -181,8 +181,9 @@ Object.assign(window.Stage2, {
     if (isPostWhiteout) return;
 
     const animTick = state.boss.animTick || 0;
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
-      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
+    const TC = Particles.TARGET_COLORS;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub, opts) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub, opts);
 
     // 1. カチューシャのアンテナ先端（ターゲットマーク不要：放電中・予兆時のみ電撃エフェクトを描画）
     const ant = state.boss.antenna;
@@ -288,12 +289,12 @@ Object.assign(window.Stage2, {
     if (holo) {
       if (!holo.broken) {
         if (state.phase < 2 || holo.isShielded) {
-          drawGuide(holo.x, holo.y, holo.r, "#00f5d4", holo.flash, 0, "HOLO CANNON", "SHIELDED");
+          drawGuide(holo.x, holo.y, holo.r, TC.LOCKED, holo.flash, 0, "HOLO CANNON", "🔒SHIELDED", { isLocked: true });
         } else {
-          drawGuide(holo.x, holo.y, holo.r, "#ff007f", holo.flash, animTick * 0.03, "HOLO CANNON", `HP:${holo.hp}`);
+          drawGuide(holo.x, holo.y, holo.r, TC.ATTACK, holo.flash, animTick * 0.03, "HOLO CANNON", `HP:${holo.hp}`, { isAttack: true });
         }
       } else {
-        drawGuide(holo.x, holo.y, holo.r, "#555555", 0, 0, "HOLO CANNON", "DESTROYED");
+        drawGuide(holo.x, holo.y, holo.r, TC.BROKEN, 0, 0, "HOLO CANNON", "DESTROYED", { isLocked: true });
       }
 
       const endPt = this.getLaserEndPoint(holo, 420, 660);
@@ -446,57 +447,61 @@ Object.assign(window.Stage2, {
     // 3. バウンスポイント：手前の左肩装甲（Phase 1 破壊対象 HP 6）
     const shL = state.boss.shoulderL;
     if (shL) {
-      drawGuide(shL.x, shL.y, shL.r, shL.broken ? "#555555" : "#ff007f", shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}/6`);
+      drawGuide(shL.x, shL.y, shL.r, shL.broken ? TC.BROKEN : TC.ATTACK, shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}/6`, { isLocked: shL.broken, isAttack: !shL.broken });
     }
 
     // 4. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象 各HP 5）
     const elbL = state.boss.elbowL;
     if (elbL) {
-      drawGuide(elbL.x, elbL.y, elbL.r, elbL.broken ? "#555555" : "#ff007f", elbL.flash, -animTick * 0.02, "L-ARM", elbL.broken ? "DESTROYED" : `HP:${elbL.hp}/5`);
+      drawGuide(elbL.x, elbL.y, elbL.r, elbL.broken ? TC.BROKEN : TC.ATTACK, elbL.flash, -animTick * 0.02, "L-ARM", elbL.broken ? "DESTROYED" : `HP:${elbL.hp}/5`, { isLocked: elbL.broken, isAttack: !elbL.broken });
     }
     const elbR = state.boss.elbowR;
     if (elbR) {
-      drawGuide(elbR.x, elbR.y, elbR.r, elbR.broken ? "#555555" : "#ff007f", elbR.flash, animTick * 0.02, "R-ARM", elbR.broken ? "DESTROYED" : `HP:${elbR.hp}/5`);
+      drawGuide(elbR.x, elbR.y, elbR.r, elbR.broken ? TC.BROKEN : TC.ATTACK, elbR.flash, animTick * 0.02, "R-ARM", elbR.broken ? "DESTROYED" : `HP:${elbR.hp}/5`, { isLocked: elbR.broken, isAttack: !elbR.broken });
     }
 
     // 4.5. 背中ブースターノズル噴射口ターゲット（左右2基：Phase 2 破壊対象 各HP 4）
     const nozL = state.boss.nozzleL;
     if (nozL) {
-      const colL = nozL.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff007f");
+      const colL = nozL.broken ? TC.BROKEN : (state.phase < 2 ? TC.LOCKED : TC.ATTACK);
       const subL = nozL.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozL.hp}/4`);
-      drawGuide(nozL.x, nozL.y, nozL.r, colL, nozL.flash, animTick * 0.025, "NOZZLE-L", subL);
+      drawGuide(nozL.x, nozL.y, nozL.r, colL, nozL.flash, animTick * 0.025, "NOZZLE-L", subL, { isLocked: nozL.broken || state.phase < 2, isAttack: !nozL.broken && state.phase >= 2 });
     }
     const nozR = state.boss.nozzleR;
     if (nozR) {
-      const colR = nozR.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff007f");
+      const colR = nozR.broken ? TC.BROKEN : (state.phase < 2 ? TC.LOCKED : TC.ATTACK);
       const subR = nozR.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozR.hp}/4`);
-      drawGuide(nozR.x, nozR.y, nozR.r, colR, nozR.flash, -animTick * 0.025, "NOZZLE-R", subR);
+      drawGuide(nozR.x, nozR.y, nozR.r, colR, nozR.flash, -animTick * 0.025, "NOZZLE-R", subR, { isLocked: nozR.broken || state.phase < 2, isAttack: !nozR.broken && state.phase >= 2 });
     }
 
-    // 5. 胸の先端（JET SENSOR ＆ BUST TARGET：Phase 2 破壊対象 HP 6）
+    // 5. 胸の先端（JET SENSOR ＆ BUST TARGET：進行必須 × お色気）
     const bTip = state.boss.tipBust;
     if (bTip) {
-      const colB = bTip.broken ? "#555555" : (state.phase < 2 ? "#e6ff00" : "#ff1493");
-      drawGuide(bTip.x, bTip.y, bTip.r, colB, bTip.flash, animTick * 0.03, "♥BUST TIP", bTip.broken ? "PURGED" : `HP:${bTip.hp}/6`);
+      if (bTip.broken) {
+        Particles.drawBounceBumperGuide(ctx, animTick, bTip.x, bTip.y, bTip.r, state.fever.active ? TC.FEVER : TC.SEXY, bTip.flash, "♥BUST TIP", "♥PURGED");
+      } else {
+        const colB = state.phase < 2 ? TC.LOCKED : TC.ATTACK;
+        drawGuide(bTip.x, bTip.y, bTip.r, colB, bTip.flash, animTick * 0.03, "♥BUST TIP", `HP:${bTip.hp}/6`, { innerColor: TC.SEXY, isLocked: state.phase < 2, isAttack: state.phase >= 2 });
+      }
     }
 
     // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット HP 12）
     const core = state.boss.core;
     if (core) {
       if (state.phase === 3 && core.unlocked) {
-        drawGuide(core.x, core.y, core.r, "#00f5d4", core.flash, animTick * 0.04, "★REACTOR CORE★", `HP:${core.hp}/12 [K.O. TARGET]`);
+        drawGuide(core.x, core.y, core.r, TC.ATTACK, core.flash, animTick * 0.045, "★REACTOR CORE★", `HP:${core.hp}/12`, { isCritical: true, innerColor: TC.SCORE });
       } else if (core.unlocked) {
-        drawGuide(core.x, core.y, core.r, "#e6ff00", core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
+        drawGuide(core.x, core.y, core.r, TC.SCORE, core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
       }
     }
 
-    // 7. 【破壊不能バウンスバンパー】左足付け根の丸い装甲パーツ（剛体CYBER BUMP：照準なし・シアン波紋クッション）
+    // 7. 【破壊不能バウンスバンパー】左足付け根の丸い装甲パーツ（サポート × お色気連動）
     const hip = state.boss.hipJointL;
     if (hip) {
       const bL = state.boss.buttL;
       const jDx = (bL ? bL.dx : 0) * this.HIP_FOLLOW;
       const jDy = (bL ? bL.dy : 0) * this.HIP_FOLLOW;
-      Particles.drawBounceBumperGuide(ctx, animTick, hip.x + jDx, hip.y + jDy, hip.r, "#00f5d4", hip.flash, "HIP JOINT", "CYBER BUMP");
+      Particles.drawBounceBumperGuide(ctx, animTick, hip.x + jDx, hip.y + jDy, hip.r, TC.SUPPORT, hip.flash, "HIP JOINT", "CYBER BUMP", { innerColor: TC.SEXY });
     }
 
     // 8. 【破壊不能バウンスバンパー】カチューシャ猫耳三角バウンス板（シアン反発フレーム・照準なし）

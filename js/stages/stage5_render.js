@@ -1086,24 +1086,26 @@ Object.assign(window.Stage5, {
   },
 
   drawEllipticalHaloGuide(ctx, animTick, h) {
+    const TC = Particles.TARGET_COLORS;
     ctx.save();
     ctx.translate(h.x, h.y);
     ctx.rotate(h.tilt);
-    const strokeCol = h.flash > 0 ? "#ffffff" : h.color;
+    const strokeCol = h.flash > 0 ? "#ffffff" : TC.ATTACK;
+    const innerCol = h.flash > 0 ? "#ffffff" : h.color;
 
-    // Solid inner ellipse
-    ctx.strokeStyle = strokeCol;
+    // Solid inner ellipse (キャラ陣営色)
+    ctx.strokeStyle = innerCol;
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.ellipse(0, 0, h.rx, h.ry, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Sleek outer dashed guide
+    // Sleek outer dashed guide (進行必須: ネオンレッド)
     ctx.setLineDash([6, 4]);
     ctx.lineDashOffset = -(animTick * 1.5);
-    ctx.strokeStyle = h.color;
-    ctx.globalAlpha = 0.75;
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = strokeCol;
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.ellipse(0, 0, h.rx + 3.5, h.ry + 3.5, 0, 0, Math.PI * 2);
     ctx.stroke();
@@ -1135,8 +1137,9 @@ Object.assign(window.Stage5, {
     const b = state.boss;
     if (!b || (state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 45)) return;
     const animTick = b.animTick || 0;
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
-      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
+    const TC = Particles.TARGET_COLORS;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub, opts) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub, opts);
 
     // 1. Lower base rails of wire ramps
     this.renderWireRampRails(ctx, state, b, false);
@@ -1151,33 +1154,33 @@ Object.assign(window.Stage5, {
         this.drawEllipticalHaloGuide(ctx, animTick, b.haloR);
       }
 
-      // Hair Ornament Targets (Odango & Antenna)
+      // Hair Ornament Targets (外周: 進行必須赤 / 内周: 双子キャラ色)
       if (!b.odangoL.broken) {
-        drawGuide(b.odangoL.x, b.odangoL.y, b.odangoL.r, b.odangoL.color, b.odangoL.flash, animTick * 0.03, b.odangoL.label, `HP:${b.odangoL.hp}/${b.odangoL.maxHP}`);
+        drawGuide(b.odangoL.x, b.odangoL.y, b.odangoL.r, TC.ATTACK, b.odangoL.flash, animTick * 0.03, b.odangoL.label, `HP:${b.odangoL.hp}/${b.odangoL.maxHP}`, { innerColor: b.odangoL.color, isAttack: true });
       }
       if (!b.antennaR.broken) {
-        drawGuide(b.antennaR.x, b.antennaR.y, b.antennaR.r, b.antennaR.color, b.antennaR.flash, -animTick * 0.03, b.antennaR.label, `HP:${b.antennaR.hp}/${b.antennaR.maxHP}`);
+        drawGuide(b.antennaR.x, b.antennaR.y, b.antennaR.r, TC.ATTACK, b.antennaR.flash, -animTick * 0.03, b.antennaR.label, `HP:${b.antennaR.hp}/${b.antennaR.maxHP}`, { innerColor: b.antennaR.color, isAttack: true });
       }
 
-      // Knee Ring Targets
+      // Knee Ring Targets (外周: 進行必須赤 / 内周: 双子キャラ色)
       if (!b.kneeL.broken) {
-        drawGuide(b.kneeL.x, b.kneeL.y, b.kneeL.r, b.kneeL.color, b.kneeL.flash, -animTick * 0.025, b.kneeL.label, `HP:${b.kneeL.hp}/${b.kneeL.maxHP}`);
+        drawGuide(b.kneeL.x, b.kneeL.y, b.kneeL.r, TC.ATTACK, b.kneeL.flash, -animTick * 0.025, b.kneeL.label, `HP:${b.kneeL.hp}/${b.kneeL.maxHP}`, { innerColor: b.kneeL.color, isAttack: true });
       }
       if (!b.kneeR.broken) {
-        drawGuide(b.kneeR.x, b.kneeR.y, b.kneeR.r, b.kneeR.color, b.kneeR.flash, animTick * 0.025, b.kneeR.label, `HP:${b.kneeR.hp}/${b.kneeR.maxHP}`);
+        drawGuide(b.kneeR.x, b.kneeR.y, b.kneeR.r, TC.ATTACK, b.kneeR.flash, animTick * 0.025, b.kneeR.label, `HP:${b.kneeR.hp}/${b.kneeR.maxHP}`, { innerColor: b.kneeR.color, isAttack: true });
       }
 
-      // Front-Thigh Garter Charms (Soft-Bounce Ornaments)
-      Particles.drawBounceBumperGuide(ctx, animTick, b.charmL.x, b.charmL.y, b.charmL.r, b.charmL.color, b.charmL.flash, null, b.charmL.label);
-      Particles.drawBounceBumperGuide(ctx, animTick, b.charmR.x, b.charmR.y, b.charmR.r, b.charmR.color, b.charmR.flash, null, b.charmR.label);
+      // Front-Thigh Garter Charms (お色気ピンク × 内周キャラ色)
+      Particles.drawBounceBumperGuide(ctx, animTick, b.charmL.x, b.charmL.y, b.charmL.r, TC.SEXY, b.charmL.flash, null, b.charmL.label, { innerColor: b.charmL.color });
+      Particles.drawBounceBumperGuide(ctx, animTick, b.charmR.x, b.charmR.y, b.charmR.r, TC.SEXY, b.charmR.flash, null, b.charmR.label, { innerColor: b.charmR.color });
 
-      // Chest Brooches (Compact guide before break, HP guide after break!)
-      drawGuide(b.prismL.x, b.prismL.y, b.prismL.r, b.prismL.color, b.prismL.flash, animTick * 0.04, b.prismL.label, b.elleBroken ? `HP:${b.prismL.hp}/${b.prismL.maxHP}` : "🔒BROOCH");
-      drawGuide(b.prismR.x, b.prismR.y, b.prismR.r, b.prismR.color, b.prismR.flash, -animTick * 0.04, b.prismR.label, b.noelBroken ? `HP:${b.prismR.hp}/${b.prismR.maxHP}` : "🔒BROOCH");
+      // Chest Brooches (ロック中: 薄紫 / 解除後: 赤 + 内周キャラ色)
+      drawGuide(b.prismL.x, b.prismL.y, b.prismL.r, b.elleBroken ? TC.ATTACK : TC.LOCKED, b.prismL.flash, animTick * 0.04, b.prismL.label, b.elleBroken ? `HP:${b.prismL.hp}/${b.prismL.maxHP}` : "🔒BROOCH", { innerColor: b.prismL.color, isLocked: !b.elleBroken, isAttack: b.elleBroken });
+      drawGuide(b.prismR.x, b.prismR.y, b.prismR.r, b.noelBroken ? TC.ATTACK : TC.LOCKED, b.prismR.flash, -animTick * 0.04, b.prismR.label, b.noelBroken ? `HP:${b.prismR.hp}/${b.prismR.maxHP}` : "🔒BROOCH", { innerColor: b.prismR.color, isLocked: !b.noelBroken, isAttack: b.noelBroken });
 
-      // High-Five Synchro Spark
+      // High-Five Synchro Spark (スコア稼ぎ × サポート)
       if (!b.elleBroken && !b.noelBroken) {
-        drawGuide(b.synchroSpark.x, b.synchroSpark.y, b.synchroSpark.r, "#e6ff00", b.synchroSpark.flash, animTick * 0.05, "🏐TWIN TOSS", "+4000");
+        drawGuide(b.synchroSpark.x, b.synchroSpark.y, b.synchroSpark.r, TC.SCORE, b.synchroSpark.flash, animTick * 0.05, "🏐TWIN TOSS", "+4000", { innerColor: TC.SUPPORT });
       }
     } else {
       // Phase 3
@@ -1242,10 +1245,10 @@ Object.assign(window.Stage5, {
       }
 
       if (!b.chestArmorBroken) {
-        drawGuide(b.pauldronL.x, b.pauldronL.y, b.pauldronL.r, "#00f5e8", b.pauldronL.flash, -animTick * 0.025, b.pauldronL.label, `ARMOR`);
-        drawGuide(b.pauldronR.x, b.pauldronR.y, b.pauldronR.r, "#ff2ad4", b.pauldronR.flash, animTick * 0.025, b.pauldronR.label, `ARMOR`);
-        drawGuide(b.bustL.x + b.bustL.dx * 0.25, b.bustL.y + b.bustL.dy * 0.25, b.bustL.r, "#e6ff00", b.bustL.flash, animTick * 0.03, "L-CHEST", `HP:${b.chestArmorHP}`);
-        drawGuide(b.bustR.x + b.bustR.dx * 0.25, b.bustR.y + b.bustR.dy * 0.25, b.bustR.r, "#e6ff00", b.bustR.flash, -animTick * 0.03, "R-CHEST", `HP:${b.chestArmorHP}`);
+        drawGuide(b.pauldronL.x, b.pauldronL.y, b.pauldronL.r, TC.ATTACK, b.pauldronL.flash, -animTick * 0.025, b.pauldronL.label, "ARMOR", { isAttack: true });
+        drawGuide(b.pauldronR.x, b.pauldronR.y, b.pauldronR.r, TC.ATTACK, b.pauldronR.flash, animTick * 0.025, b.pauldronR.label, "ARMOR", { isAttack: true });
+        drawGuide(b.bustL.x + b.bustL.dx * 0.25, b.bustL.y + b.bustL.dy * 0.25, b.bustL.r, TC.ATTACK, b.bustL.flash, animTick * 0.03, "L-CHEST", `HP:${b.chestArmorHP}`, { innerColor: TC.SEXY, isAttack: true });
+        drawGuide(b.bustR.x + b.bustR.dx * 0.25, b.bustR.y + b.bustR.dy * 0.25, b.bustR.r, TC.ATTACK, b.bustR.flash, -animTick * 0.03, "R-CHEST", `HP:${b.chestArmorHP}`, { innerColor: TC.SEXY, isAttack: true });
       } else {
         // Hexagonal Barrier Polygon around Core if shielded
         const isShielded = b.coreGraceTimer > 0 || b.cherubOrbs.some(o => o.active);
@@ -1285,9 +1288,9 @@ Object.assign(window.Stage5, {
           });
           ctx.restore();
 
-          drawGuide(b.core.x, b.core.y, b.core.r, "#00f5e8", b.core.flash, -animTick * 0.02, "ARK CORE", "🛡️BARRIER");
+          drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "ARK CORE", "🛡️BARRIER", { isLocked: true });
         } else {
-          drawGuide(b.core.x, b.core.y, b.core.r, "#e6ff00", b.core.flash, animTick * 0.045, "★ARK CORE★", `HP:${b.core.hp}/${b.core.maxHP}`);
+          drawGuide(b.core.x, b.core.y, b.core.r, TC.ATTACK, b.core.flash, animTick * 0.045, "★ARK CORE★", `HP:${b.core.hp}/${b.core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
         }
 
         // Cherub Spirit Orbs (Prominent 54x54 pixel-art / procedural sprites with flapping wings)
@@ -1349,17 +1352,17 @@ Object.assign(window.Stage5, {
           ctx.stroke();
           ctx.restore();
 
-          drawGuide(orb.x, orb.y, orb.r + 3, orb.color, orb.flash, animTick * 0.05, orb.label, `HP:${orb.hp}/${orb.maxHP}`);
+          drawGuide(orb.x, orb.y, orb.r + 3, TC.DEFENSE, orb.flash, animTick * 0.05, orb.label, `HP:${orb.hp}/${orb.maxHP}`, { innerColor: orb.color, isAttack: true });
         });
 
-        // Soft bounce guides
-        const bustCol = state.fever.active ? "#e6ff00" : "#ff66cc";
+        // Soft bounce guides (お色気統一: ローズピンク / Fever時は黄色)
+        const bustCol = state.fever.active ? TC.FEVER : TC.SEXY;
         Particles.drawBounceBumperGuide(ctx, animTick, b.bustL.x + b.bustL.dx * 0.25, b.bustL.y + b.bustL.dy * 0.25, b.bustL.r, bustCol, b.bustL.flash, null, "♥SOFT");
         Particles.drawBounceBumperGuide(ctx, animTick, b.bustR.x + b.bustR.dx * 0.25, b.bustR.y + b.bustR.dy * 0.25, b.bustR.r, bustCol, b.bustR.flash, null, "♥SOFT");
-        Particles.drawBounceBumperGuide(ctx, animTick, b.garterL.x, b.garterL.y, b.garterL.r, "#00f5e8", b.garterL.flash, null, "GARTER");
-        Particles.drawBounceBumperGuide(ctx, animTick, b.garterR.x, b.garterR.y, b.garterR.r, "#ff2ad4", b.garterR.flash, null, "GARTER");
+        Particles.drawBounceBumperGuide(ctx, animTick, b.garterL.x, b.garterL.y, b.garterL.r, TC.SEXY, b.garterL.flash, null, "GARTER");
+        Particles.drawBounceBumperGuide(ctx, animTick, b.garterR.x, b.garterR.y, b.garterR.r, TC.SEXY, b.garterR.flash, null, "GARTER");
         if (!(b.navelTrap && b.navelTrap.mode !== "idle")) {
-          Particles.drawBounceBumperGuide(ctx, animTick, b.navelSera.x, b.navelSera.y, b.navelSera.r, "#e6ff00", b.navelSera.flash, null, "NAVEL");
+          Particles.drawBounceBumperGuide(ctx, animTick, b.navelSera.x, b.navelSera.y, b.navelSera.r, TC.SEXY, b.navelSera.flash, null, "NAVEL");
         }
       }
 

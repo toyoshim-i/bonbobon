@@ -178,8 +178,9 @@ Object.assign(window.Stage3, {
 
     const b = state.boss;
     const animTick = b.animTick || 0;
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
-      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
+    const TC = Particles.TARGET_COLORS;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub, opts) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub, opts);
 
     // 1. カチューシャのアンテナ（破壊不能・電撃なし：共通ガイドパルスによるバウンスロッド表示）
     const ant = b.antenna;
@@ -523,9 +524,10 @@ Object.assign(window.Stage3, {
       const isSnipeShooter = bl && (bl.snipePhase === "tracking" || bl.snipePhase === "locked") && bl.snipeBitId === bit.id;
       const isDeltaActive = bl && (bl.triMode === "charge" || bl.triMode === "fire") && bl.deltaBitIds && bl.deltaBitIds.includes(bit.id);
       const col = isSnipeShooter
-        ? (bl.snipePhase === "locked" ? "#ff1744" : "#e6ff00")
-        : (isDeltaActive ? "#ff1493" : (bit.mode === "move" ? "#e6ff00" : "#00f5d4"));
-      drawGuide(bit.x, by, bit.r, col, bit.flash, bit.rot, bit.label, `HP:${bit.hp}/${bit.maxHP}`);
+        ? (bl.snipePhase === "locked" ? TC.ATTACK : TC.SCORE)
+        : TC.DEFENSE;
+      const innerCol = isDeltaActive ? TC.ATTACK : (bit.mode === "move" ? TC.SCORE : null);
+      drawGuide(bit.x, by, bit.r, col, bit.flash, bit.rot, bit.label, `HP:${bit.hp}/${bit.maxHP}`, { innerColor: innerCol, isAttack: isSnipeShooter || isDeltaActive });
     });
 
     // 3. 左右の手（通常: バウンス / 吸引中: 破壊進行度LV.1〜4に応じた大渦＆吸引テザー電撃 / 転送中: 電脳ワープライン）
@@ -618,9 +620,9 @@ Object.assign(window.Stage3, {
     if (b.hipPort) {
       const hp = b.hipPort;
       if (!hp.broken) {
-        drawGuide(hp.x, hp.y, hp.r, "#00f5d4", hp.flash, -animTick * 0.025, "HIP PORT", `HP:${hp.hp}/${hp.maxHP}`);
+        drawGuide(hp.x, hp.y, hp.r, TC.SCORE, hp.flash, -animTick * 0.025, "HIP PORT", `HP:${hp.hp}/${hp.maxHP}`, { innerColor: TC.ATTACK });
       } else {
-        Particles.drawBounceBumperGuide(ctx, animTick, hp.x, hp.y, hp.r, "#e6ff00", hp.flash, "HIP PORT", "⚡SPARK");
+        Particles.drawBounceBumperGuide(ctx, animTick, hp.x, hp.y, hp.r, TC.SCORE, hp.flash, "HIP PORT", "⚡SPARK");
       }
     }
     if (b.garterRibbon) {
@@ -633,7 +635,7 @@ Object.assign(window.Stage3, {
         gr.x + tx,
         gr.y + ty,
         gr.r,
-        "#ff66b2",
+        TC.SEXY,
         gr.flash,
         "RIBBON",
         "CHARM BOING"
@@ -641,47 +643,47 @@ Object.assign(window.Stage3, {
     }
     if (b.bootKicker) {
       const bk = b.bootKicker;
-      Particles.drawBounceBumperGuide(ctx, animTick, bk.x, bk.y, bk.r, "#00f5d4", bk.flash, "BOOT", "BOUNCE");
+      Particles.drawBounceBumperGuide(ctx, animTick, bk.x, bk.y, bk.r, TC.SUPPORT, bk.flash, "BOOT", "BOUNCE");
     }
 
-    // 6. 右膝当てアーマー（未破壊時はHPガイド、破壊後はバウンスバンパー）
+    // 6. 右膝当てアーマー（Phase 1 進行必須 → 破壊後はグレーバウンスバンパー）
     const knee = b.kneePad;
     if (knee) {
       if (!knee.broken) {
-        drawGuide(knee.x, knee.y, knee.r, "#b84dff", knee.flash, animTick * 0.02, "KNEE PAD", `HP:${knee.hp}/${knee.maxHP}`);
+        drawGuide(knee.x, knee.y, knee.r, TC.ATTACK, knee.flash, animTick * 0.02, "KNEE PAD", `HP:${knee.hp}/${knee.maxHP}`, { isAttack: true });
       } else {
-        Particles.drawBounceBumperGuide(ctx, animTick, knee.x, knee.y, knee.r, "#ff66b2", knee.flash, "KNEE", "BOUNCE");
+        Particles.drawBounceBumperGuide(ctx, animTick, knee.x, knee.y, knee.r, TC.BROKEN, knee.flash, "KNEE", "BOUNCE");
       }
     }
 
-    // 7. 胸部ビスチェ装甲 / パージ後ソフトバスト（ガイド円の追従量は抑え、背景絵のぷるぷる相対変位がより映えるようにする）
+    // 7. 胸部ビスチェ装甲 / パージ後ソフトバスト（Phase 1 ロック → Phase 2 破壊必須×お色気 → Phase 3 お色気）
     if (!b.chestArmorBroken) {
       const lx = b.bustL.x + b.bustL.dx * 0.25;
       const ly = b.bustL.y + b.bustL.dy * 0.25;
       const rx = b.bustR.x + b.bustR.dx * 0.25;
       const ry = b.bustR.y + b.bustR.dy * 0.25;
       if (state.phase < 2) {
-        drawGuide(lx, ly, b.bustL.r, "#b59ce6", b.bustL.flash, -animTick * 0.015, "L-BUSTIER", "🛡️LOCKED");
-        drawGuide(rx, ry, b.bustR.r, "#b59ce6", b.bustR.flash, animTick * 0.015, "R-BUSTIER", "🛡️LOCKED");
+        drawGuide(lx, ly, b.bustL.r, TC.LOCKED, b.bustL.flash, 0, "L-BUSTIER", "🔒LOCKED", { isLocked: true });
+        drawGuide(rx, ry, b.bustR.r, TC.LOCKED, b.bustR.flash, 0, "R-BUSTIER", "🔒LOCKED", { isLocked: true });
       } else {
-        drawGuide(lx, ly, b.bustL.r, "#ff1493", b.bustL.flash, -animTick * 0.025, "L-BUSTIER", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`);
-        drawGuide(rx, ry, b.bustR.r, "#ff1493", b.bustR.flash, animTick * 0.025, "R-BUSTIER", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`);
+        drawGuide(lx, ly, b.bustL.r, TC.ATTACK, b.bustL.flash, -animTick * 0.025, "L-BUSTIER", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`, { innerColor: TC.SEXY, isAttack: true });
+        drawGuide(rx, ry, b.bustR.r, TC.ATTACK, b.bustR.flash, animTick * 0.025, "R-BUSTIER", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`, { innerColor: TC.SEXY, isAttack: true });
       }
     } else {
-      const bustCol = state.fever.active ? "#e6ff00" : "#ff1493";
+      const bustCol = state.fever.active ? TC.FEVER : TC.SEXY;
       const subTxt = state.fever.active ? "♥FEVER♥" : "♥SOFT";
       Particles.drawBounceBumperGuide(ctx, animTick, b.bustL.x + b.bustL.dx, b.bustL.y + b.bustL.dy, b.bustL.r, bustCol, b.bustL.flash, "L-BUST", subTxt);
       Particles.drawBounceBumperGuide(ctx, animTick, b.bustR.x + b.bustR.dx, b.bustR.y + b.bustR.dy, b.bustR.r, bustCol, b.bustR.flash, "R-BUST", subTxt);
     }
 
-    // 8. 首元のグリーンのペンダント・コア
+    // 8. 首元のペンダント・コア（Phase 3 解放時はクリティカル目標）
     const core = b.core;
     if (core) {
       if (state.phase === 3 && core.unlocked) {
-        drawGuide(core.x, core.y, core.r, "#00f5d4", core.flash, animTick * 0.04, "★PENDANT CORE★", `HP:${core.hp}/${core.maxHP}`);
+        drawGuide(core.x, core.y, core.r, TC.ATTACK, core.flash, animTick * 0.045, "★PENDANT CORE★", `HP:${core.hp}/${core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
       } else {
         ctx.save();
-        ctx.strokeStyle = core.flash > 0 ? "#ffffff" : "rgba(0, 245, 212, 0.50)";
+        ctx.strokeStyle = core.flash > 0 ? "#ffffff" : "rgba(143, 122, 184, 0.55)";
         ctx.lineWidth = core.flash > 0 ? 2.6 : 1.4;
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {

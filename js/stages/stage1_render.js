@@ -152,50 +152,73 @@ Object.assign(window.Stage1, {
     if (isPostWhiteout) return;
 
     const animTick = state.boss.animTick || 0;
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
-      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
+    const TC = Particles.TARGET_COLORS;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub, opts) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub, opts);
 
-    // 1. Drones
+    // 1. Drones (防衛ユニット: 紫 / 破壊後: スコアバンパー)
     const dL = state.boss.droneL;
     const dR = state.boss.droneR;
-    drawGuide(dL.x, dL.y, dL.r, state.boss.droneL_HP > 0 ? "#00f5d4" : "#e6ff00", dL.flash, dL.rot, "L-DRONE", state.boss.droneL_HP > 0 ? `HP:${state.boss.droneL_HP}` : "EX-BUMP");
-    drawGuide(dR.x, dR.y, dR.r, state.boss.droneR_HP > 0 ? "#00f5d4" : "#e6ff00", dR.flash, dR.rot, "R-DRONE", state.boss.droneR_HP > 0 ? `HP:${state.boss.droneR_HP}` : "EX-BUMP");
+    if (state.boss.droneL_HP > 0) {
+      drawGuide(dL.x, dL.y, dL.r, TC.DEFENSE, dL.flash, dL.rot, "L-DRONE", `HP:${state.boss.droneL_HP}`, { isAttack: true });
+    } else {
+      Particles.drawBounceBumperGuide(ctx, animTick, dL.x, dL.y, dL.r, TC.SCORE, dL.flash, "L-DRONE", "EX-BUMP");
+    }
+    if (state.boss.droneR_HP > 0) {
+      drawGuide(dR.x, dR.y, dR.r, TC.DEFENSE, dR.flash, dR.rot, "R-DRONE", `HP:${state.boss.droneR_HP}`, { isAttack: true });
+    } else {
+      Particles.drawBounceBumperGuide(ctx, animTick, dR.x, dR.y, dR.r, TC.SCORE, dR.flash, "R-DRONE", "EX-BUMP");
+    }
 
-    // 2. Arm / Shoulder Armor (R-ARM = Playfield Left, L-ARM = Playfield Right)
+    // 2. Arm / Shoulder Armor (ロック中: 薄紫・回転停止 / 攻撃可: 赤 / 破壊後: スコアバンパー)
     const pL = state.boss.podL;
     const pR = state.boss.podR;
     const armR_Broken = state.boss.armR_Broken;
     const armL_Broken = state.boss.armL_Broken;
     const pL_shielded = state.phase === 1 && state.boss.droneL_HP > 0;
     const pR_shielded = state.phase === 1 && state.boss.droneR_HP > 0;
-    const colL = armR_Broken ? "#e6ff00" : (pL_shielded ? "#b59ce6" : "#ff1493");
-    const colR = armL_Broken ? "#e6ff00" : (pR_shielded ? "#b59ce6" : "#ff1493");
-    drawGuide(pL.x, pL.y, pL.r, colL, pL.flash, pL.rot, "R-ARM", armR_Broken ? "⚡EX-SPARK" : (pL_shielded ? "🛡️SHIELD" : `HP:${state.boss.armR_HP}`));
-    drawGuide(pR.x, pR.y, pR.r, colR, pR.flash, pR.rot, "L-ARM", armL_Broken ? "⚡EX-SPARK" : (pR_shielded ? "🛡️SHIELD" : `HP:${state.boss.armL_HP}`));
+    if (armR_Broken) {
+      Particles.drawBounceBumperGuide(ctx, animTick, pL.x, pL.y, pL.r, TC.SCORE, pL.flash, "R-ARM", "⚡EX-SPARK");
+    } else {
+      drawGuide(pL.x, pL.y, pL.r, pL_shielded ? TC.LOCKED : TC.ATTACK, pL.flash, pL.rot, "R-ARM", pL_shielded ? "🛡️SHIELD" : `HP:${state.boss.armR_HP}`, { isLocked: pL_shielded, isAttack: !pL_shielded });
+    }
+    if (armL_Broken) {
+      Particles.drawBounceBumperGuide(ctx, animTick, pR.x, pR.y, pR.r, TC.SCORE, pR.flash, "L-ARM", "⚡EX-SPARK");
+    } else {
+      drawGuide(pR.x, pR.y, pR.r, pR_shielded ? TC.LOCKED : TC.ATTACK, pR.flash, pR.rot, "L-ARM", pR_shielded ? "🛡️SHIELD" : `HP:${state.boss.armL_HP}`, { isLocked: pR_shielded, isAttack: !pR_shielded });
+    }
 
-    // 3. Waist / Hip Units
+    // 3. Waist / Hip Units (任意破壊 × スコア倍率: 外黄 / 内赤 → 破壊後グレー)
     const hL = state.boss.hipL;
     const hR = state.boss.hipR;
-    drawGuide(hL.x, hL.y, hL.r, hL.hp > 0 ? "#ff66b2" : "#00f5d4", hL.flash, hL.rot, "L-HIP", hL.hp > 0 ? `HP:${hL.hp}` : "⚡OVERHEAT");
-    drawGuide(hR.x, hR.y, hR.r, hR.hp > 0 ? "#ff66b2" : "#00f5d4", hR.flash, hR.rot, "R-HIP", hR.hp > 0 ? `HP:${hR.hp}` : "⚡OVERHEAT");
+    if (hL.hp > 0) {
+      drawGuide(hL.x, hL.y, hL.r, TC.SCORE, hL.flash, hL.rot, "L-HIP", `HP:${hL.hp}`, { innerColor: TC.ATTACK });
+    } else {
+      Particles.drawBounceBumperGuide(ctx, animTick, hL.x, hL.y, hL.r, TC.BROKEN, hL.flash, "L-HIP", "⚡OVERHEAT");
+    }
+    if (hR.hp > 0) {
+      drawGuide(hR.x, hR.y, hR.r, TC.SCORE, hR.flash, hR.rot, "R-HIP", `HP:${hR.hp}`, { innerColor: TC.ATTACK });
+    } else {
+      Particles.drawBounceBumperGuide(ctx, animTick, hR.x, hR.y, hR.r, TC.BROKEN, hR.flash, "R-HIP", "⚡OVERHEAT");
+    }
 
     // 4. Chest Armor Vents / Exposed Bust Targets
     if (!state.boss.chestArmorBroken) {
-      // 中央の不要な赤丸ターゲットを廃止し、両胸下の黄色と黒の排気口に左右の破壊ターゲットを配置
+      // 胸部排気口（進行必須 × お色気: 外赤 / 内ピンク）
       const vL = state.boss.ventL;
       const vR = state.boss.ventR;
       if (vL) {
-        drawGuide(vL.x, vL.y, vL.r, vL.hp > 0 ? "#e6ff00" : "#ff1493", vL.flash, -animTick * 0.02, "L-VENT", vL.hp > 0 ? `HP:${vL.hp}` : "DAMAGED");
+        drawGuide(vL.x, vL.y, vL.r, vL.hp > 0 ? TC.ATTACK : TC.BROKEN, vL.flash, -animTick * 0.02, "L-VENT", vL.hp > 0 ? `HP:${vL.hp}` : "DAMAGED", { innerColor: vL.hp > 0 ? TC.SEXY : null, isAttack: vL.hp > 0 });
       }
       if (vR) {
-        drawGuide(vR.x, vR.y, vR.r, vR.hp > 0 ? "#e6ff00" : "#ff1493", vR.flash, animTick * 0.02, "R-VENT", vR.hp > 0 ? `HP:${vR.hp}` : "DAMAGED");
+        drawGuide(vR.x, vR.y, vR.r, vR.hp > 0 ? TC.ATTACK : TC.BROKEN, vR.flash, animTick * 0.02, "R-VENT", vR.hp > 0 ? `HP:${vR.hp}` : "DAMAGED", { innerColor: vR.hp > 0 ? TC.SEXY : null, isAttack: vR.hp > 0 });
       }
 
-      // 首元の黄色いジュエル（CORE JEWEL）：六角形の精密フレーム（開始前は静かに存在）
+      // 首元のジュエル（CORE JEWEL）：Phase 3 前は静かな六角フレーム（両耳達成時は黄、通常は薄紫）
       const core = state.boss.core;
       if (core) {
         ctx.save();
-        ctx.strokeStyle = "rgba(230, 255, 0, 0.45)";
+        ctx.strokeStyle = state.boss.coreUnlocked ? "rgba(230, 255, 0, 0.70)" : "rgba(143, 122, 184, 0.55)";
         ctx.lineWidth = 1.4;
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -212,9 +235,15 @@ Object.assign(window.Stage1, {
     } else {
       const bL = state.boss.bustL;
       const bR = state.boss.bustR;
-      const bustCol = state.fever.active ? "#e6ff00" : "#ff1493";
-      drawGuide(bL.x + bL.dx, bL.y + bL.dy, bL.r, bustCol, bL.flash, bL.rot, "L-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
-      drawGuide(bR.x + bR.dx, bR.y + bR.dy, bR.r, bustCol, bR.flash, bR.rot, "R-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
+      const bustCol = state.fever.active ? TC.FEVER : TC.SEXY;
+      Particles.drawBounceBumperGuide(ctx, animTick, bL.x + bL.dx, bL.y + bL.dy, bL.r, bustCol, bL.flash, "L-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
+      Particles.drawBounceBumperGuide(ctx, animTick, bR.x + bR.dx, bR.y + bR.dy, bR.r, bustCol, bR.flash, "R-BUST", state.fever.active ? "♥FEVER♥" : "♥SOFT");
+
+      // Phase 3 コア露出時はクリティカル目標として強調表示
+      if (state.phase === 3 && state.boss.coreUnlocked && state.boss.coreHP > 0 && state.boss.core) {
+        const core = state.boss.core;
+        drawGuide(core.x, core.y, core.r, TC.ATTACK, core.flash, animTick * 0.045, "★CORE JEWEL★", `HP:${state.boss.coreHP}/16`, { isCritical: true, innerColor: TC.SCORE });
+      }
     }
 
     // 5. Crotch Secret Gravity Well (Reacts to Bust-boing Excitement!)
@@ -227,7 +256,8 @@ Object.assign(window.Stage1, {
       const isExcited = excitementRatio > 0.30;
 
       const sub = isCooling ? "COOLING" : (isExcited ? "♥BOOSTED♥" : `[${crChargeStr}]`);
-      const col = isCooling ? "#9933ff" : (isExcited ? "#e6ff00" : (cr.charge > 0 ? "#ff66b2" : "#b84dff"));
+      const col = isCooling ? TC.LOCKED : TC.SEXY;
+      const innerCol = isCooling ? null : (isExcited ? TC.SCORE : TC.DEFENSE);
 
       // Gravitational Pull Waves (intensifies with excitement)
       ctx.save();
@@ -269,7 +299,7 @@ Object.assign(window.Stage1, {
         }
       });
 
-      drawGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "GRAV CORE", sub);
+      drawGuide(cr.x, cr.y, cr.r, col, cr.flash, cr.rot, "GRAV CORE", sub, { innerColor: innerCol, isLocked: isCooling });
     }
 
     // 6. Chest Core Gem Flash

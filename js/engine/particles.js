@@ -202,6 +202,18 @@ window.Particles = {
   },
 
   // 全ガイド共通の拡大縮小パルス。破壊可能ターゲット／バウンスなど種類を問わず、
+  // 全ステージ共通のターゲット意味別カラー定義
+  TARGET_COLORS: {
+    ATTACK: "#ff1744",   // 進行必須（破壊可能）
+    DEFENSE: "#b84dff",  // 防衛ユニット・妨害
+    LOCKED: "#8f7ab8",   // ロック中・シールド中
+    BROKEN: "#555555",   // 破壊済み・停止
+    SEXY: "#ff66cc",     // お色気（ソフトバウンス）
+    SCORE: "#e6ff00",    // スコア稼ぎ・ボーナス
+    SUPPORT: "#00f5d4",  // 救済・盤面サポート
+    FEVER: "#e6ff00"     // フィーバー時ハイライト
+  },
+
   // ガイドの脈動は必ずこの関数で計算する（種類ごとに式を書くと周期や振幅がばらけて統一感が崩れる）。
   // lag: 残像リング用の位相遅れ、ampMul: 残像リング用の振幅倍率
   GUIDE_PULSE_AMP: 0.16,
@@ -210,20 +222,69 @@ window.Particles = {
     return 1.0 + this.GUIDE_PULSE_AMP * ampMul * Math.sin(animTick * this.GUIDE_PULSE_FREQ - lag);
   },
 
-  drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, subInfo) {
+  // subInfo ("HP:x" または "HP:x/y") から現在HP・最大HPを解析するヘルパー
+  _parseSubHP(subInfo) {
+    if (!subInfo) return null;
+    const hpIdx = subInfo.indexOf("HP:");
+    if (hpIdx === -1) return null;
+    let pos = hpIdx + 3;
+    let curHP = 0;
+    let hasCur = false;
+    while (pos < subInfo.length) {
+      const ch = subInfo.charCodeAt(pos);
+      if (ch >= 48 && ch <= 57) {
+        curHP = curHP * 10 + (ch - 48);
+        hasCur = true;
+        pos++;
+      } else {
+        break;
+      }
+    }
+    if (!hasCur) return null;
+    let maxHP = 0;
+    let hasMax = false;
+    if (pos < subInfo.length && subInfo.charCodeAt(pos) === 47) { // '/'
+      pos++;
+      while (pos < subInfo.length) {
+        const ch = subInfo.charCodeAt(pos);
+        if (ch >= 48 && ch <= 57) {
+          maxHP = maxHP * 10 + (ch - 48);
+          hasMax = true;
+          pos++;
+        } else {
+          break;
+        }
+      }
+    }
+    if (!hasMax) maxHP = Math.max(curHP, 5);
+    return { curHP, maxHP };
+  },
+
+  // opts: { innerColor?: string, isLocked?: boolean, isCritical?: boolean, isAttack?: boolean }
+  drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, subInfo, opts = null) {
     ctx.save();
     ctx.translate(x, y);
 
     const isHit = flash > 0;
+    const isLocked = !!(opts && opts.isLocked);
+    const isCritical = !!(opts && opts.isCritical);
+    const isAttack = !isLocked && (!!(opts && opts.isAttack) || isCritical || color === this.TARGET_COLORS.ATTACK);
+    const innerColor = opts && opts.innerColor ? opts.innerColor : null;
+    const effectiveRot = isLocked ? 0 : (rot || 0);
+
+    const parsedHP = this._parseSubHP(subInfo);
+    const isLowHP = !isLocked && parsedHP && parsedHP.curHP > 0 && parsedHP.curHP <= 2;
+
     const baseScale = this.guidePulse(animTick);
+    const lowHpBoost = isLowHP ? (1.0 + 0.045 * Math.sin(animTick * 0.28)) : 1.0;
 
     // 1. Afterimage Outer Ring (Trail 2)
     const scale2 = this.guidePulse(animTick, 0.7, 1.35);
     const r2 = r * scale2;
     ctx.save();
-    ctx.rotate((rot || 0) * 0.55);
+    ctx.rotate(effectiveRot * 0.55);
     ctx.strokeStyle = color;
-    ctx.globalAlpha = isHit ? 0.5 : 0.20;
+    ctx.globalAlpha = isHit ? 0.5 : (isLocked ? 0.14 : 0.20);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.arc(0, 0, r2, 0, Math.PI * 2);
@@ -234,9 +295,9 @@ window.Particles = {
     const scale1 = this.guidePulse(animTick, 0.35, 1.15);
     const r1 = r * scale1;
     ctx.save();
-    ctx.rotate((rot || 0) * 0.85);
+    ctx.rotate(effectiveRot * 0.85);
     ctx.strokeStyle = color;
-    ctx.globalAlpha = isHit ? 0.75 : 0.35;
+    ctx.globalAlpha = isHit ? 0.75 : (isLocked ? 0.24 : 0.35);
     ctx.lineWidth = 1.8;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
@@ -244,45 +305,76 @@ window.Particles = {
     ctx.stroke();
     ctx.restore();
 
+    // 2.5 Critical / Core Lock-on Inward Pulse Ring
+    if (isCritical && !isLocked && !isHit) {
+      const lockPhase = (animTick * 0.038) % 1.0;
+      const lockR = Math.max(2, r * (1.42 - 0.72 * lockPhase));
+      ctx.save();
+      ctx.strokeStyle = Math.floor(animTick / 8) % 2 === 0 ? color : this.TARGET_COLORS.SCORE;
+      ctx.lineWidth = 1.6;
+      ctx.globalAlpha = 0.65 * (1.0 - lockPhase);
+      ctx.beginPath();
+      ctx.arc(0, 0, lockR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // 3. Main Rotating Cyber Reticle Brackets
     ctx.save();
-    ctx.rotate(rot || 0);
-    const rMain = r * baseScale;
+    ctx.rotate(effectiveRot);
+    const rMain = r * baseScale * lowHpBoost;
 
     // Draw full circular ring
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.0;
-    ctx.globalAlpha = isHit ? 0.7 : 0.35;
+    ctx.globalAlpha = isHit ? 0.7 : (isLocked ? 0.25 : 0.35);
     ctx.beginPath();
     ctx.arc(0, 0, rMain, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
 
-    ctx.strokeStyle = isHit ? "#ffffff" : color;
-    ctx.lineWidth = isHit ? 3.2 : 2.0;
-    ctx.globalAlpha = isHit ? 1.0 : 0.85;
+    // 二重円（複合意味がある場合の内周リング）
+    if (innerColor) {
+      ctx.save();
+      ctx.strokeStyle = isHit ? "#ffffff" : innerColor;
+      ctx.lineWidth = isHit ? 2.4 : 1.7;
+      ctx.globalAlpha = isHit ? 1.0 : (isLocked ? 0.6 : 0.85);
+      ctx.beginPath();
+      ctx.arc(0, 0, rMain * 0.68, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
-    // 4 circular corner brackets [ ]
+    const bracketColor = isHit
+      ? "#ffffff"
+      : (isCritical && Math.floor(animTick / 8) % 2 === 1 ? this.TARGET_COLORS.SCORE : color);
+    ctx.strokeStyle = bracketColor;
+    ctx.lineWidth = isHit ? 3.2 : (isLocked ? 1.5 : 2.0);
+    ctx.globalAlpha = isHit ? 1.0 : (isLocked ? 0.68 : 0.88);
+
+    // 4 circular corner brackets [ ]（攻撃可能時は目標へ収束する呼吸アニメ）
+    const converge = isAttack ? (1.0 - 0.08 * Math.max(0, Math.sin(animTick * 0.14))) : 1.0;
+    const rBracket = rMain * converge;
     const bracketArc = 0.42;
     for (let i = 0; i < 4; i++) {
       const startAngle = i * (Math.PI / 2) - bracketArc / 2;
       const endAngle = i * (Math.PI / 2) + bracketArc / 2;
       ctx.beginPath();
-      ctx.arc(0, 0, rMain, startAngle, endAngle);
+      ctx.arc(0, 0, rBracket, startAngle, endAngle);
       ctx.stroke();
     }
 
     // Crosshair ticks
-    ctx.strokeStyle = isHit ? "#e6ff00" : color;
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = isHit ? "#e6ff00" : (innerColor || bracketColor);
+    ctx.lineWidth = isLocked ? 1.2 : 1.6;
     for (let i = 0; i < 4; i++) {
       const a = i * (Math.PI / 2);
       const cos = Math.cos(a);
       const sin = Math.sin(a);
       ctx.beginPath();
-      ctx.moveTo(cos * (rMain - 4), sin * (rMain - 4));
-      ctx.lineTo(cos * (rMain + 4), sin * (rMain + 4));
+      ctx.moveTo(cos * (rBracket - 4), sin * (rBracket - 4));
+      ctx.lineTo(cos * (rBracket + 4), sin * (rBracket + 4));
       ctx.stroke();
     }
     ctx.restore();
@@ -314,7 +406,7 @@ window.Particles = {
       ctx.lineWidth = 2.5;
       ctx.strokeText(label, 0, -rMain - 4);
       ctx.fillStyle = color;
-      ctx.globalAlpha = 0.95;
+      ctx.globalAlpha = isLocked ? 0.8 : 0.95;
       ctx.fillText(label, 0, -rMain - 4);
     }
     if (subInfo && !isHit) {
@@ -324,58 +416,27 @@ window.Particles = {
       ctx.lineWidth = 2.0;
       ctx.strokeText(subInfo, 0, rMain + 10);
       ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = 0.95;
+      ctx.globalAlpha = isLocked ? 0.8 : 0.95;
       ctx.fillText(subInfo, 0, rMain + 10);
 
       // HP セグメントバー（subInfo が "HP:x" または "HP:x/y" の場合、視覚的なHPブロックを描画）
-      const hpIdx = subInfo.indexOf("HP:");
-      if (hpIdx !== -1) {
-        let pos = hpIdx + 3;
-        let curHP = 0;
-        let hasCur = false;
-        while (pos < subInfo.length) {
-          const ch = subInfo.charCodeAt(pos);
-          if (ch >= 48 && ch <= 57) {
-            curHP = curHP * 10 + (ch - 48);
-            hasCur = true;
-            pos++;
-          } else {
-            break;
-          }
-        }
-        if (hasCur) {
-          let maxHP = 0;
-          let hasMax = false;
-          if (pos < subInfo.length && subInfo.charCodeAt(pos) === 47) { // '/'
-            pos++;
-            while (pos < subInfo.length) {
-              const ch = subInfo.charCodeAt(pos);
-              if (ch >= 48 && ch <= 57) {
-                maxHP = maxHP * 10 + (ch - 48);
-                hasMax = true;
-                pos++;
-              } else {
-                break;
-              }
-            }
-          }
-          if (!hasMax) maxHP = Math.max(curHP, 5);
-          const barW = Math.max(20, r * 1.2);
-          const barH = 3;
-          const startX = -barW / 2;
-          const startY = rMain + 13;
+      if (parsedHP) {
+        const { curHP, maxHP } = parsedHP;
+        const barW = Math.max(20, r * 1.2);
+        const barH = 3;
+        const startX = -barW / 2;
+        const startY = rMain + 13;
 
-          ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-          ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 0.8;
-          ctx.strokeRect(startX - 1, startY - 1, barW + 2, barH + 2);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(startX - 1, startY - 1, barW + 2, barH + 2);
 
-          const segW = barW / maxHP;
-          ctx.fillStyle = curHP <= 1 ? "#ff0055" : (curHP <= 2 ? "#e6ff00" : "#00f5d4");
-          for (let seg = 0; seg < curHP && seg < maxHP; seg++) {
-            ctx.fillRect(startX + seg * segW + 0.5, startY + 0.5, segW - 1, barH - 1);
-          }
+        const segW = barW / maxHP;
+        ctx.fillStyle = curHP <= 1 ? "#ff0055" : (curHP <= 2 ? "#e6ff00" : "#00f5d4");
+        for (let seg = 0; seg < curHP && seg < maxHP; seg++) {
+          ctx.fillRect(startX + seg * segW + 0.5, startY + 0.5, segW - 1, barH - 1);
         }
       }
     }
@@ -383,15 +444,17 @@ window.Particles = {
     ctx.restore();
   },
 
-  // 破壊不能バウンスバンパー専用ガイド描画（照準マークなし・シアン波紋クッションリング・HP表示なし）
-  drawBounceBumperGuide(ctx, animTick, x, y, r, color, flash, label, sub) {
+  // 破壊不能バウンスバンパー専用ガイド描画（照準マークなし・波紋クッションリング・HP表示なし）
+  // opts: { innerColor?: string }
+  drawBounceBumperGuide(ctx, animTick, x, y, r, color, flash, label, sub, opts = null) {
     ctx.save();
     ctx.translate(x, y);
 
     const isHit = flash > 0;
     const pulse = this.guidePulse(animTick);
     const trail = this.guidePulse(animTick, 0.35, 1.15);
-    const bColor = color || "#00f5d4";
+    const bColor = color || this.TARGET_COLORS.SUPPORT;
+    const innerColor = (opts && opts.innerColor) ? opts.innerColor : bColor;
 
     // 1. クッション同心円リング（共通パルスでリング・ピン全体が拡大縮小）
     const rOuter = r * pulse;
@@ -412,9 +475,10 @@ window.Particles = {
     ctx.arc(0, 0, rOuter, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 内周リング
-    ctx.lineWidth = isHit ? 2.5 : 1.6;
-    ctx.globalAlpha = isHit ? 1.0 : 0.70;
+    // 内周リング（複合意味がある場合は innerColor で色分け）
+    ctx.strokeStyle = innerColor;
+    ctx.lineWidth = isHit ? 2.5 : 1.7;
+    ctx.globalAlpha = isHit ? 1.0 : 0.78;
     ctx.beginPath();
     ctx.arc(0, 0, rOuter * 0.72, 0, Math.PI * 2);
     ctx.stroke();
@@ -424,7 +488,7 @@ window.Particles = {
       const a = (i * Math.PI / 2) + (animTick * 0.015);
       const px = Math.cos(a) * (rOuter * 0.86);
       const py = Math.sin(a) * (rOuter * 0.86);
-      ctx.fillStyle = isHit ? "#ffffff" : bColor;
+      ctx.fillStyle = isHit ? "#ffffff" : innerColor;
       ctx.beginPath();
       ctx.arc(px, py, 1.8, 0, Math.PI * 2);
       ctx.fill();

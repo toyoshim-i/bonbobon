@@ -588,74 +588,75 @@ Object.assign(window.Stage4, {
     const b = state.boss;
     if (!b || (state.clearSequence && state.clearSequence.active && state.clearSequence.frame >= 45)) return;
     const animTick = b.animTick || 0;
-    const drawGuide = (x, y, r, color, flash, rot, label, sub) =>
-      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub);
+    const TC = Particles.TARGET_COLORS;
+    const drawGuide = (x, y, r, color, flash, rot, label, sub, opts) =>
+      Particles.drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, sub, opts);
 
     // 1. 立体ワイヤーランプの下側ベースレール＋高速ネオンチェイサー矢印！
     this.renderWireRampRails(ctx, b, false);
 
-    // 2. 貫通型回転手裏剣スピナー (L / R) — バウンス円ガイドは出さず、手裏剣ブレード自体がシャープに回転発光！
+    // 2. 貫通型回転手裏剣スピナー (L / R) — スコア稼ぎスピナーはネオンイエロー基調
     b.spinners.forEach(sp => {
-      const col = sp.flash > 0 ? "#ffffff" : "#00f5d4";
-      this.drawShurikenSprite(ctx, sp.x, sp.y, sp.r, sp.angle, col, "#ff2a9d", true);
+      const col = sp.flash > 0 ? "#ffffff" : TC.SCORE;
+      this.drawShurikenSprite(ctx, sp.x, sp.y, sp.r, sp.angle, col, TC.SUPPORT, true);
       ctx.save();
       ctx.font = "bold 7.5px monospace";
       ctx.textAlign = "center";
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 2.0;
       ctx.strokeText("SPIN", sp.x, sp.y + sp.r + 9);
-      ctx.fillStyle = "#00f5d4";
+      ctx.fillStyle = TC.SCORE;
       ctx.fillText("SPIN", sp.x, sp.y + sp.r + 9);
       ctx.restore();
     });
 
-    // 3. 幻影分身ホログラムのサイバーターゲットガイド
+    // 3. 幻影分身ホログラム（防衛ユニット: 外紫 / 内L・R識別色）
     b.ninjutsu.clones.forEach(cl => {
       if (!cl.active) return;
       const cy = cl.y + Math.sin(cl.phase) * 7;
-      drawGuide(cl.x, cy, cl.r, cl.color, cl.flash, animTick * 0.04, cl.label, `HP:${cl.hp}/${cl.maxHP}`);
+      drawGuide(cl.x, cy, cl.r, TC.DEFENSE, cl.flash, animTick * 0.04, cl.label, `HP:${cl.hp}/${cl.maxHP}`, { innerColor: cl.color, isAttack: true });
     });
 
-    // 4. Phase 1: 左右コテの四角プレート ＆ 左右独立の膝当てアーマー（紫ではなく視認性抜群のネオンイエロー照準！）
+    // 4. Phase 1: 左右コテ ＆ 左右膝当てアーマー（進行必須: ネオンレッド）
     if (!b.tekkoL.broken) {
-      drawGuide(b.tekkoL.x, b.tekkoL.y, b.tekkoL.r, "#e6ff00", b.tekkoL.flash, -animTick * 0.025, "L-KOTE", `HP:${b.tekkoL.hp}/${b.tekkoL.maxHP}`);
+      drawGuide(b.tekkoL.x, b.tekkoL.y, b.tekkoL.r, TC.ATTACK, b.tekkoL.flash, -animTick * 0.025, "L-KOTE", `HP:${b.tekkoL.hp}/${b.tekkoL.maxHP}`, { isAttack: true });
     }
     if (!b.tekkoR.broken) {
-      drawGuide(b.tekkoR.x, b.tekkoR.y, b.tekkoR.r, "#e6ff00", b.tekkoR.flash, animTick * 0.025, "R-KOTE", `HP:${b.tekkoR.hp}/${b.tekkoR.maxHP}`);
+      drawGuide(b.tekkoR.x, b.tekkoR.y, b.tekkoR.r, TC.ATTACK, b.tekkoR.flash, animTick * 0.025, "R-KOTE", `HP:${b.tekkoR.hp}/${b.tekkoR.maxHP}`, { isAttack: true });
     }
     if (!b.kneeL.broken) {
-      drawGuide(b.kneeL.x, b.kneeL.y, b.kneeL.r, "#e6ff00", b.kneeL.flash, -animTick * 0.02, "L-KNEE", `HP:${b.kneeL.hp}/${b.kneeL.maxHP}`);
+      drawGuide(b.kneeL.x, b.kneeL.y, b.kneeL.r, TC.ATTACK, b.kneeL.flash, -animTick * 0.02, "L-KNEE", `HP:${b.kneeL.hp}/${b.kneeL.maxHP}`, { isAttack: true });
     }
     if (!b.kneeR.broken) {
-      drawGuide(b.kneeR.x, b.kneeR.y, b.kneeR.r, "#e6ff00", b.kneeR.flash, animTick * 0.02, "R-KNEE", `HP:${b.kneeR.hp}/${b.kneeR.maxHP}`);
+      drawGuide(b.kneeR.x, b.kneeR.y, b.kneeR.r, TC.ATTACK, b.kneeR.flash, animTick * 0.02, "R-KNEE", `HP:${b.kneeR.hp}/${b.kneeR.maxHP}`, { isAttack: true });
     }
 
-    // 5. Phase 2: 胸部・忍装束スーツ / パージ後のソフトバウンスガイド
+    // 5. Phase 2: 胸部・忍装束スーツ（P1ロック薄紫 / P2進行必須×お色気 / パージ後お色気ピンク）
     if (!b.chestArmorBroken) {
       const lx = b.bustL.x + b.bustL.dx * 0.25;
       const ly = b.bustL.y + b.bustL.dy * 0.25;
       const rx = b.bustR.x + b.bustR.dx * 0.25;
       const ry = b.bustR.y + b.bustR.dy * 0.25;
       if (state.phase < 2) {
-        drawGuide(lx, ly, b.bustL.r, "#00f5d4", b.bustL.flash, -animTick * 0.015, "L-SUIT", "🛡️SEALED");
-        drawGuide(rx, ry, b.bustR.r, "#00f5d4", b.bustR.flash, animTick * 0.015, "R-SUIT", "🛡️SEALED");
+        drawGuide(lx, ly, b.bustL.r, TC.LOCKED, b.bustL.flash, 0, "L-SUIT", "🛡️SEALED", { isLocked: true });
+        drawGuide(rx, ry, b.bustR.r, TC.LOCKED, b.bustR.flash, 0, "R-SUIT", "🛡️SEALED", { isLocked: true });
       } else {
-        drawGuide(lx, ly, b.bustL.r, "#ff2a9d", b.bustL.flash, -animTick * 0.03, "L-SUIT", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`);
-        drawGuide(rx, ry, b.bustR.r, "#ff2a9d", b.bustR.flash, animTick * 0.03, "R-SUIT", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`);
+        drawGuide(lx, ly, b.bustL.r, TC.ATTACK, b.bustL.flash, -animTick * 0.03, "L-SUIT", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`, { innerColor: TC.SEXY, isAttack: true });
+        drawGuide(rx, ry, b.bustR.r, TC.ATTACK, b.bustR.flash, animTick * 0.03, "R-SUIT", `HP:${b.chestArmorHP}/${b.chestArmorMaxHP}`, { innerColor: TC.SEXY, isAttack: true });
       }
     } else {
-      const bustCol = state.fever.active ? "#e6ff00" : "#ff66cc";
+      const bustCol = state.fever.active ? TC.FEVER : TC.SEXY;
       Particles.drawBounceBumperGuide(ctx, animTick, b.bustL.x + b.bustL.dx * 0.25, b.bustL.y + b.bustL.dy * 0.25, b.bustL.r, bustCol, b.bustL.flash, null, "♥SOFT");
       Particles.drawBounceBumperGuide(ctx, animTick, b.bustR.x + b.bustR.dx * 0.25, b.bustR.y + b.bustR.dy * 0.25, b.bustR.r, bustCol, b.bustR.flash, null, "♥SOFT");
     }
 
-    // 6. Phase 3: 首元の羽衣チャクラ核 ＆ 頭頂水引クリティカルサブコア（分身生存中は六角結界表示！）
+    // 6. Phase 3: 首元の羽衣チャクラ核 ＆ 頭頂水引クリティカルサブコア
     if (state.phase >= 3 && b.core.unlocked) {
       if (this.isCoreShieldedByBunshin(state)) {
-        drawGuide(b.core.x, b.core.y, b.core.r, "#00f5d4", b.core.flash, -animTick * 0.02, "CHAKRA CORE", "🛡️分身結界");
+        drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "CHAKRA CORE", "🛡️分身結界", { isLocked: true });
       } else {
-        drawGuide(b.core.x, b.core.y, b.core.r, "#e6ff00", b.core.flash, animTick * 0.045, "★CHAKRA CORE★", `HP:${b.core.hp}/${b.core.maxHP}`);
-        drawGuide(b.hairpinCore.x, b.hairpinCore.y, b.hairpinCore.r, "#00f5d4", b.hairpinCore.flash, -animTick * 0.04, "KAMI-KAZARI", "CRIT ×2!");
+        drawGuide(b.core.x, b.core.y, b.core.r, TC.ATTACK, b.core.flash, animTick * 0.045, "★CHAKRA CORE★", `HP:${b.core.hp}/${b.core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
+        drawGuide(b.hairpinCore.x, b.hairpinCore.y, b.hairpinCore.r, TC.ATTACK, b.hairpinCore.flash, -animTick * 0.045, "KAMI-KAZARI", "CRIT ×2!", { isCritical: true, innerColor: TC.SCORE });
       }
     }
 
@@ -682,13 +683,13 @@ Object.assign(window.Stage4, {
       this.drawShurikenSprite(ctx, gf.x, gf.y, gf.r * 0.72, -gf.rot * 1.4, state.phase >= 3 ? "#e6ff00" : "#00f5d4", "#ffffff", false);
     }
 
-    // 8. 腰の四角いシアン回路センサー（原画の四角いシアン端子に合わせたシャープなダイヤ／スクエア枠！太ももマークは無し！）
+    // 8. 腰の性感回路センサー（お色気連動: ローズピンク枠）
     b.waistSensors.forEach(sens => {
       const pulse = Particles.guidePulse(animTick);
       const half = sens.r * 0.78 * pulse;
       ctx.save();
       ctx.translate(sens.x, sens.y);
-      ctx.strokeStyle = sens.flash > 0 ? "#ffffff" : "#00f5d4";
+      ctx.strokeStyle = sens.flash > 0 ? "#ffffff" : TC.SEXY;
       ctx.globalAlpha = sens.flash > 0 ? 1.0 : 0.78;
       ctx.lineWidth = sens.flash > 0 ? 2.4 : 1.5;
       ctx.strokeRect(-half, -half, half * 2, half * 2);

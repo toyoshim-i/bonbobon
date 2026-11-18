@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>桃色装甲ボンぼや〜ジュッ！ - MOMOIRO SOUKOU BON-VOYAGE!</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <link rel="stylesheet" href="./css/style.css?v=16" />
+  <link rel="stylesheet" href="./css/style.css?v=17" />
   <link rel="icon" href="data:," />
 </head>
 <body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-3 box-border">
@@ -85,23 +85,24 @@
     <div id="inGameHudBar" class="hidden w-full h-7 bg-[#140730] border border-[#00f5d4]/50 rounded-lg px-2 py-0.5 my-0.5 shrink-0 shadow-md flex items-center justify-between gap-1 overflow-hidden">
       <span id="hudMisses" class="hidden"></span>
       <!-- LEFT: SCORE -->
-      <div class="flex items-baseline gap-1 shrink-0">
-        <span class="text-[8px] font-bold text-[#00f5d4]/80 tracking-wider">SCORE</span>
-        <span id="hudScore" class="text-xs sm:text-sm font-black text-white tabular-nums tracking-tight whitespace-nowrap">0</span>
+      <div class="flex items-baseline gap-0.5 min-w-0 shrink-0">
+        <span class="hidden sm:inline text-[8px] font-bold text-[#00f5d4]/80 tracking-wider">SCORE</span>
+        <span id="hudScore" class="text-[11px] sm:text-xs font-black text-white tabular-nums tracking-tight whitespace-nowrap">0</span>
       </div>
 
-      <!-- CENTER-RIGHT: MERGED FEVER GAUGE -->
+      <!-- CENTER: MERGED FEVER GAUGE -->
       <div class="flex items-center gap-1 shrink-0">
         <span class="text-[8px] font-extrabold text-[#ff1493] shrink-0">FEVER</span>
-        <div class="w-11 sm:w-14 h-2 bg-black/60 rounded overflow-hidden border border-[#ff1493]/50 shrink-0">
+        <div class="w-9 sm:w-12 h-2 bg-black/60 rounded overflow-hidden border border-[#ff1493]/50 shrink-0">
           <div id="feverGaugeBar" class="h-full bg-gradient-to-r from-[#ff1493] via-[#e6ff00] to-[#00f5d4] transition-all" style="width: 0%"></div>
         </div>
-        <span id="hudBurstTimer" class="whitespace-nowrap tabular-nums w-[46px] text-right shrink-0 leading-none text-[8.5px] font-bold text-[#00f5d4]">0%</span>
+        <span id="hudBurstTimer" class="whitespace-nowrap tabular-nums w-[42px] text-right shrink-0 leading-none text-[8.5px] font-bold text-[#00f5d4]">0%</span>
       </div>
 
-      <!-- RIGHT: SHIELD & PHASE & IN-GAME DEBUG SETTINGS -->
+      <!-- RIGHT: TIMER & SHIELD & PHASE & IN-GAME DEBUG SETTINGS -->
       <div class="flex items-center gap-1 shrink-0">
-        <span id="hudShield" class="px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0">🛡️SAFE</span>
+        <span id="hudTimer" class="px-1 py-0.5 rounded text-[8.5px] font-mono font-black tabular-nums text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 whitespace-nowrap shrink-0">⏱5:00</span>
+        <span id="hudShield" class="px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0" title="SHIELD">🛡️</span>
         <span id="hudPhase" class="px-1 py-0.5 rounded bg-[#ff1493]/20 border border-[#ff1493]/60 text-[8px] font-extrabold text-[#ff1493] whitespace-nowrap shrink-0">PH.1</span>
         <button id="btnHudDebugSettings" class="hidden h-5 px-1.5 rounded bg-[#2a0e4a] hover:bg-[#ff1493] border border-[#e6ff00]/70 text-[#e6ff00] text-[10px] font-bold leading-none shrink-0 cursor-pointer items-center justify-center transition" title="SETTINGS">⚙️</button>
       </div>
@@ -126,11 +127,62 @@
         <!-- STAGE CLEAR OVERLAY (WITHIN CANVAS PLAYFIELD FRAME, FIXED SURROUNDING UI) -->
         <div id="clearModal" class="absolute inset-0 z-30 hidden flex-col justify-end p-2 pointer-events-auto opacity-0 transition-opacity duration-700">
 
-          <!-- BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (PURE TRANSLUCENT ALPHA, NO BACKDROP-FILTER BUG) -->
-          <div class="w-full p-2 bg-gradient-to-t from-[#090218]/45 via-[#090218]/20 to-transparent rounded-b-lg flex flex-col gap-1.5 shrink-0 border-t border-[#ff1493]/30">
+          <!-- STEP 1: STAGE CLEAR SCORE TALLY PANEL -->
+          <div id="clearTallyPanel" class="w-full p-3 bg-[#090218]/85 border-2 border-[#e6ff00]/80 rounded-xl flex flex-col gap-2 shrink-0 shadow-[0_0_24px_rgba(230,255,0,0.28)] cursor-pointer select-none">
+            <div class="flex items-center justify-between border-b border-[#00f5d4]/40 pb-1">
+              <span id="tallyHeaderTitle" class="text-[11px] font-black text-[#e6ff00] tracking-wider">🏆 STAGE 1 RESULT</span>
+              <span id="tallyRemTime" class="px-1.5 py-0.5 rounded bg-[#00f5d4]/20 border border-[#00f5d4]/70 text-[10px] font-mono font-black tabular-nums text-[#00f5d4]">⏱5:00</span>
+            </div>
+
+            <!-- BASE SCORE x TIME MULTIPLIER COUNTER -->
+            <div class="bg-[#140633]/90 border border-[#ff1493]/60 rounded-lg p-2 text-center">
+              <div class="text-[8.5px] font-bold text-[#b59ce6] tracking-wider mb-0.5" data-i18n="clear.tallyFormulaLabel">ステージ素点 × 残りタイム倍率 (+1%/秒・最大×2.00)</div>
+              <div class="flex items-baseline justify-center gap-1.5 font-mono tabular-nums">
+                <span id="tallyBaseScore" class="text-sm sm:text-base font-black text-white">0</span>
+                <span class="text-xs font-bold text-[#ff66b2]">×</span>
+                <span id="tallyMult" class="text-lg sm:text-xl font-black text-[#e6ff00]">1.00</span>
+                <span id="tallyMaxBadge" class="hidden px-1 py-0.5 rounded bg-[#ff1493] text-[8px] font-black text-white leading-none">MAX!</span>
+              </div>
+            </div>
+
+            <!-- SEQUENTIAL SLAM ROWS ("ドン、ドン…") -->
+            <div class="flex flex-col gap-1 text-[10.5px] sm:text-[11px] font-mono tabular-nums px-1">
+              <div id="tallyRowStageTotal" class="hidden items-center justify-between py-0.5 border-b border-white/10">
+                <span class="font-bold text-[#00f5d4]" data-i18n="clear.tallyStageTotal">STAGE SCORE</span>
+                <span id="tallyStageTotalVal" class="text-sm font-black text-white">0</span>
+              </div>
+              <div id="tallyRowClearBonus" class="hidden items-center justify-between py-0.5">
+                <span class="font-bold text-gray-200" data-i18n="clear.tallyClearBonus">CLEAR BONUS</span>
+                <span id="tallyClearBonusVal" class="font-black text-[#00f5d4]">+0</span>
+              </div>
+              <div id="tallyRowNoMissBonus" class="hidden items-center justify-between py-0.5">
+                <span id="tallyNoMissLabel" class="font-bold text-[#e6ff00]">👑 NO-MISS BONUS</span>
+                <span id="tallyNoMissBonusVal" class="font-black text-[#e6ff00]">+0</span>
+              </div>
+              <div id="tallyRowCarryover" class="hidden items-center justify-between py-0.5 text-[9.5px] text-gray-300">
+                <span data-i18n="clear.tallyCarryover">CARRYOVER</span>
+                <span id="tallyCarryoverVal" class="font-bold text-gray-200">0</span>
+              </div>
+              <div id="tallyRowGrandTotal" class="hidden items-center justify-between pt-1.5 mt-0.5 border-t-2 border-[#e6ff00]/80">
+                <span class="text-xs font-black text-[#e6ff00] tracking-wider" data-i18n="clear.tallyGrandTotal">TOTAL SCORE</span>
+                <span id="tallyGrandTotalVal" class="text-base sm:text-lg font-black text-[#e6ff00] drop-shadow-[0_0_8px_rgba(230,255,0,0.6)]">0</span>
+              </div>
+            </div>
+
+            <!-- TALLY FOOTER (SKIP HINT -> NEXT BUTTON) -->
+            <div class="pt-0.5">
+              <div id="tallySkipHint" class="text-center text-[8.5px] font-mono text-gray-400" data-i18n="clear.tallySkipHint">TAP / SPACE TO SKIP</div>
+              <button id="btnTallyContinue" type="button" class="hidden w-full py-1.5 rounded-lg bg-gradient-to-r from-[#ff1493] via-[#ff66b2] to-[#e6ff00] active:scale-95 text-black font-black text-[11px] tracking-wider cursor-pointer transition shadow hover:brightness-110" data-i18n="clear.tallyNextBtn">
+                ▶ 次へ (NEXT)
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: BOTTOM ADVENTURE DIALOGUE & RELIC SELECTION (PURE TRANSLUCENT ALPHA, NO BACKDROP-FILTER BUG) -->
+          <div id="clearDialoguePanel" class="hidden w-full p-2 bg-gradient-to-t from-[#090218]/45 via-[#090218]/20 to-transparent rounded-b-lg flex-col gap-1.5 shrink-0 border-t border-[#ff1493]/30">
             <!-- CLEAR BONUS BANNER -->
             <div id="clearBonusBanner" class="p-1 rounded bg-[#0b031c]/60 border border-[#e6ff00]/70 flex items-center justify-between text-[9px] px-2 shadow">
-              <span class="text-[#e6ff00] font-black">STAGE CLEAR BONUS:</span>
+              <span class="text-[#e6ff00] font-black">STAGE RESULT:</span>
               <span id="clearBonusText" class="text-white font-mono font-black">+50,000 pts</span>
             </div>
 
@@ -706,6 +758,10 @@
       </div>
       <div class="space-y-1 text-[10px] pt-1">
         <div class="flex items-center justify-between">
+          <span class="text-gray-300" data-i18n="sidebar.stageTime">残り時間:</span>
+          <span id="dtStageTimer" class="font-mono font-black tabular-nums text-[#00f5d4]">5:00</span>
+        </div>
+        <div class="flex items-center justify-between">
           <span class="text-gray-300" data-i18n="sidebar.shield">シールド:</span>
           <span id="dtBallCount" class="font-black text-[#00f5d4]">🛡️SAFE</span>
         </div>
@@ -738,38 +794,38 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
-  <script src="./js/i18n/i18n.js?v=198"></script>
-  <script src="./js/i18n/ja.js?v=198"></script>
-  <script src="./js/i18n/en.js?v=198"></script>
+  <script src="./js/i18n/i18n.js?v=203"></script>
+  <script src="./js/i18n/ja.js?v=203"></script>
+  <script src="./js/i18n/en.js?v=203"></script>
   <script src="./js/stage1_assets.js?v=198"></script>
   <script src="./js/stage2_assets.js?v=198"></script>
   <script src="./js/stage3_assets.js?v=198"></script>
   <script src="./js/stage4_assets.js?v=198"></script>
   <script src="./js/stage5_assets.js?v=198"></script>
-  <script src="./js/audio.js?v=202"></script>
-  <script src="./js/engine/score_table.js?v=1"></script>
-  <script src="./js/engine/particles.js?v=198"></script>
-  <script src="./js/engine/physics.js?v=198"></script>
-  <script src="./js/engine/systems.js?v=198"></script>
-  <script src="./js/engine/stage_common.js?v=198"></script>
-  <script src="./js/engine/ui.js?v=202"></script>
-  <script src="./js/stages/stage1.js?v=198"></script>
-  <script src="./js/stages/stage1_physics.js?v=198"></script>
-  <script src="./js/stages/stage1_render.js?v=198"></script>
-  <script src="./js/stages/stage2.js?v=198"></script>
-  <script src="./js/stages/stage2_physics.js?v=198"></script>
-  <script src="./js/stages/stage2_render.js?v=198"></script>
-  <script src="./js/stages/stage3.js?v=198"></script>
-  <script src="./js/stages/stage3_physics.js?v=198"></script>
-  <script src="./js/stages/stage3_render.js?v=198"></script>
-  <script src="./js/stages/stage4.js?v=198"></script>
-  <script src="./js/stages/stage4_physics.js?v=198"></script>
-  <script src="./js/stages/stage4_render.js?v=198"></script>
-  <script src="./js/stages/stage5.js?v=198"></script>
-  <script src="./js/stages/stage5_physics.js?v=198"></script>
-  <script src="./js/stages/stage5_render.js?v=198"></script>
-  <script src="./js/engine/game_engine.js?v=198"></script>
-  <script src="./js/game_flow.js?v=201"></script>
-  <script src="./js/main.js?v=198"></script>
+  <script src="./js/audio.js?v=203"></script>
+  <script src="./js/engine/score_table.js?v=203"></script>
+  <script src="./js/engine/particles.js?v=203"></script>
+  <script src="./js/engine/physics.js?v=203"></script>
+  <script src="./js/engine/systems.js?v=203"></script>
+  <script src="./js/engine/stage_common.js?v=203"></script>
+  <script src="./js/engine/ui.js?v=203"></script>
+  <script src="./js/stages/stage1.js?v=203"></script>
+  <script src="./js/stages/stage1_physics.js?v=203"></script>
+  <script src="./js/stages/stage1_render.js?v=203"></script>
+  <script src="./js/stages/stage2.js?v=203"></script>
+  <script src="./js/stages/stage2_physics.js?v=203"></script>
+  <script src="./js/stages/stage2_render.js?v=203"></script>
+  <script src="./js/stages/stage3.js?v=203"></script>
+  <script src="./js/stages/stage3_physics.js?v=203"></script>
+  <script src="./js/stages/stage3_render.js?v=203"></script>
+  <script src="./js/stages/stage4.js?v=203"></script>
+  <script src="./js/stages/stage4_physics.js?v=203"></script>
+  <script src="./js/stages/stage4_render.js?v=203"></script>
+  <script src="./js/stages/stage5.js?v=203"></script>
+  <script src="./js/stages/stage5_physics.js?v=203"></script>
+  <script src="./js/stages/stage5_render.js?v=203"></script>
+  <script src="./js/engine/game_engine.js?v=203"></script>
+  <script src="./js/game_flow.js?v=203"></script>
+  <script src="./js/main.js?v=203"></script>
 </body>
 </html>

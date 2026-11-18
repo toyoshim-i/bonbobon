@@ -190,6 +190,22 @@ class FMSoundEngine {
     this.playFM(150, 65, 400, 0.32, "sawtooth", 42, 0.2);
   }
 
+  tallyTick(multRatio = 0) {
+    const f = 660 + Math.min(1, Math.max(0, multRatio)) * 660;
+    this.playFM(f, f * 0.5, 90, 0.032, "square", f * 1.08, 0.075);
+  }
+
+  tallySlam(isFinal = false) {
+    this.playFM(165, 55, 360, 0.18, "sawtooth", 48, 0.22);
+    this.playFM(880, 440, 180, 0.09, "square", 1320, 0.12);
+    if (isFinal) {
+      this.playFM(145, 50, 420, 0.24, "sawtooth", 40, 0.24, 0.09);
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        this.playFM(f, f * 0.5, 110, 0.14, "square", f * 1.05, 0.12, 0.09 + i * 0.045);
+      });
+    }
+  }
+
   // High-energy Overheat Generator Spark bounce
   exSpark() {
     this.playFM(1200, 800, 300, 0.12, "sawtooth", 2400, 0.18);

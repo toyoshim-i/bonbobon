@@ -232,7 +232,54 @@ window.UI = {
       return;
     }
     this.updateScreenMode(state);
+    const stTimer = (window.ScoreTable && ScoreTable.stageTimer) || { LIMIT_FRAMES: 18000, WARN_YELLOW_FRAMES: 3600, WARN_RED_FRAMES: 1800 };
+    const remFrames = stTimer.LIMIT_FRAMES - (state.stagePlayFrames || 0);
+    const isOvertime = remFrames <= 0 && !state.stageCleared;
+
     this.setText("hudScore", state.score.toLocaleString());
+    this.setClass(
+      "hudScore",
+      isOvertime
+        ? "text-[11px] sm:text-xs font-black text-[#ff0055] tabular-nums tracking-tight whitespace-nowrap"
+        : "text-[11px] sm:text-xs font-black text-white tabular-nums tracking-tight whitespace-nowrap"
+    );
+
+    // Stage 5:00 Countdown / Overtime Curse HUD
+    const hudTimer = this.el("hudTimer");
+    const dtStageTimer = this.el("dtStageTimer");
+    if (remFrames > 0) {
+      const totalSec = Math.ceil(remFrames / 60);
+      const mm = Math.floor(totalSec / 60);
+      const ss = String(totalSec % 60).padStart(2, "0");
+      const timeTxt = `${mm}:${ss}`;
+      if (hudTimer) {
+        this.setText(hudTimer, `⏱${timeTxt}`);
+        if (remFrames <= stTimer.WARN_RED_FRAMES) {
+          this.setClass(hudTimer, "px-1 py-0.5 rounded text-[8.5px] font-mono font-black tabular-nums text-[#ff0055] bg-[#ff0055]/20 border border-[#ff0055] whitespace-nowrap shrink-0 animate-pulse");
+        } else if (remFrames <= stTimer.WARN_YELLOW_FRAMES) {
+          this.setClass(hudTimer, "px-1 py-0.5 rounded text-[8.5px] font-mono font-black tabular-nums text-[#e6ff00] bg-[#e6ff00]/15 border border-[#e6ff00]/70 whitespace-nowrap shrink-0");
+        } else {
+          this.setClass(hudTimer, "px-1 py-0.5 rounded text-[8.5px] font-mono font-black tabular-nums text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 whitespace-nowrap shrink-0");
+        }
+      }
+      if (dtStageTimer) {
+        this.setText(dtStageTimer, timeTxt);
+        this.setClass(dtStageTimer, remFrames <= stTimer.WARN_RED_FRAMES ? "font-mono font-black tabular-nums text-[#ff0055] animate-pulse" : (remFrames <= stTimer.WARN_YELLOW_FRAMES ? "font-mono font-black tabular-nums text-[#e6ff00]" : "font-mono font-black tabular-nums text-[#00f5d4]"));
+      }
+    } else {
+      const overSec = Math.floor((-remFrames) / 60);
+      const mm = Math.floor(overSec / 60);
+      const ss = String(overSec % 60).padStart(2, "0");
+      const overTxt = `-${mm}:${ss}`;
+      if (hudTimer) {
+        this.setText(hudTimer, `☠${overTxt}`);
+        this.setClass(hudTimer, "px-1 py-0.5 rounded text-[8.5px] font-mono font-black tabular-nums text-[#ff0055] bg-[#ff0055]/25 border border-[#ff0055] whitespace-nowrap shrink-0 animate-pulse");
+      }
+      if (dtStageTimer) {
+        this.setText(dtStageTimer, `☠️OVER (${overTxt})`);
+        this.setClass(dtStageTimer, "font-mono font-black tabular-nums text-[#ff0055] animate-pulse");
+      }
+    }
 
     let targetDesc = t("ui.defaultTarget");
     if (window.currentStage && window.currentStage.getTargetDesc) {
@@ -272,10 +319,10 @@ window.UI = {
     const hudShield = this.el("hudShield");
     if (hudShield) {
       if (state.score > 0) {
-        this.setText(hudShield, "🛡️SAFE");
+        this.setText(hudShield, "🛡️");
         this.setClass(hudShield, "px-1 py-0.5 rounded text-[8px] font-extrabold text-[#00f5d4] bg-[#00f5d4]/15 border border-[#00f5d4]/60 tracking-wider whitespace-nowrap shrink-0");
       } else {
-        this.setText(hudShield, "🚨DANGER");
+        this.setText(hudShield, "🚨0");
         this.setClass(hudShield, "px-1 py-0.5 rounded text-[8px] font-extrabold text-[#ff0055] bg-[#ff0055]/20 border border-[#ff0055] tracking-wider whitespace-nowrap shrink-0 animate-pulse");
       }
     }
@@ -536,6 +583,15 @@ window.UI = {
         } else if (e.code === "KeyV") {
           e.preventDefault();
           document.getElementById("btnTitleRanking")?.click();
+        }
+        return;
+      }
+
+      // Stage Clear Tally Skip / Continue via keyboard
+      if (isShown("clearTallyPanel") && isShown("clearModal")) {
+        if (["Space", "Enter", "KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+          e.preventDefault();
+          this.advanceClearTally();
         }
         return;
       }
@@ -1049,6 +1105,24 @@ window.UI = {
     const modal = document.getElementById("clearModal");
     if (!modal) return;
 
+    const tallyPanel = document.getElementById("clearTallyPanel");
+    if (tallyPanel) {
+      tallyPanel.addEventListener("click", (e) => {
+        if (e.target && e.target.closest("#btnTallyContinue")) return;
+        if (this._tallyState && !this._tallyState.done) {
+          this.finishClearTallyImmediately();
+        }
+      });
+    }
+
+    const btnTallyContinue = document.getElementById("btnTallyContinue");
+    if (btnTallyContinue) {
+      btnTallyContinue.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.advanceClearTally();
+      });
+    }
+
     const nextBtn = document.getElementById("btnClearNext");
     if (nextBtn) {
       nextBtn.addEventListener("click", () => {
@@ -1131,42 +1205,196 @@ window.UI = {
     });
   },
 
+  _clearTallyTimers() {
+    if (this._tallyRaf) {
+      cancelAnimationFrame(this._tallyRaf);
+      this._tallyRaf = null;
+    }
+    if (this._tallyTimeouts) {
+      this._tallyTimeouts.forEach(id => clearTimeout(id));
+    }
+    this._tallyTimeouts = [];
+  },
+
+  _revealTallyRow(id, isFinal = false) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("hidden", "tally-slam");
+    el.classList.add("flex");
+    void el.offsetWidth;
+    el.classList.add("tally-slam");
+    if (window.sfx && window.sfx.tallySlam) {
+      window.sfx.tallySlam(isFinal);
+    }
+  },
+
+  finishClearTallyImmediately() {
+    const ts = this._tallyState;
+    if (!ts || ts.done) return;
+    this._clearTallyTimers();
+    ts.done = true;
+
+    const fmtTime = (sec) => {
+      const s = Math.max(0, Math.floor(sec));
+      return `⏱${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    };
+    this.setText("tallyRemTime", fmtTime(0));
+    this.setText("tallyMult", ts.targetMult.toFixed(2));
+    const maxBadge = document.getElementById("tallyMaxBadge");
+    if (maxBadge) {
+      if (ts.bonusPct >= ts.maxPct) maxBadge.classList.remove("hidden");
+      else maxBadge.classList.add("hidden");
+    }
+
+    ["tallyRowStageTotal", "tallyRowClearBonus", "tallyRowNoMissBonus"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove("hidden");
+        el.classList.add("flex", "tally-slam");
+      }
+    });
+    if (ts.carryover > 0) {
+      const elCarry = document.getElementById("tallyRowCarryover");
+      if (elCarry) {
+        elCarry.classList.remove("hidden");
+        elCarry.classList.add("flex", "tally-slam");
+      }
+    }
+    this._revealTallyRow("tallyRowGrandTotal", true);
+
+    const hint = document.getElementById("tallySkipHint");
+    if (hint) hint.classList.add("hidden");
+    const btn = document.getElementById("btnTallyContinue");
+    if (btn) btn.classList.remove("hidden");
+    if (ts.state) this.updateHUD(ts.state);
+  },
+
+  advanceClearTally() {
+    if (this._tallyState && !this._tallyState.done) {
+      this.finishClearTallyImmediately();
+      return;
+    }
+    if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+    const tallyPanel = document.getElementById("clearTallyPanel");
+    const dlgPanel = document.getElementById("clearDialoguePanel");
+    if (tallyPanel) tallyPanel.classList.add("hidden");
+    if (dlgPanel) {
+      dlgPanel.classList.remove("hidden");
+      dlgPanel.classList.add("flex");
+    }
+  },
+
   presentStageClearModal(state, cfg = {}) {
     const stageIdx = state.stageIndex || 1;
-    const bal = (window.Systems && Systems.BALANCE) || {};
     const sb = window.ScoreTable.bonus;
+    const stTimer = window.ScoreTable.stageTimer;
+    const limitFrames = (stTimer && stTimer.LIMIT_FRAMES) || (60 * 300);
+    const remFrames = Math.max(0, limitFrames - (state.stagePlayFrames || 0));
+    const remSec = Math.floor(remFrames / 60);
+    const pctPerSec = (stTimer && stTimer.TIME_BONUS_PCT_PER_SEC) ?? 1;
+    const maxPct = (stTimer && stTimer.TIME_BONUS_MAX_PCT) ?? 100;
+    const bonusPct = Math.min(maxPct, remSec * pctPerSec);
+    const targetMult = +(1 + bonusPct / 100).toFixed(2);
+
+    const stageBaseScore = Math.min(state.score || 0, Math.max(0, state.stageEarnedScore || 0));
+    const carryover = Math.max(0, (state.score || 0) - stageBaseScore);
+    const multipliedStageScore = Math.round(stageBaseScore * targetMult);
+    const timeBonusPts = multipliedStageScore - stageBaseScore;
+
     const clearBonus = Systems.scaled(sb.CLEAR_PER_STAGE * stageIdx);
     const isNoMiss = (state.stageMisses || 0) === 0;
     const noMissBonus = isNoMiss ? Systems.scaled(sb.NO_MISS_PER_STAGE * stageIdx) : 0;
-    const totalBonus = clearBonus + noMissBonus;
 
+    let finalTotalScore = state.score || 0;
     if (!state._clearBonusAwarded) {
       state._clearBonusAwarded = true;
-      const nextScore = (state.score || 0) + totalBonus;
-      state.score = (window.Systems && Systems.capScore) ? Systems.capScore(nextScore) : nextScore;
+      const rawNext = carryover + multipliedStageScore + clearBonus + noMissBonus;
+      finalTotalScore = (window.Systems && Systems.capScore) ? Systems.capScore(rawNext) : rawNext;
+      state.score = finalTotalScore;
       state.peakScore = Math.max(state.peakScore || 0, state.score);
     }
 
     const modal = document.getElementById("clearModal");
     if (!modal) return;
     this._lastClearStageIdx = stageIdx;
+    this._clearTallyTimers();
 
-    // Update clear bonus banner
+    // Reset Step 1 (Tally) vs Step 2 (Dialogue + Relic) visibility
+    const tallyPanel = document.getElementById("clearTallyPanel");
+    const dlgPanel = document.getElementById("clearDialoguePanel");
+    if (tallyPanel) tallyPanel.classList.remove("hidden");
+    if (dlgPanel) {
+      dlgPanel.classList.add("hidden");
+      dlgPanel.classList.remove("flex");
+    }
+
+    const fmtTime = (sec) => {
+      const s = Math.max(0, Math.floor(sec));
+      return `⏱${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    };
+
+    this.setText("tallyHeaderTitle", `🏆 STAGE ${stageIdx} RESULT`);
+    this.setText("tallyRemTime", fmtTime(remSec));
+    this.setText("tallyBaseScore", stageBaseScore.toLocaleString());
+    this.setText("tallyMult", "1.00");
+    const maxBadge = document.getElementById("tallyMaxBadge");
+    if (maxBadge) maxBadge.classList.add("hidden");
+
+    this.setText("tallyStageTotalVal", multipliedStageScore.toLocaleString());
+    this.setText("tallyClearBonusVal", `+${clearBonus.toLocaleString()}`);
+    if (isNoMiss) {
+      this.setText("tallyNoMissLabel", t("clear.tallyNoMissBonus"));
+      this.setClass("tallyNoMissLabel", "font-bold text-[#e6ff00]");
+      this.setText("tallyNoMissBonusVal", `+${noMissBonus.toLocaleString()}`);
+      this.setClass("tallyNoMissBonusVal", "font-black text-[#e6ff00]");
+    } else {
+      this.setText("tallyNoMissLabel", t("clear.tallyMissCount", { count: state.stageMisses || 0 }));
+      this.setClass("tallyNoMissLabel", "font-bold text-gray-400");
+      this.setText("tallyNoMissBonusVal", "+0");
+      this.setClass("tallyNoMissBonusVal", "font-bold text-gray-400");
+    }
+    this.setText("tallyCarryoverVal", carryover.toLocaleString());
+    this.setText("tallyGrandTotalVal", finalTotalScore.toLocaleString());
+
+    ["tallyRowStageTotal", "tallyRowClearBonus", "tallyRowNoMissBonus", "tallyRowCarryover", "tallyRowGrandTotal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add("hidden");
+        el.classList.remove("flex", "tally-slam");
+      }
+    });
+    const skipHint = document.getElementById("tallySkipHint");
+    if (skipHint) skipHint.classList.remove("hidden");
+    const btnContinue = document.getElementById("btnTallyContinue");
+    if (btnContinue) btnContinue.classList.add("hidden");
+
+    this._tallyState = {
+      state,
+      remSec,
+      bonusPct,
+      maxPct,
+      targetMult,
+      carryover,
+      done: false
+    };
+
+    // Summary banner on Step 2 (Dialogue panel)
     const bonusText = document.getElementById("clearBonusText");
     if (bonusText) {
+      const multTag = `×${targetMult.toFixed(2)}`;
       if (isNoMiss) {
-        bonusText.innerHTML = `+${clearBonus.toLocaleString()} <span class="text-[#e6ff00]">/ 👑NO-MISS: +${noMissBonus.toLocaleString()}</span>`;
+        bonusText.innerHTML = `${multTag} (+${timeBonusPts.toLocaleString()}) / 👑+${(clearBonus + noMissBonus).toLocaleString()}`;
       } else {
-        bonusText.textContent = `+${clearBonus.toLocaleString()} pts`;
+        bonusText.textContent = `${multTag} (+${timeBonusPts.toLocaleString()}) / +${clearBonus.toLocaleString()}`;
       }
     }
 
     if (cfg.bossDisplayName) {
-      const nameEl = modal.querySelector(".text-\\[\\#ff66b2\\]");
+      const nameEl = dlgPanel ? dlgPanel.querySelector(".text-\\[\\#ff66b2\\]") : null;
       if (nameEl) nameEl.textContent = cfg.bossDisplayName;
     }
     if (cfg.defeatQuoteHtml) {
-      const quoteEl = modal.querySelector("p");
+      const quoteEl = dlgPanel ? dlgPanel.querySelector("p") : null;
       if (quoteEl) quoteEl.innerHTML = cfg.defeatQuoteHtml;
     }
 
@@ -1192,6 +1420,82 @@ window.UI = {
 
     this.openModal(modal);
 
-    this.updateHUD(state);
+    // Run sequential tally animation:
+    // 1) Count down remaining seconds while incrementing mult +0.01/sec (capped at 2.00)
+    // 2) Slam STAGE SCORE -> CLEAR BONUS -> NO-MISS -> (CARRYOVER) -> TOTAL SCORE
+    const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      this._tallyTimeouts.push(setTimeout(() => this.finishClearTallyImmediately(), 120));
+      return;
+    }
+
+    const startSequentialSlams = () => {
+      let delay = 220;
+      const schedule = (fn, wait) => {
+        const tid = setTimeout(() => {
+          if (!this._tallyState || this._tallyState.done) return;
+          fn();
+        }, delay);
+        this._tallyTimeouts.push(tid);
+        delay += wait;
+      };
+
+      schedule(() => this._revealTallyRow("tallyRowStageTotal", false), 320);
+      schedule(() => this._revealTallyRow("tallyRowClearBonus", false), 320);
+      schedule(() => this._revealTallyRow("tallyRowNoMissBonus", false), carryover > 0 ? 280 : 380);
+      if (carryover > 0) {
+        schedule(() => this._revealTallyRow("tallyRowCarryover", false), 360);
+      }
+      schedule(() => {
+        this._revealTallyRow("tallyRowGrandTotal", true);
+        if (this._tallyState) this._tallyState.done = true;
+        if (skipHint) skipHint.classList.add("hidden");
+        if (btnContinue) btnContinue.classList.remove("hidden");
+        this.updateHUD(state);
+      }, 0);
+    };
+
+    this._tallyTimeouts.push(setTimeout(() => {
+      if (!this._tallyState || this._tallyState.done) return;
+      if (remSec <= 0) {
+        startSequentialSlams();
+        return;
+      }
+      let consumed = 0;
+      let lastTickStep = -1;
+      // Step 1 second/frame (+0.01/frame, max ~1.67s to 2.00), then drain surplus rapidly
+      const stepRoll = () => {
+        if (!this._tallyState || this._tallyState.done) return;
+        const speed = consumed < maxPct ? 1 : Math.max(3, Math.ceil((remSec - maxPct) / 15));
+        consumed = Math.min(remSec, consumed + speed);
+        const curRem = Math.max(0, remSec - consumed);
+        const curPct = Math.min(maxPct, consumed * pctPerSec);
+        const curMult = 1 + curPct / 100;
+
+        this.setText("tallyRemTime", fmtTime(curRem));
+        this.setText("tallyMult", curMult.toFixed(2));
+        if (curPct >= maxPct && maxBadge) {
+          maxBadge.classList.remove("hidden");
+        }
+
+        const tickStep = Math.floor(curPct / 2);
+        if (tickStep > lastTickStep && curPct <= maxPct) {
+          lastTickStep = tickStep;
+          if (window.sfx && window.sfx.tallyTick) {
+            window.sfx.tallyTick(curPct / maxPct);
+          }
+        }
+
+        if (consumed < remSec) {
+          this._tallyRaf = requestAnimationFrame(stepRoll);
+        } else {
+          this._tallyRaf = null;
+          this.setText("tallyRemTime", fmtTime(0));
+          this.setText("tallyMult", targetMult.toFixed(2));
+          startSequentialSlams();
+        }
+      };
+      this._tallyRaf = requestAnimationFrame(stepRoll);
+    }, 320));
   }
 };

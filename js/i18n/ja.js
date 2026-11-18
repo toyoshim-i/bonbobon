@@ -24,6 +24,7 @@ I18N.register("ja", {
   // Desktop Right Sidebar
   "sidebar.armorStatusTitle": "🎯 装甲部位ステータス",
   "sidebar.realtimeTitle": "⚡ リアルタイム解析",
+  "sidebar.stageTime": "残り時間:",
   "sidebar.shield": "シールド:",
   "sidebar.burstMult": "バースト倍率:",
   "sidebar.feverGauge": "フィーバー蓄積:",
@@ -78,6 +79,15 @@ I18N.register("ja", {
 
   // Clear Modal
   "clear.defeatStatus": "大破・戦闘不能",
+  "clear.tallyFormulaLabel": "ステージ素点 × 残りタイム倍率 (+1%/秒・最大×2.00)",
+  "clear.tallyStageTotal": "STAGE SCORE",
+  "clear.tallyClearBonus": "CLEAR BONUS",
+  "clear.tallyNoMissBonus": "👑 NO-MISS BONUS",
+  "clear.tallyMissCount": "STAGE MISS ({count})",
+  "clear.tallyCarryover": "前ステージ迄 (CARRYOVER)",
+  "clear.tallyGrandTotal": "TOTAL SCORE",
+  "clear.tallySkipHint": "タップ / SPACE でスキップ",
+  "clear.tallyNextBtn": "▶ 次へ (NEXT)",
   "clear.lilithQuote": "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」",
   "clear.relicTitle": "⚙️ 鹵獲パーツ選択 (次ステージ持越)",
   "clear.relicRadarName": "ウサミミ・レーダー",
@@ -205,6 +215,7 @@ I18N.register("ja", {
   "engine.burstEnd": "【BURST終了】倍率リセット",
   "engine.ballStuck": "⚠️【ボール停滞中】<br>スワイプ または 矢印キーで台を揺らそう！",
   "engine.dangerZero": "🚨【DANGER: SCORE 0!!】🚨<br>シールド枯渇！0点のまま落とすと即GAME OVER！！",
+  "engine.timeOverCurse": "☠️【TIME OVER — 呪い減点開始!!】☠️<br>制限時間5分超過！加点停止＆スコアが毎フレーム削られる！急いで撃破せよ！",
   "engine.miss": "⚠️【MISS! -{loss} PTS】<br>バフ低下！残シールド: {score} pts",
 
   // UI

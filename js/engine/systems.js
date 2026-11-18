@@ -25,17 +25,29 @@ window.Systems = {
     return Math.min(cap, Math.max(0, Math.round(val)));
   },
 
-  // 永パ防止：ステージ実プレイ時間が目安を超えた場合のリピート加点・Fever減衰率 (1.0 -> 0.0)
+  // ステージ制限時間（5:00）内は 1.0、タイムアップ（0:00超過）後は 0.0（新規加点・Fever停止）
   getAntiStallScale(state) {
-    if (!state || !window.ScoreTable || !ScoreTable.antiStall) return 1.0;
-    const as = ScoreTable.antiStall;
-    const isStage5 = (state.stageIndex === 5) || (window.currentStage && window.currentStage.id === "stage5");
-    const softStart = isStage5 ? as.STAGE5_SOFT_DECAY_FRAMES : as.SOFT_DECAY_FRAMES;
-    const frames = state.stagePlayFrames || 0;
-    if (frames <= softStart) return 1.0;
-    const over = frames - softStart;
-    if (over >= as.DECAY_SPAN_FRAMES) return 0.0;
-    return Math.max(0.0, 1.0 - over / as.DECAY_SPAN_FRAMES);
+    if (!state || !window.ScoreTable || !ScoreTable.stageTimer) return 1.0;
+    const limit = ScoreTable.stageTimer.LIMIT_FRAMES || (60 * 300);
+    return (state.stagePlayFrames || 0) >= limit ? 0.0 : 1.0;
+  },
+
+  // タイムオーバー中の毎フレーム・スコア減少処理（『まもるクン』式のプレッシャー演出）
+  applyOvertimeDrain(state) {
+    if (!state || state.score <= 0 || !window.ScoreTable || !ScoreTable.stageTimer) return 0;
+    const st = ScoreTable.stageTimer;
+    const limit = st.LIMIT_FRAMES || (60 * 300);
+    const overFrames = (state.stagePlayFrames || 0) - limit;
+    if (overFrames <= 0) return 0;
+
+    const overSec = overFrames / 60;
+    const flatLoss = this.scaled(st.OVERTIME_DRAIN_BASE_PER_FRAME + overSec * st.OVERTIME_DRAIN_ACCEL_PER_SEC);
+    const ratioLoss = Math.floor(state.score * (st.OVERTIME_DRAIN_RATIO_PER_FRAME || 0));
+    const jitter = (overFrames * 7) % 13; // 下桁が毎フレーム激しく回転するよう端数を付与
+    const loss = Math.min(state.score, Math.max(1, flatLoss + ratioLoss + jitter));
+    state.score = Math.max(0, state.score - loss);
+    state.stageEarnedScore = Math.min(state.score, Math.max(0, (state.stageEarnedScore || 0) - loss));
+    return loss;
   },
 
   PERM_DEFS: {
@@ -101,6 +113,7 @@ window.Systems = {
     const totalMult = state.baseMultiplier * state.burstMultiplier * state.fever.mult;
     const pts = Math.round(basePts * (window.ScoreTable.SCORE_SCALE || 1) * totalMult * stallScale);
     state.score = this.capScore((state.score || 0) + pts);
+    state.stageEarnedScore = Math.min(state.score, this.capScore((state.stageEarnedScore || 0) + pts));
     state.peakScore = Math.max(state.peakScore || 0, state.score);
 
     if (pts <= 0 && stallScale <= 0) {
@@ -120,6 +133,7 @@ window.Systems = {
     const loss = Math.min(state.score || 0, Math.max(0, this.scaled(amount)));
     if (loss <= 0) return;
     state.score = Math.max(0, state.score - loss);
+    state.stageEarnedScore = Math.min(state.score, Math.max(0, (state.stageEarnedScore || 0) - loss));
     const txt = label ? `${label} -${loss.toLocaleString()}` : `-${loss.toLocaleString()}`;
     Particles.addPopup(state, x, y, txt, "#ff5588", 0.88);
     if (window.UI) window.UI.updateHUD(state);

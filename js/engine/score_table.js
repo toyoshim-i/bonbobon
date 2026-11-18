@@ -30,14 +30,23 @@ window.ScoreTable = {
     MAX_MULT: 15.0                     // BURST倍率の上限
   },
 
-  // 永パ（無限粘り稼ぎ）防止パラメータ
+  // ステージ制限時間（5分カウントダウン ➔ 残り1秒につき素点+1%［最大×2.00］／0:00超過で毎フレーム減点）
+  stageTimer: {
+    LIMIT_FRAMES: 60 * 300,                // 各ステージ制限時間: 5分（300秒 = 18,000f）
+    WARN_YELLOW_FRAMES: 60 * 60,           // 残り1分以下で黄色表示
+    WARN_RED_FRAMES: 60 * 30,              // 残り30秒以下で赤点滅
+    TIME_BONUS_PCT_PER_SEC: 1,             // クリア時の残り1秒あたり +1% (+0.01倍)
+    TIME_BONUS_MAX_PCT: 100,               // 残り時間倍率ボーナス上限 +100% (最大 ×2.00 で頭打ち)
+    OVERTIME_DRAIN_BASE_PER_FRAME: 83,     // 超過時の基礎減点/f（×10で初期 約830pts/f ≒ 5万pts/秒）
+    OVERTIME_DRAIN_ACCEL_PER_SEC: 27,      // 超過1秒ごとの減点加速/f（基礎点）
+    OVERTIME_DRAIN_RATIO_PER_FRAME: 0.00025 // 現在スコア比例の毎フレーム減点（約1.5%/秒）
+  },
+
+  // 永パ（挟まり・無限カプセル）防止パラメータ
   antiStall: {
-    SOFT_DECAY_FRAMES: 60 * 180,       // 通常ステージ減衰開始: 実プレイ3分
-    STAGE5_SOFT_DECAY_FRAMES: 60 * 240,// Stage 5 減衰開始: 実プレイ4分
-    DECAY_SPAN_FRAMES: 60 * 120,       // 減衰開始から0になるまでの猶予: +2分
-    BUMPER_GRACE_FRAMES: 10,           // バンパー・バウンス連続ヒット防止クールダウン
-    STAGE1_EARLY_JACKPOT_MAX_DROPS: 3, // Stage 1 両耳解除コアのカプセル放出上限
-    BLUSH_CAPSULE_MAX_DROPS: 6         // 赤面オーバーフロー系のカプセル放出上限（各ステージ）
+    BUMPER_GRACE_FRAMES: 10,               // バンパー・バウンス連続ヒット防止クールダウン
+    STAGE1_EARLY_JACKPOT_MAX_DROPS: 3,     // Stage 1 両耳解除コアのカプセル放出上限
+    BLUSH_CAPSULE_MAX_DROPS: 6             // 赤面オーバーフロー系のカプセル放出上限（各ステージ）
   },
 
   // 倍率を通さない固定ボーナス・ペナルティ（基礎点）

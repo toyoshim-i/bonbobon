@@ -24,6 +24,7 @@ I18N.register("en", {
   // Desktop Right Sidebar
   "sidebar.armorStatusTitle": "🎯 ARMOR STATUS",
   "sidebar.realtimeTitle": "⚡ LIVE TELEMETRY",
+  "sidebar.stageTime": "STAGE TIME:",
   "sidebar.shield": "SHIELD:",
   "sidebar.burstMult": "BURST MULT:",
   "sidebar.feverGauge": "FEVER GAUGE:",
@@ -78,6 +79,15 @@ I18N.register("en", {
 
   // Clear Modal
   "clear.defeatStatus": "DISABLED / DEFEATED",
+  "clear.tallyFormulaLabel": "STAGE SCORE × TIME MULT (+1%/s, MAX ×2.00)",
+  "clear.tallyStageTotal": "STAGE SCORE",
+  "clear.tallyClearBonus": "CLEAR BONUS",
+  "clear.tallyNoMissBonus": "👑 NO-MISS BONUS",
+  "clear.tallyMissCount": "STAGE MISS ({count})",
+  "clear.tallyCarryover": "CARRYOVER",
+  "clear.tallyGrandTotal": "TOTAL SCORE",
+  "clear.tallySkipHint": "TAP / SPACE TO SKIP",
+  "clear.tallyNextBtn": "▶ CONTINUE",
   "clear.lilithQuote": "\"Tch... If only this unit wasn't poorly maintained...!<br>You'll pay for this!\"",
   "clear.relicTitle": "⚙️ CAPTURED RELIC (CARRY OVER)",
   "clear.relicRadarName": "Bunny-Ear Radar",
@@ -205,6 +215,7 @@ I18N.register("en", {
   "engine.burstEnd": "【BURST ENDED】Multiplier reset",
   "engine.ballStuck": "⚠️【BALL STALLED】<br>Nudge with Arrow Keys or X!",
   "engine.dangerZero": "🚨【DANGER: SCORE 0!!】🚨<br>Shield depleted! Drain at 0 pts = GAME OVER!!",
+  "engine.timeOverCurse": "☠️【TIME OVER — CURSE DRAIN!!】☠️<br>Time's up! Scoring halted & score drains every frame! Defeat the boss NOW!",
   "engine.miss": "⚠️【MISS! -{loss} PTS】<br>Buffs lost! Shield left: {score} pts",
 
   // UI

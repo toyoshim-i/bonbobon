@@ -110,6 +110,7 @@ window.GameEngine = {
       totalMisses: 0,
       stageMisses: 0,
       stagePlayFrames: 0,
+      stageEarnedScore: 0,
       relics: { radar: 0, spring: 0, drone: 0 },
       selectedRelic: "radar",
       baseMultiplier: 1.0,
@@ -180,6 +181,7 @@ window.GameEngine = {
     this.state.boss = stage.createBossState();
     this.state.phase = 1;
     this.state.stagePlayFrames = 0;
+    this.state.stageEarnedScore = 0;
     this.state.stageCleared = false;
     this.state._clearBonusAwarded = false;
     this.state.clearSequence = this.createDefaultClearSequence();
@@ -514,6 +516,7 @@ window.GameEngine = {
             const sb = ScoreTable.bonus;
             const loss = Math.min(state.score, Math.max(Systems.scaled(sb.MISS_PENALTY_MIN_PER_STAGE * stageNum), Math.floor(state.score * sb.MISS_PENALTY_RATIO)));
             state.score = Math.max(0, state.score - loss);
+            state.stageEarnedScore = Math.min(state.score, Math.max(0, Math.floor((state.stageEarnedScore || 0) * (1 - sb.MISS_PENALTY_RATIO))));
             state.totalMisses = (state.totalMisses || 0) + 1;
             state.stageMisses = (state.stageMisses || 0) + 1;
 
@@ -566,14 +569,35 @@ window.GameEngine = {
       }
     }
 
-    // 永パ防止用：盤面上にアクティブなボールが存在する実プレイフレーム数を計測
+    // ステージ5分タイマー進行 ＆ 0:00超過時の毎フレーム呪いスリップ減点
     if (hasActivePlayBall && !state.stageCleared) {
       state.stagePlayFrames = (state.stagePlayFrames || 0) + 1;
-      const as = window.ScoreTable && ScoreTable.antiStall;
-      if (as) {
-        const softStart = (state.stageIndex === 5) ? as.STAGE5_SOFT_DECAY_FRAMES : as.SOFT_DECAY_FRAMES;
-        if (state.stagePlayFrames === softStart) {
-          Particles.addPopup(state, 198, 280, "⚠️TIME OVER! SCORE DECAY", "#e6ff00", 1.1);
+      const st = window.ScoreTable && ScoreTable.stageTimer;
+      if (st) {
+        const limit = st.LIMIT_FRAMES || (60 * 300);
+        const rem = limit - state.stagePlayFrames;
+        if (rem === st.WARN_YELLOW_FRAMES) {
+          Particles.addPopup(state, 198, 280, "⏱1:00 REMAINING!", "#e6ff00", 1.1);
+        } else if (rem === st.WARN_RED_FRAMES) {
+          if (window.sfx && window.sfx.feverAlarm) window.sfx.feverAlarm();
+          Particles.addPopup(state, 198, 280, "🚨0:30 HURRY UP!!", "#ff0055", 1.2);
+        } else if (rem === 0) {
+          if (window.sfx && window.sfx.feverAlarm) window.sfx.feverAlarm();
+          UI.showCutin(t("engine.timeOverCurse"), 210);
+          Particles.addPopup(state, 198, 280, "☠️TIME OVER! SCORE DRAIN!!", "#ff0055", 1.25);
+        } else if (rem < 0) {
+          const prevScore = state.score;
+          const drained = Systems.applyOvertimeDrain(state);
+          if (prevScore > 0 && state.score === 0) {
+            if (window.sfx && window.sfx.sonicScatter) window.sfx.sonicScatter();
+            UI.showCutin(t("engine.dangerZero"), 200);
+          }
+          if (drained > 0 || (-rem) % 60 === 0) {
+            state._hudDirty = true;
+          }
+        }
+        if (rem >= 0 && rem % 60 === 0) {
+          state._hudDirty = true;
         }
       }
     }

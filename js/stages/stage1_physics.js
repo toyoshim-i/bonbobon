@@ -241,7 +241,7 @@ Object.assign(window.Stage1, {
 
           if (!(ball._bumperGrace > 0)) {
             ball._bumperGrace = graceFrames;
-            this.impulseBust(state, side, -nx * 4.2, -ny * 4.2);
+            this.impulseBust(state, side, -nx * 4.2, -ny * 4.2, { fromDirectHit: true });
 
             b.flash = 22;
             if (window.sfx) window.sfx.softPuru();
@@ -251,12 +251,8 @@ Object.assign(window.Stage1, {
               { expr: "wince", frames: 16 },
               { expr: "open_blush", frames: 60 }
             ]);
-            state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
 
-            // Boost bust excitement (scales crotch suction heavily!)
-            state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 40);
-
-            Systems.addFever(state, state.fever.active ? 10 : 8);
+            Systems.addFever(state, 8);
             Systems.addScore(state, state.fever.active ? ScoreTable.stage1.BUST_SOFT_FEVER : ScoreTable.stage1.BUST_SOFT_NORMAL, cx, cy, state.fever.active ? "♥HYPER BOING♥" : "♥PURU-PURU♥");
 
             for (let h = 0; h < (state.fever.active ? 4 : 2); h++) {
@@ -393,7 +389,7 @@ Object.assign(window.Stage1, {
                 Systems.startFeverMode(state);
               }
             } else {
-              this.impulseBust(state, which, (Math.random() - 0.5) * 2, -2.5);
+              this.impulseBust(state, which, (Math.random() - 0.5) * 2, -2.5, { visualOnly: true });
             }
           } else {
             if (window.sfx) window.sfx.exSpark();
@@ -512,7 +508,7 @@ Object.assign(window.Stage1, {
               Particles.addPopup(state, crotch.x, crotch.y - 30, t("stage1.popup.crotchTrap"), "#ff66b2", 1.05);
             } else {
               crotch.charge = 0;
-              crotch.cooldown = 60 * 18;
+              crotch.cooldown = 60 * 30;
               if (window.sfx) {
                 window.sfx.burstTrigger();
                 window.sfx.exSpark();
@@ -528,9 +524,7 @@ Object.assign(window.Stage1, {
               if (state.balls.length < 3) {
                 Systems.spawnBall(state, crotch.x + (Math.random() - 0.5) * 16, crotch.y - 20, (Math.random() - 0.5) * 6, -7.5);
               }
-              Systems.startFeverMode(state);
-              state.burstMultiplier = Math.max(state.burstMultiplier, 2.0);
-              state.burstTimer = 360;
+              Systems.addFever(state, 50);
             }
           }
           UI.updateHUD(state);

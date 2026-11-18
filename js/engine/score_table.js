@@ -8,26 +8,26 @@
 
 window.ScoreTable = {
   // 表示スケール（全加点・減点・ボーナスに一括で掛かる）
-  SCORE_SCALE: 10,
+  SCORE_SCALE: 1,
 
   // カンスト上限（10桁カウンターストップ：99億9999万9999点）
   SCORE_CAP: 9999999999,
 
-  // ランク判定しきい値（SCORE_SCALE 適用後の実スコア）
-  // S = ノーミス普通クリア帯（約5,500万〜7,000万）、SS = 億超え、SSS = ハイスコアラー領域
+  // ランク判定しきい値（実スコア）
+  // S = ノーミス普通クリア帯（約6,000万〜8,500万）、SS = 億超え、SSS = ハイスコアラー領域
   RANK_THRESHOLDS: [
-    { rank: "SSS", min: 500000000 },
-    { rank: "SS",  min: 120000000 },
+    { rank: "SSS", min: 250000000 },
+    { rank: "SS",  min: 110000000 },
     { rank: "S",   min: 55000000 },
     { rank: "A",   min: 30000000 },
     { rank: "B",   min: 12000000 }
   ],
 
-  // BURST解放の倍率計算パラメータ（加算＋複数枠シナジー、上限15.0倍）
+  // BURST解放の倍率計算パラメータ（加算＋複数枠シナジー、上限10.0倍）
   burst: {
     TIER_STEP: 0.75,                   // Tier係数 = 1 + (tier - 1) * 0.75 (T1=1.0, T2=1.75, T3=2.5)
     SLOT_SYNERGY_STEP: 0.20,           // 枠シナジー = 1 + 0.20 * (枠数 - 1)
-    MAX_MULT: 15.0                     // BURST倍率の上限
+    MAX_MULT: 10.0                     // BURST倍率の上限
   },
 
   // ステージ制限時間（5分カウントダウン ➔ 残り1秒につき素点+1%［最大×2.00］／0:00超過で毎フレーム減点）
@@ -37,8 +37,8 @@ window.ScoreTable = {
     WARN_RED_FRAMES: 60 * 30,              // 残り30秒以下で赤点滅
     TIME_BONUS_PCT_PER_SEC: 1,             // クリア時の残り1秒あたり +1% (+0.01倍)
     TIME_BONUS_MAX_PCT: 100,               // 残り時間倍率ボーナス上限 +100% (最大 ×2.00 で頭打ち)
-    OVERTIME_DRAIN_BASE_PER_FRAME: 83,     // 超過時の基礎減点/f（×10で初期 約830pts/f ≒ 5万pts/秒）
-    OVERTIME_DRAIN_ACCEL_PER_SEC: 27,      // 超過1秒ごとの減点加速/f（基礎点）
+    OVERTIME_DRAIN_BASE_PER_FRAME: 500,    // 超過時の基礎減点/f（初期 約500pts/f ≒ 3万pts/秒）
+    OVERTIME_DRAIN_ACCEL_PER_SEC: 180,     // 超過1秒ごとの減点加速/f
     OVERTIME_DRAIN_RATIO_PER_FRAME: 0.00025 // 現在スコア比例の毎フレーム減点（約1.5%/秒）
   },
 
@@ -49,21 +49,21 @@ window.ScoreTable = {
     BLUSH_CAPSULE_MAX_DROPS: 6             // 赤面オーバーフロー系のカプセル放出上限（各ステージ）
   },
 
-  // 倍率を通さない固定ボーナス・ペナルティ（基礎点）
+  // 倍率を通さない固定ボーナス・ペナルティ（SCORE_SCALE=1 実スコア基準）
   bonus: {
-    CLEAR_PER_STAGE: 50000,            // ステージクリア: × ステージ番号
-    NO_MISS_PER_STAGE: 100000,         // ステージノーミス: × ステージ番号
-    PERFECT_ENDING: 200000,            // 全ステージノーミスでエンディング到達
-    PRACTICE_START: 50000,             // 練習モード開始時の持ち点
-    MISS_PENALTY_MIN_PER_STAGE: 30000, // ミス時の最低減点: × ステージ番号
+    CLEAR_PER_STAGE: 1000000,          // ステージクリア: 100万 × ステージ番号（1面100万〜5面500万）
+    NO_MISS_PER_STAGE: 1200000,        // ステージノーミス: 120万 × ステージ番号（1面120万〜5面600万）
+    PERFECT_ENDING: 5000000,           // 全ステージノーミスでエンディング到達（+500万）
+    PRACTICE_START: 500000,            // 練習モード開始時の持ち点（50万）
+    MISS_PENALTY_MIN_PER_STAGE: 300000,// ミス時の最低減点: 30万 × ステージ番号
     MISS_PENALTY_RATIO: 0.35,          // ミス時の減点率（現在スコアに対する割合）
-    FLIPPER_WHIFF_PENALTY: 100,        // フリッパー空振り
-    NUDGE_PENALTY: 2000                // 台揺らし
+    FLIPPER_WHIFF_PENALTY: 300,        // フリッパー空振り
+    NUDGE_PENALTY: 5000                // 台揺らし
   },
 
   // レリック強化値
   multiplier: {
-    RADAR_ADD_MULT: 0.50,              // レリック「ウサミミ・レーダー」1個あたりの恒久倍率加算
+    RADAR_ADD_MULT: 0.25,              // レリック「ウサミミ・レーダー」1個あたりの恒久倍率加算
     SPRING_ADD_POWER: 0.15             // レリック「電磁スプリング」1個あたりの打撃力加算（+15%）
   },
 
@@ -85,29 +85,29 @@ window.ScoreTable = {
     TORSO_PLATE_HIT: 1500,             // 胸部プレートヒット
     TORSO_RICOCHET: 400,               // 胸部プレート跳弾
     ALL_ARMOR_PURGE: 40000,            // 全3部位装甲パージ達成ボーナス
-    BUST_IMPULSE: 600,                 // バスト揺れ基礎加点（impulseBust）
-    BUST_SOFT_NORMAL: 2500,            // パージ後バストヒット（通常）
-    BUST_SOFT_FEVER: 6000,             // パージ後バストヒット（Fever中）
+    BUST_IMPULSE: 500,                 // バスト揺れ基礎加点（デバッグ/補助用）
+    BUST_SOFT_NORMAL: 1800,            // パージ後バストヒット（通常）
+    BUST_SOFT_FEVER: 3200,             // パージ後バストヒット（Fever中）
     DRONE_HIT: 2000,                   // 護衛ドローンヒット
     DRONE_DESTROY: 6000,               // 護衛ドローン撃破
-    BASE_MULT_DRONE: 0.25,             // ドローン撃破時の恒久倍率加算
-    DRONE_EX_BUMP: 2500,               // 撃破後ドローンバンパー
+    BASE_MULT_DRONE: 0.10,             // ドローン撃破時の恒久倍率加算
+    DRONE_EX_BUMP: 1000,               // 撃破後ドローンバンパー
     EAR_SKILL_SHOT: 25000,             // 垂れ耳スキルショット
-    EAR_DAMP: 2000,                    // 垂れ耳クッション通常ヒット
+    EAR_DAMP: 1000,                    // 垂れ耳クッション通常ヒット
     ARM_SHIELDED: 500,                 // シールド中の腕装甲ヒット
     ARM_HIT: 2000,                     // 腕装甲ヒット
     ARM_PURGE: 12000,                  // 腕装甲パージ
-    ARM_EX_SPARK: 5000,                // 破壊後の腕バンパー
+    ARM_EX_SPARK: 1200,                // 破壊後の腕バンパー
     HIP_HIT: 2500,                     // 腰ユニットヒット
     HIP_OVERHEAT: 8000,                // 腰ユニット破壊
-    BASE_MULT_HIP: 0.5,                // 腰ユニット破壊時の恒久倍率加算
-    HIP_SPARK: 3000,                   // 破壊後の腰バンパー
-    GRAV_RESIDUE: 1500,                // 冷却中のGRAV CORE接触
-    GRAV_TRAP_PER_CHARGE: 5000,        // GRAV COREチャージ（×charge）
-    GRAV_OVERLOAD: 30000,              // GRAVITY OVERLOAD達成
+    BASE_MULT_HIP: 0.15,               // 腰ユニット破壊時の恒久倍率加算
+    HIP_SPARK: 1200,                   // 破壊後の腰バンパー
+    GRAV_RESIDUE: 800,                 // 冷却中のGRAV CORE接触
+    GRAV_TRAP_PER_CHARGE: 3000,        // GRAV COREチャージ（×charge）
+    GRAV_OVERLOAD: 18000,              // GRAVITY OVERLOAD達成
     CORE_HIT: 8000,                    // Phase 3 コアヒット
     CORE_JACKPOT: 500,                 // 両耳解除時の早期コアジャックポット
-    CORE_SHIELDED: 1500                // シールド中のコアヒット
+    CORE_SHIELDED: 1000                // シールド中のコアヒット
   },
 
   // Stage 2: 疾風紫電セルティ
@@ -162,7 +162,7 @@ window.ScoreTable = {
     BIT_DESTROY: 22000,                // 浮遊ビット撃破
     HAND_OPEN_BOUNCE: 2800,            // 通常時の両手バウンス
     HIP_PORT_HIT: 3600,                // 腰ポートヒット
-    BASE_MULT_HIP_PORT: 0.3,           // 腰ポート破壊時の恒久倍率加算
+    BASE_MULT_HIP_PORT: 0.15,          // 腰ポート破壊時の恒久倍率加算
     HIP_PORT_OVERLOAD: 20000,          // 腰ポート破壊
     HIP_PORT_SPARK: 4200,              // 破壊後の腰ポートバンパー
     RIBBON_BOUNCE: 2800,               // ガーターリボン（腰ポート破壊前）

@@ -195,9 +195,11 @@ window.Stage1 = {
     UI.setText("bossFaceStatus", faceMap[state.boss.expression] || t("stage1.face.smile"));
   },
 
-  impulseBust(state, which, vxImpact, vyImpact) {
+  impulseBust(state, which, vxImpact, vyImpact, opts = null) {
     const b = which === "L" ? state.boss.bustL : state.boss.bustR;
-    if (window.sfx) window.sfx.softPuru();
+    const visualOnly = !!(opts && opts.visualOnly);
+    const fromDirectHit = !!(opts && opts.fromDirectHit);
+    if (!fromDirectHit && window.sfx) window.sfx.softPuru();
     b.vx += vxImpact * 1.35;
     b.vy += vyImpact * 1.35;
     b.flash = 16;
@@ -205,18 +207,22 @@ window.Stage1 = {
     const other = which === "L" ? state.boss.bustR : state.boss.bustL;
     other.vx -= vxImpact * 0.45;
     other.vy += vyImpact * 0.45;
+    state.boss.hairSpring.vx += vxImpact * 0.55;
+    state.boss.hairSpring.vy += vyImpact * 0.55;
+
+    if (visualOnly) return;
 
     state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
     state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 35);
     state.boss.expression = "blush";
     state.boss.expressionTimer = 54;
     state.boss.talkTimer = 36;
-    state.boss.hairSpring.vx += vxImpact * 0.55;
-    state.boss.hairSpring.vy += vyImpact * 0.55;
 
-    Systems.addFever(state, 12);
     Particles.add(state, b.x, b.y, "#ff66b2", 8, 2.8);
-    Systems.addScore(state, ScoreTable.stage1.BUST_IMPULSE, b.x, b.y - 18, t("stage1.softBounce"));
+    if (!fromDirectHit) {
+      Systems.addFever(state, 8);
+      Systems.addScore(state, ScoreTable.stage1.BUST_IMPULSE, b.x, b.y - 18, t("stage1.softBounce"));
+    }
 
     // EMP Counter at 100% Blush
     if (state.boss.blushGauge >= 100) {

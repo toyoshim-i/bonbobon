@@ -91,7 +91,7 @@ I18N.register("ja", {
   "clear.lilithQuote": "「くっ……こんな整備不良の機体じゃなければ……！<br>覚えてなさいよっ！」",
   "clear.relicTitle": "⚙️ 鹵獲パーツ選択 (次ステージ持越)",
   "clear.relicRadarName": "ウサミミ・レーダー",
-  "clear.relicRadarDesc": "恒久スコア倍率 +0.5",
+  "clear.relicRadarDesc": "恒久スコア倍率 +0.25",
   "clear.relicSpringName": "電磁スプリング",
   "clear.relicSpringDesc": "フリッパー反発力+15%＆弾速UP",
   "clear.relicDroneName": "支援ドローン",

@@ -91,7 +91,7 @@ I18N.register("en", {
   "clear.lilithQuote": "\"Tch... If only this unit wasn't poorly maintained...!<br>You'll pay for this!\"",
   "clear.relicTitle": "⚙️ CAPTURED RELIC (CARRY OVER)",
   "clear.relicRadarName": "Bunny-Ear Radar",
-  "clear.relicRadarDesc": "Permanent Score Mult +0.5",
+  "clear.relicRadarDesc": "Permanent Score Mult +0.25",
   "clear.relicSpringName": "EM Spring",
   "clear.relicSpringDesc": "Flipper Power +15% & Faster Ball",
   "clear.relicDroneName": "Support Drone",

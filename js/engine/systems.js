@@ -7,7 +7,7 @@ window.Systems = {
   // ※スコア関連の値は js/engine/score_table.js（ScoreTable）で一元管理する。
   BALANCE: {
     FEVER_DURATION_FRAMES: 60 * 18,
-    FEVER_MULT: 5.0,
+    FEVER_MULT: 2.5,
     FEVER_TARGET_BALLS: 3,
     BURST_DURATION_FRAMES: 60 * 10,
     CAPSULE_LIFE_FRAMES: 960,
@@ -110,7 +110,9 @@ window.Systems = {
 
   addScore(state, basePts, x, y, label = "", opts = null) {
     const stallScale = (opts && opts.exemptDecay) ? 1.0 : this.getAntiStallScale(state);
-    const totalMult = state.baseMultiplier * state.burstMultiplier * state.fever.mult;
+    // FEVER と BURST の同時発動時は乗算爆発を防ぎつつ重ね掛けの旨味を残す加算合成: 1 + (fever - 1) + (burst - 1)
+    const buffMult = 1 + (state.fever.mult - 1) + (state.burstMultiplier - 1);
+    const totalMult = state.baseMultiplier * buffMult;
     const pts = Math.round(basePts * (window.ScoreTable.SCORE_SCALE || 1) * totalMult * stallScale);
     state.score = this.capScore((state.score || 0) + pts);
     state.stageEarnedScore = Math.min(state.score, this.capScore((state.stageEarnedScore || 0) + pts));

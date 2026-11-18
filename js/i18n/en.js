@@ -79,7 +79,8 @@ I18N.register("en", {
 
   // Clear Modal
   "clear.defeatStatus": "DISABLED / DEFEATED",
-  "clear.tallyFormulaLabel": "STAGE SCORE × TIME MULT (+1%/s, MAX ×2.00)",
+  "clear.tallyFormulaLabel": "+1%/s, MAX ×2.00",
+  "clear.tallyBaseLabel": "BASE × TIME",
   "clear.tallyStageTotal": "STAGE SCORE",
   "clear.tallyClearBonus": "CLEAR BONUS",
   "clear.tallyNoMissBonus": "👑 NO-MISS BONUS",
@@ -120,7 +121,9 @@ I18N.register("en", {
   "ending.totalMissesPrefix": "TOTAL MISSES:",
   "ending.totalMissesSuffix": "",
   "ending.register": "REGISTER",
+  "ending.registerBtn": "📝 REGISTER SCORE",
   "ending.registered": "REGISTERED ✔",
+  "ending.noMissBanner": "👑 NO-MISS PERFECT ADMIRAL!! +5,000,000 PTS BONUS!",
   "ending.toResultsBtn": "🏆 FINAL RESULTS & RANKING ▶",
   "ending.returnTitleBtn": "🏠 RETURN TO TITLE",
 

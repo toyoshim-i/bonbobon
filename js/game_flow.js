@@ -3,14 +3,14 @@
 // =========================================================================
 
 window.GameFlow = {
-  // v2: SCORE_SCALE(×10) 導入に伴いスコア桁が変わったため保存キーを更新
-  highScoresKey: "bonbobon_highscores_v2",
+  // v3: SCORE_SCALE=1 + クリア時間倍率・100万単位クリアボーナス調整後の保存キー
+  highScoresKey: "bonbobon_highscores_v3",
 
   defaultHighScores: [
-    { name: "M.O.T.H.E.R.", score: 600000000, rank: "SSS", date: "2098-11-16" },
-    { name: "ELLE&NOEL",   score: 180000000, rank: "SS",  date: "2098-11-16" },
-    { name: "KASUMI",      score: 75000000,  rank: "S",   date: "2098-11-16" },
-    { name: "NOAH",        score: 38000000,  rank: "A",   date: "2098-11-16" },
+    { name: "M.O.T.H.E.R.", score: 300000000, rank: "SSS", date: "2098-11-16" },
+    { name: "ELLE&NOEL",   score: 140000000, rank: "SS",  date: "2098-11-16" },
+    { name: "KASUMI",      score: 70000000,  rank: "S",   date: "2098-11-16" },
+    { name: "NOAH",        score: 36000000,  rank: "A",   date: "2098-11-16" },
     { name: "LILITH",      score: 15000000,  rank: "B",   date: "2098-11-16" }
   ],
 
@@ -172,20 +172,26 @@ window.GameFlow = {
       });
     }
 
-    // Dedicated Ranking Modal Close Buttons
-    const btnRankingClose = document.getElementById("btnRankingClose");
-    if (btnRankingClose) {
-      btnRankingClose.addEventListener("click", () => this.closeRankingModal());
-    }
-    const btnRankingBack = document.getElementById("btnRankingBack");
-    if (btnRankingBack) {
-      btnRankingBack.addEventListener("click", () => this.closeRankingModal());
+    // Dedicated Ranking Bottom Close Deck Button
+    const btnBottomRankingClose = document.getElementById("btnBottomRankingClose");
+    if (btnBottomRankingClose) {
+      btnBottomRankingClose.addEventListener("click", () => {
+        if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+        this.closeRankingModal();
+      });
     }
 
-    // Attract Modal Tap / Click -> Return to Title
+    // Attract Modal Tap / Click or Bottom Full-Width Button -> Return to Title
     const attractModal = document.getElementById("attractModal");
     if (attractModal) {
       attractModal.addEventListener("click", () => {
+        this.stopAttractDemo();
+      });
+    }
+    const btnBottomAttractTitle = document.getElementById("btnBottomAttractTitle");
+    if (btnBottomAttractTitle) {
+      btnBottomAttractTitle.addEventListener("click", () => {
+        if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
         this.stopAttractDemo();
       });
     }
@@ -207,29 +213,11 @@ window.GameFlow = {
       });
     }
 
-    // Game Over Buttons
-    const btnGoRetry = document.getElementById("btnGameOverRetry");
-    if (btnGoRetry) {
-      btnGoRetry.addEventListener("click", () => {
-        this.hideAllModals();
-        if (window.GameEngine) GameEngine.startArcadeCampaign();
-      });
-    }
-
-    const btnGoPracRetry = document.getElementById("btnGameOverPracticeRetry");
-    if (btnGoPracRetry) {
-      btnGoPracRetry.addEventListener("click", () => {
-        this.hideAllModals();
-        if (window.GameEngine) {
-          const sIdx = (GameEngine.state && GameEngine.state.stageIndex) || 1;
-          GameEngine.startPracticeStage(sIdx);
-        }
-      });
-    }
-
-    const btnGoTitle = document.getElementById("btnGameOverTitle");
-    if (btnGoTitle) {
-      btnGoTitle.addEventListener("click", () => {
+    // Game Over Bottom Full-Width Return to Title Button
+    const btnBottomGameOverTitle = document.getElementById("btnBottomGameOverTitle");
+    if (btnBottomGameOverTitle) {
+      btnBottomGameOverTitle.addEventListener("click", () => {
+        if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
         this.showTitle();
       });
     }
@@ -243,7 +231,12 @@ window.GameFlow = {
         } else if (this.ending.act === 2) {
           this.showEndingAct3();
         } else if (this.ending.act === 3) {
-          this.showTitle();
+          if (!this.ending.registered) {
+            this.registerEndingScore();
+          } else {
+            if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+            this.showTitle();
+          }
         }
       });
     }
@@ -255,16 +248,9 @@ window.GameFlow = {
       });
     }
 
-    const btnEndingRegister = document.getElementById("btnEndingRegister");
-    if (btnEndingRegister) {
-      btnEndingRegister.addEventListener("click", () => {
-        this.registerEndingScore();
-      });
-    }
-
     // Global Key Listener for Title / Ending (Space / Enter)
     window.addEventListener("keydown", (e) => {
-      if (e.repeat) return;
+      if (e.repeat || e.defaultPrevented) return;
       this.resetIdleTimer();
       const titleModal = document.getElementById("titleModal");
       const isTitleVisible = titleModal && !titleModal.classList.contains("hidden");
@@ -424,6 +410,9 @@ window.GameFlow = {
     if (this.attract.active) return;
     this.attract.active = true;
     this.attract.frame = 0;
+    if (window.UI && window.GameEngine && GameEngine.state) {
+      UI.updateScreenMode(GameEngine.state);
+    }
 
     const titleModal = document.getElementById("titleModal");
     const attractModal = document.getElementById("attractModal");
@@ -464,6 +453,9 @@ window.GameFlow = {
     this.attract.active = false;
     cancelAnimationFrame(this.attract.rafId);
     this.idleFrames = 0;
+    if (window.UI && window.GameEngine && GameEngine.state) {
+      UI.updateScreenMode(GameEngine.state);
+    }
 
     const titleModal = document.getElementById("titleModal");
     const attractModal = document.getElementById("attractModal");
@@ -714,13 +706,21 @@ window.GameFlow = {
     const modal = document.getElementById("rankingModal");
     if (modal) {
       this.renderHighScoresTable("rankingHighScoresTable");
-      if (window.UI && UI.openModal) UI.openModal(modal);
+      if (window.UI) {
+        UI.isRankingOpen = true;
+        if (window.GameEngine && GameEngine.state) UI.updateScreenMode(GameEngine.state);
+        if (UI.openModal) UI.openModal(modal);
+      }
     }
   },
 
   closeRankingModal() {
     this.resetIdleTimer();
-    if (window.UI && UI.closeModal) UI.closeModal("rankingModal");
+    if (window.UI) {
+      UI.isRankingOpen = false;
+      if (window.GameEngine && GameEngine.state) UI.updateScreenMode(GameEngine.state);
+      if (UI.closeModal) UI.closeModal("rankingModal");
+    }
   },
 
   renderHighScoresTable(tableId, highlightIdx = -1) {
@@ -776,16 +776,10 @@ window.GameFlow = {
     const missesEl = document.getElementById("gameOverMisses");
     if (missesEl) missesEl.textContent = String(state.totalMisses || 0);
 
-    const btnPracRetry = document.getElementById("btnGameOverPracticeRetry");
-    if (btnPracRetry) {
-      if (state.gameMode === "practice") {
-        btnPracRetry.classList.remove("hidden");
-      } else {
-        btnPracRetry.classList.add("hidden");
-      }
+    if (window.UI) {
+      UI.updateScreenMode(state);
+      if (UI.openModal) UI.openModal(modal);
     }
-
-    if (window.UI && UI.openModal) UI.openModal(modal);
   },
 
   // -------------------------------------------------------------------------
@@ -1164,6 +1158,8 @@ window.GameFlow = {
       btn.className = `${base} bg-[#125830] hover:bg-[#1f8f4f] text-[#34ff8a] font-mono text-sm border-2 border-[#34ff8a] shadow-[0_0_12px_rgba(52,255,138,0.3)]`;
     } else if (variant === "launch") {
       btn.className = `${base} bg-gradient-to-r from-[#ff1493] via-[#00f5e8] to-[#e6ff00] text-black text-sm shadow-lg hover:brightness-110`;
+    } else if (variant === "register") {
+      btn.className = `${base} bg-gradient-to-r from-[#00f5d4] via-[#34ff8a] to-[#e6ff00] text-black text-sm shadow-[0_0_14px_rgba(0,245,212,0.45)] hover:brightness-110`;
     } else {
       btn.className = `${base} bg-gradient-to-r from-[#ff1493] to-[#7928ca] text-white text-sm shadow-lg hover:brightness-110`;
     }
@@ -1257,7 +1253,7 @@ window.GameFlow = {
     if (act2Box) act2Box.classList.add("hidden");
     if (act3Box) act3Box.classList.remove("hidden");
 
-    this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
+    this.updateEndingBottomButton(t("ending.registerBtn"), "register");
 
     const state = (window.GameEngine && GameEngine.state) || {};
     const finalScore = state.score || 0;
@@ -1310,12 +1306,6 @@ window.GameFlow = {
       this.ending.callsign = "ADMIRAL";
     }
     const kb = document.getElementById("endingArcadeKeyboard");
-    const regBtn = document.getElementById("btnEndingRegister");
-    if (regBtn) {
-      regBtn.disabled = false;
-      regBtn.textContent = t("ending.register");
-      regBtn.className = "px-3 py-1 rounded bg-[#00f5d4] hover:bg-[#00d0b4] text-black text-[10px] font-black cursor-pointer transition shrink-0";
-    }
     if (kb) {
       kb.classList.remove("hidden");
       if (!kb.dataset.bound) {
@@ -1396,12 +1386,7 @@ window.GameFlow = {
     const kb = document.getElementById("endingArcadeKeyboard");
     if (kb) kb.classList.add("hidden");
 
-    const regBtn = document.getElementById("btnEndingRegister");
-    if (regBtn) {
-      regBtn.disabled = true;
-      regBtn.textContent = t("ending.registered");
-      regBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-400 text-[9.5px] font-bold cursor-default shrink-0";
-    }
+    this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
     if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
   },
 
@@ -1434,10 +1419,10 @@ window.GameFlow = {
         }
         this.updateEndingBottomButton(t("ending.toResultsBtn"), "launch");
       } else if (this.ending.act === 3) {
-        this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
-        const regBtn = document.getElementById("btnEndingRegister");
-        if (regBtn) {
-          regBtn.textContent = this.ending.registered ? t("ending.registered") : t("ending.register");
+        if (this.ending.registered) {
+          this.updateEndingBottomButton(t("ending.returnTitleBtn"), "title");
+        } else {
+          this.updateEndingBottomButton(t("ending.registerBtn"), "register");
         }
       }
     }
@@ -1582,6 +1567,8 @@ window.GameFlow = {
     cancelAnimationFrame(this.ending.rafId);
     if (window.UI) {
       UI.isMenuOpen = false;
+      UI.isRankingOpen = false;
+      UI.isStage5ClearOpen = false;
       if (window.GameEngine && GameEngine.state) {
         UI.updateScreenMode(GameEngine.state);
       }

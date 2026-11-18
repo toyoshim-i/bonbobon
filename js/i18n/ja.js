@@ -79,7 +79,8 @@ I18N.register("ja", {
 
   // Clear Modal
   "clear.defeatStatus": "大破・戦闘不能",
-  "clear.tallyFormulaLabel": "ステージ素点 × 残りタイム倍率 (+1%/秒・最大×2.00)",
+  "clear.tallyFormulaLabel": "素点 × 残りタイム (+1%/秒・最大×2.00)",
+  "clear.tallyBaseLabel": "素点 × TIME",
   "clear.tallyStageTotal": "STAGE SCORE",
   "clear.tallyClearBonus": "CLEAR BONUS",
   "clear.tallyNoMissBonus": "👑 NO-MISS BONUS",
@@ -120,7 +121,9 @@ I18N.register("ja", {
   "ending.totalMissesPrefix": "総ミス回数:",
   "ending.totalMissesSuffix": "回",
   "ending.register": "登録",
+  "ending.registerBtn": "📝 スコアを登録 (REGISTER)",
   "ending.registered": "登録完了 ✔",
+  "ending.noMissBanner": "👑 NO-MISS PERFECT ADMIRAL!! +5,000,000 PTS BONUS!",
   "ending.toResultsBtn": "🏆 最終戦果＆ランキング登録へ ▶",
   "ending.returnTitleBtn": "🏠 タイトル画面へ帰還 (RETURN TO TITLE)",
 

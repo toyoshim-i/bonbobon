@@ -102,16 +102,24 @@ window.UI = {
   },
 
   isMenuOpen: false,
+  isRankingOpen: false,
+  isStage5ClearOpen: false,
 
   updateScreenMode(state) {
     const isTitle = !!(state && state.inTitle);
     const isEnding = !!(state && state.inEnding);
+    const isGameOver = !!(state && state.gameOver);
+    const isAttract = !!(window.GameFlow && GameFlow.attract && GameFlow.attract.active);
     const isFullscreenMode = isTitle || isEnding;
     const hudBar = this.el("inGameHudBar");
     const buffBar = this.el("inGameBuffBar");
     const titleControls = this.el("titleControlsBar");
     const gameControls = this.el("gameControlsBar");
     const menuControls = this.el("menuControlsBar");
+    const rankingControls = this.el("rankingControlsBar");
+    const gameOverControls = this.el("gameOverControlsBar");
+    const attractControls = this.el("attractControlsBar");
+    const clearEndingControls = this.el("clearEndingControlsBar");
     const endingControls = this.el("endingControlsBar");
     const playfieldFrame = this.el("playfieldFrame");
     const objectivePill = this.el("hudObjectivePill");
@@ -144,65 +152,48 @@ window.UI = {
       else buffBar.classList.remove("hidden");
     }
 
-    // Bottom Controls Deck Switcher:
-    // When Settings Modal is open, transform bottom bar into full-width CLOSE SETTINGS deck!
-    if (this.isMenuOpen) {
-      if (menuControls) {
-        menuControls.classList.remove("hidden");
-        menuControls.classList.add("block");
-      }
-      if (endingControls) {
-        endingControls.classList.add("hidden");
-        endingControls.classList.remove("block");
-      }
-      if (titleControls) {
-        titleControls.classList.add("hidden");
-        titleControls.classList.remove("grid");
-      }
-      if (gameControls) {
-        gameControls.classList.add("hidden");
-        gameControls.classList.remove("grid");
-      }
-    } else {
-      if (menuControls) {
-        menuControls.classList.add("hidden");
-        menuControls.classList.remove("block");
-      }
-      if (endingControls) {
-        if (isEnding) {
-          endingControls.classList.remove("hidden");
-          endingControls.classList.add("block");
-        } else {
-          endingControls.classList.add("hidden");
-          endingControls.classList.remove("block");
-        }
-      }
-      if (titleControls) {
-        if (isTitle && !isEnding) {
-          titleControls.classList.remove("hidden");
-          titleControls.classList.add("grid");
-        } else {
-          titleControls.classList.add("hidden");
-          titleControls.classList.remove("grid");
-        }
-      }
-      if (gameControls) {
-        if (isFullscreenMode) {
-          gameControls.classList.add("hidden");
-          gameControls.classList.remove("grid");
-        } else {
-          gameControls.classList.remove("hidden");
-          gameControls.classList.add("grid");
-        }
-      }
-    }
+    // Bottom Controls Deck Switcher (mutually exclusive 4-col / full-span decks)
+    const activeDeck = this.isMenuOpen
+      ? "menu"
+      : (this.isRankingOpen
+        ? "ranking"
+        : (isGameOver
+          ? "gameover"
+          : (isAttract
+            ? "attract"
+            : (this.isStage5ClearOpen
+              ? "clearEnding"
+              : (isEnding
+                ? "ending"
+                : (isTitle ? "title" : "game"))))));
+
+    const toggleBlock = (el, on) => {
+      if (!el) return;
+      el.classList.toggle("hidden", !on);
+      el.classList.toggle("block", on);
+    };
+    const toggleGrid = (el, on) => {
+      if (!el) return;
+      el.classList.toggle("hidden", !on);
+      el.classList.toggle("grid", on);
+    };
+
+    toggleBlock(menuControls, activeDeck === "menu");
+    toggleBlock(rankingControls, activeDeck === "ranking");
+    toggleBlock(gameOverControls, activeDeck === "gameover");
+    toggleBlock(attractControls, activeDeck === "attract");
+    toggleBlock(clearEndingControls, activeDeck === "clearEnding");
+    toggleBlock(endingControls, activeDeck === "ending");
+    toggleGrid(titleControls, activeDeck === "title");
+    toggleGrid(gameControls, activeDeck === "game");
   },
 
   updatePlungerHint(state) {
     const pBtn = this.el("btnPlunger");
     const pHint = this.el("plungerBtnHint");
     if (!pBtn || !pHint) return;
-    if (state.plunger.waitingForLaunch) {
+    const hasBallInLane = !!(state.balls && state.balls.some(b => (b.inShooterLane || b.x >= 380) && b.y > 520));
+    if (hasBallInLane || state.plunger.pulling) {
       if (pBtn._lastWaiting !== true) {
         pBtn._lastWaiting = true;
         pBtn.classList.remove("opacity-40", "grayscale");
@@ -535,6 +526,7 @@ window.UI = {
         e.preventDefault();
         const menuModal = document.getElementById("menuModal");
         const rankingModal = document.getElementById("rankingModal");
+        const gameOverModal = document.getElementById("gameOverModal");
         if (window.GameFlow && window.GameFlow.attract && window.GameFlow.attract.active) {
           window.GameFlow.stopAttractDemo();
         } else if (menuModal && !menuModal.classList.contains("hidden")) {
@@ -542,6 +534,10 @@ window.UI = {
         } else if (rankingModal && !rankingModal.classList.contains("hidden")) {
           if (window.GameFlow && window.GameFlow.closeRankingModal) {
             window.GameFlow.closeRankingModal();
+          }
+        } else if (gameOverModal && !gameOverModal.classList.contains("hidden")) {
+          if (window.GameFlow && window.GameFlow.showTitle) {
+            window.GameFlow.showTitle();
           }
         } else {
           releaseAllHeldKeys();
@@ -552,21 +548,63 @@ window.UI = {
 
       if (e.repeat) return;
 
-      // Dynamic Z / X / C / V mapping for non-gameplay bottom decks
+      // Dynamic Z / X / C / V / Space / Enter mapping for non-gameplay bottom decks
       if (isShown("menuControlsBar")) {
-        if (["KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV", "Space", "Enter"].includes(e.code)) {
           e.preventDefault();
           document.getElementById("btnBottomMenuClose")?.click();
         }
         return;
       }
 
-      if (isShown("rankingModal") || isShown("gameOverModal")) {
+      if (isShown("rankingControlsBar") || isShown("rankingModal")) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV", "Space", "Enter"].includes(e.code)) {
+          e.preventDefault();
+          document.getElementById("btnBottomRankingClose")?.click();
+        }
+        return;
+      }
+
+      if (isShown("gameOverControlsBar") || isShown("gameOverModal")) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV", "Space", "Enter"].includes(e.code)) {
+          e.preventDefault();
+          document.getElementById("btnBottomGameOverTitle")?.click();
+        }
+        return;
+      }
+
+      if (isShown("attractControlsBar") || (window.GameFlow && GameFlow.attract && GameFlow.attract.active)) {
+        if (["KeyZ", "KeyX", "KeyC", "KeyV", "Space", "Enter"].includes(e.code)) {
+          e.preventDefault();
+          document.getElementById("btnBottomAttractTitle")?.click();
+        }
         return;
       }
 
       if (isShown("endingControlsBar")) {
-        if (["KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+        const gf = window.GameFlow;
+        const isUnregisteredAct3 = !!(gf && gf.ending && gf.ending.act === 3 && !gf.ending.registered);
+        if (isUnregisteredAct3) {
+          if (e.code === "Enter") {
+            e.preventDefault();
+            document.getElementById("btnBottomEndingAction")?.click();
+          } else if (e.code === "Backspace") {
+            e.preventDefault();
+            gf.inputCallsignKey("BS");
+          } else if (e.code === "Space") {
+            e.preventDefault();
+            gf.inputCallsignKey("SPC");
+          } else if (/^Key([A-Z])$/.test(e.code)) {
+            e.preventDefault();
+            gf.inputCallsignKey(e.code.slice(3));
+          } else if (/^Digit([0-9])$/.test(e.code)) {
+            e.preventDefault();
+            gf.inputCallsignKey(e.code.slice(5));
+          } else if (e.code === "Minus") {
+            e.preventDefault();
+            gf.inputCallsignKey("-");
+          }
+        } else if (["KeyZ", "KeyX", "KeyC", "KeyV", "Space", "Enter"].includes(e.code)) {
           e.preventDefault();
           document.getElementById("btnBottomEndingAction")?.click();
         }
@@ -587,13 +625,21 @@ window.UI = {
         return;
       }
 
-      // Stage Clear Tally Skip / Continue via keyboard
-      if (isShown("clearTallyPanel") && isShown("clearModal")) {
-        if (["Space", "Enter", "KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
-          e.preventDefault();
-          this.advanceClearTally();
+      // Stage Clear Tally Skip via keyboard while animating (or advance Stage 5 to Ending once tally is done)
+      if (isShown("clearModal")) {
+        if (this._tallyState && !this._tallyState.done) {
+          if (["Space", "Enter", "KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+            e.preventDefault();
+            this.finishClearTallyImmediately();
+            return;
+          }
+        } else if (isShown("clearEndingControlsBar")) {
+          if (["Space", "Enter", "KeyZ", "KeyX", "KeyC", "KeyV"].includes(e.code)) {
+            e.preventDefault();
+            document.getElementById("btnClearNext")?.click();
+            return;
+          }
         }
-        return;
       }
 
       // Gameplay controls (#gameControlsBar)
@@ -699,9 +745,9 @@ window.UI = {
       const canvasX = (e.clientX - canvasRect.left) * (engine.W / canvasRect.width);
       const canvasY = (e.clientY - canvasRect.top) * (engine.H / canvasRect.height);
 
-      if (engine.state.plunger.waitingForLaunch && canvasX > 370 && canvasY > 440) {
+      if (canvasX > 370 && canvasY > 440) {
         activeTouches.set(e.pointerId, { type: "plunger", startY: canvasY, lastY: canvasY });
-        engine.state.plunger.pulling = true;
+        engine.startPlungerPull();
         return;
       }
 
@@ -1107,25 +1153,18 @@ window.UI = {
 
     const tallyPanel = document.getElementById("clearTallyPanel");
     if (tallyPanel) {
-      tallyPanel.addEventListener("click", (e) => {
-        if (e.target && e.target.closest("#btnTallyContinue")) return;
+      tallyPanel.addEventListener("click", () => {
         if (this._tallyState && !this._tallyState.done) {
           this.finishClearTallyImmediately();
         }
       });
     }
 
-    const btnTallyContinue = document.getElementById("btnTallyContinue");
-    if (btnTallyContinue) {
-      btnTallyContinue.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.advanceClearTally();
-      });
-    }
-
     const nextBtn = document.getElementById("btnClearNext");
     if (nextBtn) {
       nextBtn.addEventListener("click", () => {
+        this._clearTallyTimers();
+        this.isStage5ClearOpen = false;
         this.closeModal(modal);
         if (window.GameFlow && window.GameFlow.startEnding) {
           GameFlow.startEnding(engine.state);
@@ -1135,6 +1174,7 @@ window.UI = {
 
     document.querySelectorAll(".relic-btn").forEach(btn => {
       btn.addEventListener("click", () => {
+        this._clearTallyTimers();
         const chosenRelic = btn.dataset.relic || "radar";
         const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : t("ui.relicPart");
         this.closeModal(modal);
@@ -1261,27 +1301,7 @@ window.UI = {
       }
     }
     this._revealTallyRow("tallyRowGrandTotal", true);
-
-    const hint = document.getElementById("tallySkipHint");
-    if (hint) hint.classList.add("hidden");
-    const btn = document.getElementById("btnTallyContinue");
-    if (btn) btn.classList.remove("hidden");
     if (ts.state) this.updateHUD(ts.state);
-  },
-
-  advanceClearTally() {
-    if (this._tallyState && !this._tallyState.done) {
-      this.finishClearTallyImmediately();
-      return;
-    }
-    if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
-    const tallyPanel = document.getElementById("clearTallyPanel");
-    const dlgPanel = document.getElementById("clearDialoguePanel");
-    if (tallyPanel) tallyPanel.classList.add("hidden");
-    if (dlgPanel) {
-      dlgPanel.classList.remove("hidden");
-      dlgPanel.classList.add("flex");
-    }
   },
 
   presentStageClearModal(state, cfg = {}) {
@@ -1319,15 +1339,7 @@ window.UI = {
     this._lastClearStageIdx = stageIdx;
     this._clearTallyTimers();
 
-    // Reset Step 1 (Tally) vs Step 2 (Dialogue + Relic) visibility
-    const tallyPanel = document.getElementById("clearTallyPanel");
     const dlgPanel = document.getElementById("clearDialoguePanel");
-    if (tallyPanel) tallyPanel.classList.remove("hidden");
-    if (dlgPanel) {
-      dlgPanel.classList.add("hidden");
-      dlgPanel.classList.remove("flex");
-    }
-
     const fmtTime = (sec) => {
       const s = Math.max(0, Math.floor(sec));
       return `⏱${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -1363,10 +1375,6 @@ window.UI = {
         el.classList.remove("flex", "tally-slam");
       }
     });
-    const skipHint = document.getElementById("tallySkipHint");
-    if (skipHint) skipHint.classList.remove("hidden");
-    const btnContinue = document.getElementById("btnTallyContinue");
-    if (btnContinue) btnContinue.classList.add("hidden");
 
     this._tallyState = {
       state,
@@ -1378,17 +1386,6 @@ window.UI = {
       done: false
     };
 
-    // Summary banner on Step 2 (Dialogue panel)
-    const bonusText = document.getElementById("clearBonusText");
-    if (bonusText) {
-      const multTag = `×${targetMult.toFixed(2)}`;
-      if (isNoMiss) {
-        bonusText.innerHTML = `${multTag} (+${timeBonusPts.toLocaleString()}) / 👑+${(clearBonus + noMissBonus).toLocaleString()}`;
-      } else {
-        bonusText.textContent = `${multTag} (+${timeBonusPts.toLocaleString()}) / +${clearBonus.toLocaleString()}`;
-      }
-    }
-
     if (cfg.bossDisplayName) {
       const nameEl = dlgPanel ? dlgPanel.querySelector(".text-\\[\\#ff66b2\\]") : null;
       if (nameEl) nameEl.textContent = cfg.bossDisplayName;
@@ -1399,24 +1396,17 @@ window.UI = {
     }
 
     const relicSection = document.getElementById("relicSection");
-    const endingAction = document.getElementById("clearEndingAction");
     const nextBtn = document.getElementById("btnClearNext");
 
     const isStage5 = stageIdx === 5 || (window.currentStage && window.currentStage.id === "stage5");
+    this.isStage5ClearOpen = !!isStage5;
     if (isStage5) {
       if (relicSection) relicSection.classList.add("hidden");
-      if (endingAction) {
-        endingAction.classList.remove("hidden");
-        endingAction.classList.add("flex");
-      }
       if (nextBtn) nextBtn.innerHTML = t("clear.toEnding");
     } else {
       if (relicSection) relicSection.classList.remove("hidden");
-      if (endingAction) {
-        endingAction.classList.add("hidden");
-        endingAction.classList.remove("flex");
-      }
     }
+    this.updateScreenMode(state);
 
     this.openModal(modal);
 
@@ -1449,8 +1439,6 @@ window.UI = {
       schedule(() => {
         this._revealTallyRow("tallyRowGrandTotal", true);
         if (this._tallyState) this._tallyState.done = true;
-        if (skipHint) skipHint.classList.add("hidden");
-        if (btnContinue) btnContinue.classList.remove("hidden");
         this.updateHUD(state);
       }, 0);
     };

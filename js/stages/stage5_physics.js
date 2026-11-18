@@ -37,7 +37,7 @@ Object.assign(window.Stage5, {
       b.navelBeam.pluckAmp = 0;
     }
 
-    const t = b.animTick;
+    const tick = b.animTick;
 
     // Fusion sequence progression (Cinematic 3-Beat Transformation)
     if (b.fusionSeq && b.fusionSeq.active) {
@@ -104,17 +104,26 @@ Object.assign(window.Stage5, {
         // Beat 3 (frame 161..195) — Odd-Eye Awakening & Release
         if (fs.frame === 161) {
           fs.seraOffsetY = 0;
+          b.subFlippersDeployed = true;
           StageCommon.setExpressionSequence(state, [
             { expr: "shout", frames: 34 },
             { expr: "wink", frames: 30 }
           ]);
           if (window.sfx && window.sfx.exSpark) window.sfx.exSpark();
-          state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 70, speed: 4.5, color: "#ff2ad4", lineWidth: 3.5, alpha: 1.0 });
-          state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 85, speed: 5.0, color: "#00f5e8", lineWidth: 3.5, alpha: 1.0 });
+          if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
+          state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 75, speed: 4.5, color: "#ff2ad4", lineWidth: 3.5, alpha: 1.0 });
+          state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 92, speed: 5.0, color: "#00f5e8", lineWidth: 3.5, alpha: 1.0 });
+          state.shockwaves.push({ x: 25,  y: 392, r: 6, maxR: 54, speed: 4.0, color: "#e6ff00", lineWidth: 3.2, alpha: 1.0 });
+          state.shockwaves.push({ x: 371, y: 392, r: 6, maxR: 54, speed: 4.0, color: "#00f5e8", lineWidth: 3.2, alpha: 1.0 });
+          Particles.add(state, 25,  392, "#e6ff00", 24, 5.5);
+          Particles.add(state, 371, 392, "#00f5e8", 24, 5.5);
+          UI.showCutin(t("stage5.cutin.wingPaddles"), 210);
         }
+        b.subFlipperDeploy = Math.min(1.0, (b.subFlipperDeploy || 0) + 1 / 34);
         if (fs.frame >= 195) {
           fs.active = false;
           fs.whiteout = 0;
+          b.subFlipperDeploy = 1.0;
           state.balls.forEach(ball => {
             if (ball._fusionStasis) {
               ball._fusionStasis = false;
@@ -122,6 +131,11 @@ Object.assign(window.Stage5, {
               ball.vy = -6.8;
             }
           });
+          // 合体開幕を派手にするため、支援マルチボールを1球追加投入！
+          const playBalls = state.balls.filter(ball => !ball.inShooterLane);
+          if (playBalls.length < 2 && window.Systems && Systems.spawnBall) {
+            Systems.spawnBall(state, 198 + (Math.random() - 0.5) * 36, 260, (Math.random() < 0.5 ? -1 : 1) * 4.2, -7.2);
+          }
           UI.updateHUD(state);
         }
       }
@@ -144,18 +158,18 @@ Object.assign(window.Stage5, {
 
       // Independent movement per twin (broken twin immediately enters wide solo flight!)
       if (!b.elleBroken) {
-        b.elle.dx = Math.sin(t * 0.037) * 7.5;
-        b.elle.dy = Math.cos(t * 0.049) * 8.0;
+        b.elle.dx = Math.sin(tick * 0.037) * 7.5;
+        b.elle.dy = Math.cos(tick * 0.049) * 8.0;
       } else {
-        b.elle.dx = Math.sin(t * 0.031) * 28 + 10;
-        b.elle.dy = Math.cos(t * 0.043) * 26 - 12;
+        b.elle.dx = Math.sin(tick * 0.031) * 28 + 10;
+        b.elle.dy = Math.cos(tick * 0.043) * 26 - 12;
       }
       if (!b.noelBroken) {
-        b.noel.dx = Math.cos(t * 0.043) * 8.0;
-        b.noel.dy = Math.sin(t * 0.053) * 8.5;
+        b.noel.dx = Math.cos(tick * 0.043) * 8.0;
+        b.noel.dy = Math.sin(tick * 0.053) * 8.5;
       } else {
-        b.noel.dx = Math.cos(t * 0.036) * 30 - 12;
-        b.noel.dy = Math.sin(t * 0.047) * 32 + 16;
+        b.noel.dx = Math.cos(tick * 0.036) * 30 - 12;
+        b.noel.dy = Math.sin(tick * 0.047) * 32 + 16;
       }
 
       b.haloL.x = b.haloL.homeX + b.elle.dx;
@@ -381,7 +395,7 @@ Object.assign(window.Stage5, {
       if (b.sanctuaryFeathers) {
         b.sanctuaryFeathers.forEach(f => {
           f.y -= f.spd;
-          f.x += Math.sin(t * 0.04 + f.phase) * f.sway * 0.5;
+          f.x += Math.sin(tick * 0.04 + f.phase) * f.sway * 0.5;
           if (f.y < -20) {
             f.y = 670;
             f.x = 20 + Math.random() * 380;
@@ -389,8 +403,12 @@ Object.assign(window.Stage5, {
         });
       }
 
-      // Seraphic Harmony Beam countdown
+      // Seraphic Harmony Beam countdown & Mid-Field Wing-Paddle deploy guarantee
       if (b.harmonyBeamTimer > 0) b.harmonyBeamTimer--;
+      if (!b.subFlippersDeployed) b.subFlippersDeployed = true;
+      if ((b.subFlipperDeploy || 0) < 1.0) {
+        b.subFlipperDeploy = Math.min(1.0, (b.subFlipperDeploy || 0) + 1 / 30);
+      }
 
       // Grand Phase 3 Boss Attack: Rotating Cross-Seraphim Laser & Light-Sword Volley
       const sa = b.seraphAttack;
@@ -424,7 +442,7 @@ Object.assign(window.Stage5, {
           sa.baseAngle += 0.007; // smooth sweeping cross laser
           if (sa.timer <= 0) {
             sa.mode = "idle";
-            sa.timer = 210;
+            sa.timer = 150;
           }
         } else if (sa.mode === "sword_warn") {
           sa.timer--;
@@ -509,6 +527,7 @@ Object.assign(window.Stage5, {
               // Flipper collision / parry
               let parriedNow = false;
               let hitFlipper = false;
+              let hitFlipIsLeft = true;
               for (let fi = 0; fi < flippers.length; fi++) {
                 const f = flippers[fi];
                 const fst = Physics.flipperState[fi];
@@ -517,7 +536,9 @@ Object.assign(window.Stage5, {
                 const cp = Physics.closestPointOnSeg(sw.x, sw.y, f.px, f.py, tipX, tipY);
                 if (Math.hypot(sw.x - cp.x, sw.y - cp.y) < sw.r + 7.0) {
                   hitFlipper = true;
+                  hitFlipIsLeft = !!f.isLeft;
                   fst.swingHit = true;
+                  Physics.flipperState[f.isLeft ? 0 : 1].swingHit = true;
                   const omega = Math.abs(fst.angle - fst.prevAngle) * 60;
                   if (omega > 0.12 || (fst.justPressedTimer || 0) > 0) {
                     parriedNow = true;
@@ -536,10 +557,19 @@ Object.assign(window.Stage5, {
                 Systems.addFever(state, 8);
                 continue;
               } else if (hitFlipper) {
-                state.flipperReverseTimer = Math.max(state.flipperReverseTimer || 0, 180);
-                if (window.sfx && window.sfx.haloReverse) window.sfx.haloReverse();
-                Particles.add(state, sw.x, sw.y, "#ff1493", 16, 4.0);
-                Particles.addPopup(state, 198, 560, "⚔️SWORD IMPACT!!", "#ff1493", 1.2);
+                const pinKey = hitFlipIsLeft ? "flipperPinL" : "flipperPinR";
+                state[pinKey] = Math.max(state[pinKey] || 0, 5);
+                b[hitFlipIsLeft ? "pinStyleL" : "pinStyleR"] = "sword";
+                let shortened = false;
+                if (state.perm && (state.perm.wideFlipper || 0) > 0) {
+                  state.perm.wideFlipper = Math.max(0, state.perm.wideFlipper - 1);
+                  shortened = true;
+                  if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
+                  UI.updateHUD(state);
+                }
+                if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+                Particles.add(state, sw.x, sw.y, "#ffd700", 16, 4.0);
+                Particles.addPopup(state, sw.x, sw.y - 16, shortened ? t("stage5.popup.swordPinShorten") : t("stage5.popup.swordPin"), shortened ? "#ff0055" : "#ffd700", 1.08);
                 sa.swords.splice(si, 1);
                 continue;
               }
@@ -552,7 +582,7 @@ Object.assign(window.Stage5, {
 
           if (sa.swords.length === 0 && sa.timer <= 0) {
             sa.mode = "idle";
-            sa.timer = 210;
+            sa.timer = 150;
           }
         }
       }
@@ -721,6 +751,7 @@ Object.assign(window.Stage5, {
 
         let parriedNow = false;
         let hitFlipper = false;
+        let hitFlipIsLeft = true;
         let cpX = 0, cpY = 0;
         for (let fi = 0; fi < flippers.length; fi++) {
           const f = flippers[fi];
@@ -731,7 +762,9 @@ Object.assign(window.Stage5, {
           const dist = Math.hypot(ring.x - cp.x, ring.y - cp.y);
           if (dist < ring.r + 7.0) {
             hitFlipper = true;
+            hitFlipIsLeft = !!f.isLeft;
             fst.swingHit = true;
+            Physics.flipperState[f.isLeft ? 0 : 1].swingHit = true;
             cpX = cp.x;
             cpY = cp.y;
             const omega = Math.abs(fst.angle - fst.prevAngle) * 60;
@@ -759,11 +792,14 @@ Object.assign(window.Stage5, {
           Systems.addFever(state, 8);
           continue;
         } else if (hitFlipper) {
-          state.flipperReverseTimer = 240; // 4.0 seconds
+          // 拘束リング：他のパドル拘束と同じ連打解除システムに統一（高耐久8回ガチャ解除！）
+          const pinKey = hitFlipIsLeft ? "flipperPinL" : "flipperPinR";
+          state[pinKey] = Math.max(state[pinKey] || 0, 8);
+          b[hitFlipIsLeft ? "pinStyleL" : "pinStyleR"] = "halo";
           if (window.sfx && window.sfx.haloReverse) window.sfx.haloReverse();
           UI.showCutin(t("stage5.cutin.curseRing"), 110);
-          Particles.add(state, cpX, cpY, "#ff1493", 16, 4.0);
-          Particles.addPopup(state, 198, 560, t("stage5.popup.lrReverse"), "#ff1493", 1.2);
+          Particles.add(state, cpX, cpY, "#ff1493", 18, 4.2);
+          Particles.addPopup(state, cpX, cpY - 18, t("stage5.popup.lrReverse"), "#ff2ad4", 1.08);
           ha.rings.splice(i, 1);
           continue;
         }
@@ -783,7 +819,7 @@ Object.assign(window.Stage5, {
     const b = state.boss;
     if (!b || ball.inShooterLane || ball._inNavelTrap || ball._fusionStasis) return;
 
-    const SUBSTEPS = 6;
+    const SUBSTEPS = (window.Physics && Physics.BALANCE.SUBSTEPS) || 8;
 
     // A & B. 3D Wireform Ramp Riding & Gate Entry (active only in Phases 1 & 2 before fusion!)
     if (StageCommon.stepWireRampBall(ball, state, this, substep, SUBSTEPS, {
@@ -794,6 +830,27 @@ Object.assign(window.Stage5, {
       entryScore: ScoreTable.stage5.RAMP_ENTRY
     })) {
       return;
+    }
+
+    // C. Phase 3 中段ウイングパドル用サイドフィードレール（壁沿いに落ちてくる球を中段パドル根本へ滑らかに誘導）
+    if ((b.subFlipperDeploy || 0) > 0.3) {
+      const feedRails = [
+        { x1: 16,  y1: 356, x2: 25,  y2: 392 },
+        { x1: 380, y1: 356, x2: 371, y2: 392 }
+      ];
+      for (let ri = 0; ri < feedRails.length; ri++) {
+        const rl = feedRails[ri];
+        const hit = Physics.checkCapsuleHit(ball, rl.x1, rl.y1, rl.x2, rl.y2, 3.0);
+        if (hit) {
+          ball.x = hit.qx + hit.nx * (hit.minDist + 0.5);
+          ball.y = hit.qy + hit.ny * (hit.minDist + 0.5);
+          const vn = ball.vx * hit.nx + ball.vy * hit.ny;
+          if (vn < 0) {
+            ball.vx -= 1.15 * vn * hit.nx;
+            ball.vy -= 1.15 * vn * hit.ny;
+          }
+        }
+      }
     }
 
     if (substep !== 0) return;

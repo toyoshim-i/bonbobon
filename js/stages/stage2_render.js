@@ -293,8 +293,6 @@ Object.assign(window.Stage2, {
         } else {
           drawGuide(holo.x, holo.y, holo.r, TC.ATTACK, holo.flash, animTick * 0.03, "HOLO CANNON", `HP:${holo.hp}`, { isAttack: true });
         }
-      } else {
-        drawGuide(holo.x, holo.y, holo.r, TC.BROKEN, 0, 0, "HOLO CANNON", "DESTROYED", { isLocked: true });
       }
 
       const endPt = this.getLaserEndPoint(holo, 420, 660);
@@ -444,52 +442,62 @@ Object.assign(window.Stage2, {
       }
     }
 
-    // 3. バウンスポイント：手前の左肩装甲（Phase 1 破壊対象 HP 6）
+    // 3. バウンスポイント：手前の左肩装甲（Phase 1 破壊対象 HP 6、破壊後は射線クリア）
     const shL = state.boss.shoulderL;
-    if (shL) {
-      drawGuide(shL.x, shL.y, shL.r, shL.broken ? TC.BROKEN : TC.ATTACK, shL.flash, animTick * 0.02, "L-SHOULDER", shL.broken ? "PURGED" : `HP:${shL.hp}/6`, { isLocked: shL.broken, isAttack: !shL.broken });
+    if (shL && !shL.broken) {
+      drawGuide(shL.x, shL.y, shL.r, TC.ATTACK, shL.flash, animTick * 0.02, "L-SHOULDER", `HP:${shL.hp}/6`, { isAttack: true });
     }
 
-    // 4. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象 各HP 5）
+    // 4. 腕部関節装甲ターゲット：肘（左右 各HP 5、破壊後は射線クリア）
     const elbL = state.boss.elbowL;
-    if (elbL) {
-      drawGuide(elbL.x, elbL.y, elbL.r, elbL.broken ? TC.BROKEN : TC.ATTACK, elbL.flash, -animTick * 0.02, "L-ARM", elbL.broken ? "DESTROYED" : `HP:${elbL.hp}/5`, { isLocked: elbL.broken, isAttack: !elbL.broken });
+    if (elbL && !elbL.broken) {
+      drawGuide(elbL.x, elbL.y, elbL.r, TC.ATTACK, elbL.flash, -animTick * 0.02, "L-ARM", `HP:${elbL.hp}/5`, { isAttack: true });
     }
     const elbR = state.boss.elbowR;
-    if (elbR) {
-      drawGuide(elbR.x, elbR.y, elbR.r, elbR.broken ? TC.BROKEN : TC.ATTACK, elbR.flash, animTick * 0.02, "R-ARM", elbR.broken ? "DESTROYED" : `HP:${elbR.hp}/5`, { isLocked: elbR.broken, isAttack: !elbR.broken });
+    if (elbR && !elbR.broken) {
+      drawGuide(elbR.x, elbR.y, elbR.r, TC.ATTACK, elbR.flash, animTick * 0.02, "R-ARM", `HP:${elbR.hp}/5`, { isAttack: true });
     }
 
-    // 4.5. 背中ブースターノズル噴射口ターゲット（左右2基：Phase 2 破壊対象 各HP 4）
+    // 4.5. 背中ブースターノズル噴射口ターゲット（左右2基：Phase 2 破壊対象 各HP 4、破壊後は射線クリア）
     const nozL = state.boss.nozzleL;
-    if (nozL) {
-      const colL = nozL.broken ? TC.BROKEN : (state.phase < 2 ? TC.LOCKED : TC.ATTACK);
-      const subL = nozL.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozL.hp}/4`);
-      drawGuide(nozL.x, nozL.y, nozL.r, colL, nozL.flash, animTick * 0.025, "NOZZLE-L", subL, { isLocked: nozL.broken || state.phase < 2, isAttack: !nozL.broken && state.phase >= 2 });
+    if (nozL && !nozL.broken) {
+      const colL = state.phase < 2 ? TC.LOCKED : TC.ATTACK;
+      const subL = state.phase < 2 ? "ARMORED" : `HP:${nozL.hp}/4`;
+      drawGuide(nozL.x, nozL.y, nozL.r, colL, nozL.flash, animTick * 0.025, "NOZZLE-L", subL, { isLocked: state.phase < 2, isAttack: state.phase >= 2 });
     }
     const nozR = state.boss.nozzleR;
-    if (nozR) {
-      const colR = nozR.broken ? TC.BROKEN : (state.phase < 2 ? TC.LOCKED : TC.ATTACK);
-      const subR = nozR.broken ? "OFFLINE" : (state.phase < 2 ? "ARMORED" : `HP:${nozR.hp}/4`);
-      drawGuide(nozR.x, nozR.y, nozR.r, colR, nozR.flash, -animTick * 0.025, "NOZZLE-R", subR, { isLocked: nozR.broken || state.phase < 2, isAttack: !nozR.broken && state.phase >= 2 });
+    if (nozR && !nozR.broken) {
+      const colR = state.phase < 2 ? TC.LOCKED : TC.ATTACK;
+      const subR = state.phase < 2 ? "ARMORED" : `HP:${nozR.hp}/4`;
+      drawGuide(nozR.x, nozR.y, nozR.r, colR, nozR.flash, -animTick * 0.025, "NOZZLE-R", subR, { isLocked: state.phase < 2, isAttack: state.phase >= 2 });
     }
 
     // 5. 胸の先端（JET SENSOR ＆ BUST TARGET：進行必須 × お色気）
     const bTip = state.boss.tipBust;
     if (bTip) {
       if (bTip.broken) {
-        Particles.drawBounceBumperGuide(ctx, animTick, bTip.x, bTip.y, bTip.r, state.fever.active ? TC.FEVER : TC.SEXY, bTip.flash, "♥BUST TIP", "♥PURGED");
+        Particles.drawBounceBumperGuide(ctx, animTick, bTip.x, bTip.y, bTip.r, state.fever.active ? TC.FEVER : TC.SEXY, bTip.flash, "♥BUST TIP", state.phase === 3 ? "⚡CHAIN" : "♥PURGED");
       } else {
         const colB = state.phase < 2 ? TC.LOCKED : TC.ATTACK;
         drawGuide(bTip.x, bTip.y, bTip.r, colB, bTip.flash, animTick * 0.03, "♥BUST TIP", `HP:${bTip.hp}/6`, { innerColor: TC.SEXY, isLocked: state.phase < 2, isAttack: state.phase >= 2 });
       }
     }
 
-    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット HP 12）
+    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット）
     const core = state.boss.core;
     if (core) {
       if (state.phase === 3 && core.unlocked) {
-        drawGuide(core.x, core.y, core.r, TC.ATTACK, core.flash, animTick * 0.045, "★REACTOR CORE★", `HP:${core.hp}/12`, { isCritical: true, innerColor: TC.SCORE });
+        // 磁力吸引フィールドの薄いガイド波紋
+        ctx.save();
+        const pullWave = 1.0 - ((animTick * 0.025) % 1.0);
+        ctx.strokeStyle = `rgba(0, 245, 212, ${(1.0 - pullWave) * 0.45})`;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(core.x, core.y, core.r + pullWave * 56, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        drawGuide(core.x, core.y, core.r, TC.ATTACK, core.flash, animTick * 0.045, "★REACTOR CORE★", `HP:${core.hp}/${core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
       } else if (core.unlocked) {
         drawGuide(core.x, core.y, core.r, TC.SCORE, core.flash, animTick * 0.02, "★CORE UNLOCKED★", "BONUS TARGET");
       }

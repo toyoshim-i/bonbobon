@@ -541,8 +541,9 @@ Object.assign(window.Stage5, {
 
       ctx.save();
 
-      // Scrolling horizontal cross-lines
-      const gridScroll = (t * 0.015) % 1;
+      // Scrolling horizontal cross-lines (Phase 3 fusion accelerates cyber-sanctuary warp speed!)
+      const gridSpeed = state.phase === 3 ? (b.chestArmorBroken ? 0.048 : 0.036) : 0.015;
+      const gridScroll = (t * gridSpeed) % 1;
       ctx.strokeStyle = crossColor;
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -913,17 +914,20 @@ Object.assign(window.Stage5, {
 
         } else {
           // --- Phase 3: Fused Goddess SERAPHIA ---
-          // Beat 2 (frame 70..180) Heavenly God-Rays from above (198, 16)
-          if (b.fusionSeq && b.fusionSeq.active && b.fusionSeq.frame >= 70 && b.fusionSeq.frame <= 180) {
-            const gAlpha = Math.sin(((b.fusionSeq.frame - 70) / 110) * Math.PI) * 0.55;
+          // Heavenly Sanctuary God-Rays (peak during descent, then persistent shimmering beams throughout Phase 3!)
+          const isDescending = !!(b.fusionSeq && b.fusionSeq.active && b.fusionSeq.frame >= 70 && b.fusionSeq.frame <= 180);
+          const gAlpha = isDescending
+            ? Math.sin(((b.fusionSeq.frame - 70) / 110) * Math.PI) * 0.55
+            : (0.14 + 0.06 * Math.sin(t * 0.05) + (b.chestArmorBroken ? 0.07 : 0));
+          if (gAlpha > 0.01) {
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
             const numRays = 14;
             for (let r = 0; r < numRays; r++) {
-              const baseAngle = (r / numRays) * Math.PI * 0.85 + 0.25;
+              const baseAngle = (r / numRays) * Math.PI * 0.85 + 0.25 + Math.sin(t * 0.012) * 0.04;
               const spread = 0.08 + Math.sin(t * 0.05 + r) * 0.02;
               const rLen = 680;
-              ctx.fillStyle = (r % 2 === 0) ? `rgba(255, 230, 100, ${gAlpha})` : `rgba(0, 245, 232, ${gAlpha * 0.75})`;
+              ctx.fillStyle = (r % 2 === 0) ? `rgba(255, 230, 100, ${gAlpha})` : `rgba(0, 245, 232, ${gAlpha * 0.80})`;
               ctx.beginPath();
               ctx.moveTo(198, 16);
               ctx.lineTo(198 + Math.cos(baseAngle - spread) * rLen, 16 + Math.sin(baseAngle - spread) * rLen);
@@ -947,7 +951,7 @@ Object.assign(window.Stage5, {
             ctx.save();
             ctx.translate(198, 224 + seraDy);
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = 0.62;
+            ctx.globalAlpha = b.chestArmorBroken ? 0.85 : 0.75;
 
             // Outer Mandala (Clockwise)
             ctx.save();
@@ -1635,92 +1639,116 @@ Object.assign(window.Stage5, {
       }
     });
 
-    // 4. Crystal-Clear Flipper Reverse Visual Effects ("⇄LR反転")
-    if ((state.flipperReverseTimer || 0) > 0) {
-      const secLeft = (state.flipperReverseTimer / 60).toFixed(1);
-      const flippers = Physics.getFlippers(state);
+    // 4. Phase 3 中段ウイングパドル・サイドポッド＆誘導レール＋統一パドル拘束UI（拘束リング／光剣）
+    if ((b.subFlipperDeploy || 0) > 0.05) {
+      const dep = Math.min(1, b.subFlipperDeploy || 0);
       ctx.save();
-
-      // Spinning Angel Halos over each flipper
-      for (let fi = 0; fi < flippers.length; fi++) {
-        const f = flippers[fi];
-        const fst = Physics.flipperState[fi];
-        const cx = f.px + Math.cos(fst.angle) * (f.len * 0.5);
-        const cy = f.py + Math.sin(fst.angle) * (f.len * 0.5);
-
-        ctx.save();
-        ctx.translate(cx, cy - 14);
-        ctx.rotate(b.animTick * 0.08 + fi * Math.PI);
-        ctx.strokeStyle = (fi === 0) ? "#ff2ad4" : "#00f5e8";
-        ctx.lineWidth = 2.4;
+      ctx.globalAlpha = dep;
+      [
+        { rx1: 16, ry1: 356, px: 25,  py: 392, col: "#ff2ad4", dir: 1 },
+        { rx1: 380, ry1: 356, px: 371, py: 392, col: "#00f5e8", dir: -1 }
+      ].forEach(pod => {
+        // 誘導レール（チェイサー発光）
+        ctx.strokeStyle = pod.col;
+        ctx.lineWidth = 3.2;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 20, 8, -0.15, 0, Math.PI * 2);
+        ctx.moveTo(pod.rx1, pod.ry1);
+        ctx.lineTo(pod.px, pod.py);
         ctx.stroke();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.0;
+
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5, 5]);
+        ctx.lineDashOffset = -(b.animTick * 1.8);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 16, 5.5, -0.15, 0, Math.PI * 2);
+        ctx.moveTo(pod.rx1, pod.ry1);
+        ctx.lineTo(pod.px, pod.py);
         ctx.stroke();
-        ctx.restore();
-      }
+        ctx.setLineDash([]);
 
-      // Warning pill badge at (198, 566)
-      const pillW = 210, pillH = 22;
-      const px = 198 - pillW / 2, py = 566 - pillH / 2;
-      ctx.save();
-      ctx.fillStyle = "rgba(10, 2, 24, 0.90)";
-      ctx.strokeStyle = (b.animTick % 6 < 3) ? "#ff1493" : "#00f5e8";
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.roundRect(px, py, pillW, pillH, 11);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.font = "bold 9.5px monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(`⚠️ LR CONTROLS REVERSED! (${secLeft}s) ⚠️`, 198, 566);
-      ctx.restore();
-
-      // Arched cross-arrows connecting left and right flippers
-      ctx.save();
-      ctx.strokeStyle = "#e6ff00";
-      ctx.lineWidth = 2.2;
-      ctx.setLineDash([5, 4]);
-      ctx.lineDashOffset = -(b.animTick * 2);
-      ctx.beginPath();
-      ctx.moveTo(142, 600);
-      ctx.quadraticCurveTo(198, 580, 254, 600);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(254, 606);
-      ctx.quadraticCurveTo(198, 626, 142, 606);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = "#e6ff00";
-      ctx.beginPath(); ctx.moveTo(258, 600); ctx.lineTo(250, 595); ctx.lineTo(250, 605); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(138, 606); ctx.lineTo(146, 601); ctx.lineTo(146, 611); ctx.closePath(); ctx.fill();
-      ctx.restore();
-
-      // Electric arcs between flippers when either flipper is pressed
-      if (state.leftFlipperDown || state.rightFlipperDown) {
-        ctx.save();
-        ctx.strokeStyle = (b.animTick % 4 < 2) ? "#ff1493" : "#00f5e8";
-        ctx.lineWidth = 2.5;
+        // サイド展開ポッド基部＆ウイングオーラ
+        ctx.fillStyle = "#160738";
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 2.0;
         ctx.beginPath();
-        let curX = 135, curY = 595;
-        ctx.moveTo(curX, curY);
-        for (let seg = 1; seg <= 7; seg++) {
-          const tx = 135 + ((261 - 135) / 7) * seg;
-          const ty = 595 + (Math.random() - 0.5) * 16;
-          ctx.lineTo(tx, ty);
-        }
+        ctx.arc(pod.px, pod.py, 8.5, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
-        ctx.restore();
-      }
 
+        const wingPulse = 0.55 + 0.35 * Math.sin(b.animTick * 0.18);
+        ctx.strokeStyle = pod.col;
+        ctx.globalAlpha = dep * wingPulse;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(pod.px, pod.py, 13 + Math.sin(b.animTick * 0.15) * 2, pod.dir > 0 ? -1.1 : Math.PI - 0.8, pod.dir > 0 ? 0.8 : Math.PI + 1.1);
+        ctx.stroke();
+        ctx.globalAlpha = dep;
+      });
       ctx.restore();
     }
+
+    // パドル拘束ビジュアル（拘束リング＝高耐久8連打 ／ 光剣＝5連打、4面手裏剣と同じく分かりやすい連打解除表示に統一！）
+    const flips = Physics.getFlippers(state);
+    [
+      { count: state.flipperPinL || 0, style: b.pinStyleL || "halo", sideIdx: 0 },
+      { count: state.flipperPinR || 0, style: b.pinStyleR || "halo", sideIdx: 1 }
+    ].forEach(({ count, style, sideIdx }) => {
+      if (count <= 0) return;
+      // 同じ側のメインパドル（＋展開中なら中段パドル）に拘束エフェクトを描画
+      flips.forEach((f, idx) => {
+        if ((f.isLeft ? 0 : 1) !== sideIdx) return;
+        const st = Physics.flipperState[idx];
+        const shakeOff = (st.pinShake || 0) > 0 ? Math.sin(b.animTick * 1.8) * 3.0 : 0;
+        const mx = f.px + Math.cos(st.angle) * (f.len * 0.52) + shakeOff;
+        const my = f.py + Math.sin(st.angle) * (f.len * 0.52);
+
+        ctx.save();
+        ctx.translate(mx, my);
+        if (style === "sword") {
+          ctx.rotate(st.angle + 1.15);
+          ctx.strokeStyle = "#ffd700";
+          ctx.lineWidth = 3.0;
+          ctx.beginPath();
+          ctx.moveTo(0, -13);
+          ctx.lineTo(0, 11);
+          ctx.moveTo(-6, -4);
+          ctx.lineTo(6, -4);
+          ctx.stroke();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(0, -12);
+          ctx.lineTo(0, 10);
+          ctx.stroke();
+        } else {
+          // 拘束リング（二重ネオン枷リングがパドルをガッチリ締め付ける演出）
+          ctx.rotate(b.animTick * 0.10);
+          ctx.strokeStyle = sideIdx === 0 ? "#ff2ad4" : "#00f5e8";
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 16, 7.5, -0.2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12, 5.0, 0.25, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        if (!f.isSubFlipper) {
+          ctx.save();
+          ctx.font = "bold 9.5px monospace";
+          ctx.textAlign = "center";
+          ctx.strokeStyle = "#000000";
+          ctx.lineWidth = 2.8;
+          const mashTxt = t("stage4.render.mash", { count });
+          ctx.strokeText(mashTxt, mx, my - 17);
+          ctx.fillStyle = "#e6ff00";
+          ctx.fillText(mashTxt, mx, my - 17);
+          ctx.restore();
+        }
+      });
+    });
   }
 });

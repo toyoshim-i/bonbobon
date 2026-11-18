@@ -221,8 +221,8 @@ Object.assign(window.Stage2, {
 
         const newSplitBalls = [];
         state.balls.forEach(ball => {
-          // 発射待ち（シューターレーン内）のボールは壁で遮られるため絶対に被弾させない安全保護
-          if (ball.inShooterLane || (state.plunger && state.plunger.waitingForLaunch)) return;
+          // シューターレーン内のボールは壁で遮られるため被弾させない安全保護
+          if (ball.inShooterLane || ball.x >= 380) return;
 
           const hit = Physics.checkCapsuleHit(ball, beamStartX, beamStartY, beamEndX, beamEndY, 9.5);
           if (hit) {
@@ -408,6 +408,52 @@ Object.assign(window.Stage2, {
       if (cb) cb(bumper);
     });
 
+    // 0. メイン動力炉：プラズマ・リアクターコア（最優先判定＋独立クールダウン＋Phase 3 磁力吸引アシスト）
+    const core = state.boss.core;
+    if (core) {
+      if (state.phase === 3 && core.unlocked && core.hp > 0 && !ball.inShooterLane) {
+        const dxC = core.x - ball.x;
+        const dyC = core.y - ball.y;
+        const distC = Math.hypot(dxC, dyC);
+        const pullRadius = 105;
+        if (distC < pullRadius && distC > 2.0) {
+          const pull = 0.38 * (1.0 - distC / pullRadius);
+          ball.vx += (dxC / distC) * pull;
+          ball.vy += (dyC / distC) * pull;
+        }
+      }
+
+      if (state.phase === 3 || core.unlocked) {
+        Physics.checkCircleBumper(ball, core, 8.8, () => {
+          if (ball._coreGrace > 0) return;
+          ball._coreGrace = 8;
+          Systems.addFever(state, 6);
+          if (state.phase === 3 && core.unlocked && core.hp > 0) {
+            core.hp--;
+            core.flash = 26;
+            StageCommon.setExpressionSequence(state, [
+              { expr: "shock", frames: 25 },
+              { expr: "shout", frames: 30 },
+              { expr: "open_blush", frames: 60 }
+            ]);
+            if (window.sfx) window.sfx.metalBumper();
+            Particles.add(state, core.x, core.y, "#00f5d4", 26, 6.0);
+            Particles.add(state, core.x, core.y, "#ffffff", 20, 5.0);
+            Systems.addScore(state, ScoreTable.stage2.CORE_HIT, core.x, core.y - 18, `💥CORE HIT! HP:${core.hp}`);
+
+            if (core.hp === 0) {
+              this.triggerClear(state, engine);
+            }
+          } else if (core.unlocked) {
+            if (window.sfx) window.sfx.burstTrigger();
+            Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
+            Systems.addScore(state, ScoreTable.stage2.CORE_OVERDRIVE, core.x, core.y - 16, "★REACTOR OVERDRIVE!★");
+          }
+          UI.updateHUD(state);
+        });
+      }
+    }
+
     // 1. カチューシャのアンテナ先端（放電時は強烈に弾く、停止時は通過！ 接触でHP減少）
     const ant = state.boss.antenna;
     if (ant) {
@@ -478,8 +524,9 @@ Object.assign(window.Stage2, {
       }
     }
 
-    // 2. バウンスポイント：手前の左肩装甲（※右肩は身体の奥にあるため反射板なし）
+    // 2. バウンスポイント：手前の左肩装甲（※破壊後はコリジョンを消滅させリアクターへの射線を開通）
     const handleShoulderHit = (sh, sideLabel) => {
+      if (!sh || sh.broken) return;
       checkBumper(sh, 9.5, () => {
         sh.flash = 22;
         if (window.sfx) window.sfx.metalBumper();
@@ -505,17 +552,15 @@ Object.assign(window.Stage2, {
             Systems.dropReward(state, "major", { x: sh.x, y: sh.y });
             this.checkPhase1Clear(state);
           }
-        } else {
-          Systems.addScore(state, ScoreTable.stage2.SHOULDER_SPARK, sh.x, sh.y, `⚡${sideLabel} SHOULDER SPARK!`);
         }
       });
     };
 
     if (state.boss.shoulderL) handleShoulderHit(state.boss.shoulderL, "L");
 
-    // 3. 腕部関節装甲ターゲット：肘（左肘＆右肘：Phase 1 破壊対象 各HP: 5）
+    // 3. 腕部関節装甲ターゲット：肘（※破壊後はコリジョンを消滅させ射線を開通）
     const handleElbowHit = (elb, sideLabel) => {
-      if (!elb) return;
+      if (!elb || elb.broken) return;
       checkBumper(elb, 10.0, () => {
         elb.flash = 22;
         if (window.sfx) window.sfx.metalBumper();
@@ -542,10 +587,6 @@ Object.assign(window.Stage2, {
             Systems.dropReward(state, "major", { x: elb.x, y: elb.y });
             this.checkPhase1Clear(state);
           }
-        } else {
-          // 破壊後：小スパーク散布
-          Particles.add(state, elb.x, elb.y, "#e6ff00", 12, 3.5);
-          Systems.addScore(state, ScoreTable.stage2.ARM_SPARK, elb.x, elb.y, `⚡${sideLabel} ARM SPARK!`);
         }
       });
     };
@@ -553,9 +594,9 @@ Object.assign(window.Stage2, {
     if (state.boss.elbowL) handleElbowHit(state.boss.elbowL, "L");
     if (state.boss.elbowR) handleElbowHit(state.boss.elbowR, "R");
 
-    // 3.5. 背中ブースターノズル噴射口ターゲット（左右2基のノズル：Phase 2 破壊対象 各HP: 4）
+    // 3.5. 背中ブースターノズル噴射口ターゲット（※破壊後はコリジョンを消滅させ射線を開通）
     const handleNozzleHit = (noz, nozLabel) => {
-      if (!noz) return;
+      if (!noz || noz.broken) return;
       checkBumper(noz, 10.5, () => {
         noz.flash = 24;
         if (window.sfx) window.sfx.metalBumper();
@@ -597,9 +638,6 @@ Object.assign(window.Stage2, {
               this.checkPhase2Clear(state);
             }
           }
-        } else {
-          Particles.add(state, noz.x, noz.y, "#555555", 8, 2.5);
-          Systems.addScore(state, ScoreTable.stage2.NOZZLE_SCRAP, noz.x, noz.y, "⚡NOZZLE SCRAP");
         }
       });
     };
@@ -607,16 +645,12 @@ Object.assign(window.Stage2, {
     if (state.boss.nozzleL) handleNozzleHit(state.boss.nozzleL, "L");
     if (state.boss.nozzleR) handleNozzleHit(state.boss.nozzleR, "R");
 
-    // 4. 左手奥ホログラム砲台コア（Phase 1はシールド防御、Phase 2で攻撃可能！）
+    // 4. 左手奥ホログラム砲台コア（Phase 1はシールド防御、Phase 2で攻撃可能、破壊後は消滅）
     const holo = state.boss.hologram;
-    if (holo) {
+    if (holo && !holo.broken) {
       checkBumper(holo, 9.2, () => {
         holo.flash = 22;
-        if (holo.broken) {
-          if (window.sfx) window.sfx.metalBumper();
-          Particles.add(state, holo.x, holo.y, "#00f5d4", 10, 3.5);
-          Systems.addScore(state, ScoreTable.stage2.HOLO_SCRAP, holo.x, holo.y, "HOLO SCRAP");
-        } else if (holo.isShielded || state.phase < 2) {
+        if (holo.isShielded || state.phase < 2) {
           // Phase 1: ホログラムシールドで反射
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, holo.x, holo.y, "#00f5d4", 14, 4.5);
@@ -672,7 +706,9 @@ Object.assign(window.Stage2, {
           { expr: "open_blush", frames: 70 }
         ]);
         state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 30);
-        this.triggerJetBlast(state);
+        if (state.phase < 3) {
+          this.triggerJetBlast(state);
+        }
 
         if (state.phase < 2 && !bust.broken) {
           Systems.addScore(state, ScoreTable.stage2.BUST_ARMORED, bust.x, bust.y, "🔒BUST LOCKED");
@@ -692,42 +728,19 @@ Object.assign(window.Stage2, {
           }
         } else {
           Systems.addScore(state, ScoreTable.stage2.BUST_TIP_SENSITIVE, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
-        }
-      });
-    }
-
-    // 6. メイン動力炉：プラズマ・リアクターコア（Phase 3 最終決戦ターゲット！）
-    const core = state.boss.core;
-    if (core) {
-      checkBumper(core, 8.8, () => {
-        Systems.addFever(state, 6);
-        if (state.phase === 3 && core.unlocked && core.hp > 0) {
-          core.hp--;
-          core.flash = 26;
-          StageCommon.setExpressionSequence(state, [
-            { expr: "shock", frames: 25 },
-            { expr: "shout", frames: 30 },
-            { expr: "open_blush", frames: 60 }
-          ]);
-          if (window.sfx) window.sfx.metalBumper();
-          Particles.add(state, core.x, core.y, "#00f5d4", 26, 6.0);
-          Particles.add(state, core.x, core.y, "#ffffff", 20, 5.0);
-          Systems.addScore(state, ScoreTable.stage2.CORE_HIT, core.x, core.y - 18, `💥CORE HIT! HP:${core.hp}`);
-
-          if (core.hp === 0) {
-            this.triggerClear(state, engine);
+          // Phase 3 では隣接するリアクターコアへ誘爆ダメージを伝導！
+          if (state.phase === 3 && core && core.unlocked && core.hp > 0 && !(ball._coreGrace > 0)) {
+            ball._coreGrace = 8;
+            core.hp--;
+            core.flash = 24;
+            Particles.add(state, core.x, core.y, "#00f5d4", 20, 5.5);
+            Particles.addPopup(state, core.x, core.y - 16, `⚡CHAIN SHOCK! HP:${core.hp}`, "#e6ff00", 1.05);
+            if (core.hp === 0) {
+              this.triggerClear(state, engine);
+            }
+            UI.updateHUD(state);
           }
-        } else if (core.unlocked) {
-          if (window.sfx) window.sfx.burstTrigger();
-          Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
-          Systems.addScore(state, ScoreTable.stage2.CORE_OVERDRIVE, core.x, core.y - 16, "★REACTOR OVERDRIVE!★");
-        } else {
-          core.flash = 12;
-          if (window.sfx) window.sfx.metalBumper();
-          Particles.add(state, core.x, core.y, "#00f5d4", 10, 3.0);
-          Systems.addScore(state, ScoreTable.stage2.CORE_SHIELDED, core.x, core.y - 14, "⚡CORE SHIELDED⚡");
         }
-        UI.updateHUD(state);
       });
     }
 
@@ -737,12 +750,18 @@ Object.assign(window.Stage2, {
       const bL = state.boss.buttL;
       const jDx = (bL ? bL.dx : 0) * this.HIP_FOLLOW;
       const jDy = (bL ? bL.dy : 0) * this.HIP_FOLLOW;
+      const preVy = ball.vy;
       const dynamicHip = {
         x: hip.x + jDx,
         y: hip.y + jDy,
-        r: hip.r
+        r: state.phase === 3 ? 20 : hip.r
       };
       checkBumper(dynamicHip, 10.0, () => {
+        // Phase 3 で下から打ち上げた球が真下のフリッパー間へ叩き落とされないよう上方向へ逃がす
+        if (state.phase === 3 && preVy < -1.5 && ball.vy > 0) {
+          ball.vy = -Math.max(8.5, Math.abs(ball.vy));
+          ball.vx = (core ? (core.x - ball.x) * 0.06 : 0) + (Math.random() - 0.5) * 2.5;
+        }
         hip.flash = 22;
         if (window.sfx) window.sfx.metalBumper();
         Particles.add(state, dynamicHip.x, dynamicHip.y, "#00f5d4", 18, 5.0);

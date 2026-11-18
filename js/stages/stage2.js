@@ -166,14 +166,14 @@ window.Stage2 = {
         rot: 0
       },
 
-      // 6. メイン動力炉：プラズマ・リアクターコア（全装甲パージ後に露出・最終撃破ターゲット：Phase 3 HP 12）
+      // 6. メイン動力炉：プラズマ・リアクターコア（全装甲パージ後に露出・最終撃破ターゲット：Phase 3 HP 6）
       // 原画 (290, 680) -> キャンバス (153, 334)
       core: {
         x: 153,
         y: 334,
-        r: 18,
-        hp: 12,
-        maxHP: 12,
+        r: 22,
+        hp: 6,
+        maxHP: 6,
         unlocked: false,
         flash: 0
       },
@@ -364,7 +364,7 @@ window.Stage2 = {
     const bTip = state.boss.tipBust;
     if (state.phase === 3) {
       const core = state.boss.core;
-      UI.setText("dtChestStatus", core.hp === 0 ? "💥CORE K.O.!" : `★CORE (${core.hp}/12)`);
+      UI.setText("dtChestStatus", core.hp === 0 ? "💥CORE K.O.!" : `★CORE (${core.hp}/${core.maxHP})`);
       UI.setClass("dtChestStatus", "font-bold text-[#00f5d4] animate-pulse");
     } else {
       UI.setText("dtChestStatus", bTip.broken ? "💥BUST PURGED!" : `BUST TIP (${bTip.hp}/6)`);

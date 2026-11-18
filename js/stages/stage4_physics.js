@@ -366,7 +366,7 @@ Object.assign(window.Stage4, {
     const b = state.boss;
     if (!b || ball.inShooterLane) return;
 
-    const SUBSTEPS = 6;
+    const SUBSTEPS = (window.Physics && Physics.BALANCE.SUBSTEPS) || 8;
 
     // -----------------------------------------------------------------
     // A & B. 空中立体ワイヤーランプ滑走 ＆ 入口ゲート突入判定

@@ -661,7 +661,7 @@ window.StageCommon = {
     const b = state.boss;
     if (ball._onWireRamp) {
       const rs = ball._onWireRamp;
-      const timeScale = (window.Physics && Physics.BALANCE.TIME_SCALE) || 1.0;
+      const timeScale = (window.Physics && Physics.getTimeScale) ? Physics.getTimeScale(state) : ((window.Physics && Physics.BALANCE.TIME_SCALE) || 1.0);
       rs.dist += (rs.speed * timeScale) / substeps;
       const samp = stage.sampleRamp(rs.rampId, rs.dist);
       ball.x = samp.x;

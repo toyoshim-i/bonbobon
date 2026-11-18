@@ -130,7 +130,10 @@ window.GameEngine = {
       plunger: {
         power: 0,
         pulling: false,
-        waitingForLaunch: true,
+        launchFrames: 0,
+        launchSpeed: 0,
+        launchPower: 0,
+        launchSkillRatio: 0,
         springY: 575,
         springVy: 0
       },
@@ -197,6 +200,10 @@ window.GameEngine = {
     if (meta) this.state.stageIndex = meta.index;
 
     Systems.prepareBallForLaunch(this.state);
+    if (window.UI) {
+      UI.isStage5ClearOpen = false;
+      UI.updateScreenMode(this.state);
+    }
     UI.updateHUD(this.state);
 
     const txtHeader = document.getElementById("txtHeaderStage");
@@ -288,47 +295,17 @@ window.GameEngine = {
     if (!this.state.plunger.pulling) return;
     this.state.plunger.pulling = false;
 
-    // Linear power based on charge duration / drag distance (respects slight taps)
+    // 引き量に応じた物理ピストン初速をセット（バネ先端に接するボールのみ物理衝突で打ち出す）
     const currentPower = Math.max(3, this.state.plunger.power);
     const p = currentPower / 100;
     const pb = Physics.BALANCE;
     const launchSpeed = pb.PLUNGER_BASE_SPEED + p * pb.PLUNGER_MAX_ADD_SPEED;
 
-    // Spring oscillation recoil impulse
+    this.state.plunger.launchSpeed = launchSpeed;
+    this.state.plunger.launchPower = currentPower;
+    this.state.plunger.launchSkillRatio = p;
+    this.state.plunger.launchFrames = 6;
     this.state.plunger.springVy = -p * 22;
-
-    const geom = Physics.TABLE_GEOM;
-    const ballInLane = this.state.balls.find(b => b.inShooterLane && b.x >= geom.SHOOTER_MIN_X && b.x <= geom.SHOOTER_MAX_X);
-    if (ballInLane) {
-      const tipY = (this.state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
-      // ボールがスプリングの可動範囲内（y: 280〜625）にあれば撃ち出し・カウンター判定
-      if (ballInLane.y >= 280 && ballInLane.y <= 625) {
-        if (window.sfx) window.sfx.plungerLaunch(currentPower);
-
-        // カウンター激突判定（落下中のボールにバネをぶつけて急加速！）
-        if (ballInLane.vy > 0.4) {
-          const counterBoost = ballInLane.vy * 1.35;
-          ballInLane.vy = -(launchSpeed + counterBoost);
-          ballInLane.vx = -0.3;
-          if (window.sfx) window.sfx.metalBumper();
-          Particles.add(this.state, ballInLane.x, ballInLane.y, "#00f5d4", 16, 4.5);
-          Particles.add(this.state, ballInLane.x, ballInLane.y, "#e6ff00", 12, 3.5);
-          Particles.addPopup(this.state, ballInLane.x - 15, ballInLane.y - 15, "🚀SUPER COUNTER LAUNCH!", "#e6ff00", 1.2);
-          Systems.addScore(this.state, ScoreTable.common.COUNTER_SHOT, ballInLane.x, ballInLane.y, "COUNTER SHOT!");
-        } else {
-          // 通常の静止・上昇中打ち出し
-          ballInLane.vy = -launchSpeed;
-          ballInLane.vx = -0.3;
-        }
-
-        this.state.plunger.waitingForLaunch = false;
-        if (this.state.boss) this.state.boss.winkTimer = 35;
-
-        if (p >= pb.SKILL_SHOT_MIN_RATIO && p <= pb.SKILL_SHOT_MAX_RATIO) {
-          this.state.skillShotEligible = true;
-        }
-      }
-    }
     this.state.plunger.power = 0;
     UI.updateHUD(this.state);
   },
@@ -344,6 +321,10 @@ window.GameEngine = {
       this.state.boss = this.currentStage.createBossState();
     }
     Systems.prepareBallForLaunch(this.state);
+    if (window.UI) {
+      UI.isStage5ClearOpen = false;
+      UI.updateScreenMode(this.state);
+    }
     UI.updateHUD(this.state);
     UI.showCutin(t("engine.resetInit"), 100);
   },
@@ -421,6 +402,12 @@ window.GameEngine = {
       state.plunger.springVy = (state.plunger.springVy || 0) + dy * 0.44;
       state.plunger.springVy *= 0.65;
       state.plunger.springY = (state.plunger.springY || restY) + state.plunger.springVy;
+      if (state.plunger.launchFrames > 0) {
+        state.plunger.launchFrames--;
+        if (state.plunger.launchFrames <= 0) {
+          state.plunger.launchSpeed = 0;
+        }
+      }
     }
 
     // Burst Buff Timer
@@ -474,6 +461,9 @@ window.GameEngine = {
       Physics.pushTrailPoint(ball.trail, ball.x, ball.y, 9);
       if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
       if (ball._bumperGrace > 0) ball._bumperGrace--;
+      if (ball._coreGrace > 0) ball._coreGrace--;
+      if (ball._flipHitGrace > 0) ball._flipHitGrace--;
+      if (ball._postGrace > 0) ball._postGrace--;
       if (!ball.inShooterLane) hasActivePlayBall = true;
 
       // Ball Stagnation / Stuck Detection (Universal pinball feature)
@@ -717,7 +707,7 @@ window.GameEngine = {
 
     // Flippers, Capsules, Plunger & Balls
     if (!isPostWhiteout) {
-      // Flippers
+      // Flippers (Main + Stage 5 Phase 3 Mid-Field Wing Paddles)
       const flippers = Physics.getFlippers(state);
       flippers.forEach((f, idx) => {
         const st = Physics.flipperState[idx];
@@ -726,24 +716,56 @@ window.GameEngine = {
 
         ctx.save();
         ctx.lineCap = "round";
-        ctx.strokeStyle = f.isLeft ? "#ff1493" : "#00f5d4";
-        ctx.lineWidth = 9;
-        ctx.beginPath();
-        ctx.moveTo(f.px, f.py);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        if (f.isSubFlipper) {
+          // 中段ウイングパドル：ゴールド×シアンの発光エナジーブレード
+          ctx.strokeStyle = "rgba(230, 255, 0, 0.35)";
+          ctx.lineWidth = 13;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
 
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        ctx.moveTo(f.px, f.py);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+          ctx.strokeStyle = f.isLeft ? "#ff2ad4" : "#00f5e8";
+          ctx.lineWidth = 8.5;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
 
-        ctx.fillStyle = "#e6ff00";
-        ctx.beginPath();
-        ctx.arc(f.px, f.py, 4, 0, Math.PI * 2);
-        ctx.fill();
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(f.px, f.py, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = f.isLeft ? "#ff1493" : "#00f5d4";
+          ctx.lineWidth = 9;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+
+          ctx.fillStyle = "#e6ff00";
+          ctx.beginPath();
+          ctx.arc(f.px, f.py, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       });
 
@@ -893,8 +915,10 @@ window.GameEngine = {
       const springBottomY = 635;
       const springHeight = Math.max(10, springBottomY - plungerY);
 
+      const hasBallOnPlunger = state.balls && state.balls.some(b => b.inShooterLane && b.y > 535);
+      const plungerCol = state.plunger.pulling ? "#e6ff00" : (hasBallOnPlunger ? "#00f5d4" : "#ff1493");
       // Draw Zigzag Spring Coil
-      ctx.strokeStyle = state.plunger.pulling ? "#e6ff00" : (state.plunger.waitingForLaunch ? "#00f5d4" : "#ff1493");
+      ctx.strokeStyle = plungerCol;
       ctx.lineWidth = 2.4;
       ctx.beginPath();
       ctx.moveTo(393, springBottomY);
@@ -908,7 +932,7 @@ window.GameEngine = {
       ctx.stroke();
 
       // Plunger Head / Striker Plate
-      ctx.fillStyle = state.plunger.pulling ? "#e6ff00" : (state.plunger.waitingForLaunch ? "#00f5d4" : "#ff1493");
+      ctx.fillStyle = plungerCol;
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.4;
       ctx.beginPath();

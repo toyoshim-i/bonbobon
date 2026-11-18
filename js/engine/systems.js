@@ -367,18 +367,20 @@ window.Systems = {
     state.flipperPinL = 0;
     state.flipperPinR = 0;
     state.flipperReverseTimer = 0;
-    state.plunger.waitingForLaunch = true;
     state.plunger.power = 0;
     state.plunger.pulling = false;
+    state.plunger.launchFrames = 0;
+    state.plunger.launchSpeed = 0;
     state.skillShotEligible = false;
 
     const geom = (window.Physics && Physics.TABLE_GEOM) || { SHOOTER_CENTER_X: 393, PLUNGER_REST_Y: 575 };
+    const r = 6.5;
     state.balls.push({
       x: geom.SHOOTER_CENTER_X,
-      y: geom.PLUNGER_REST_Y,
+      y: geom.PLUNGER_REST_Y - 6 - r,
       vx: 0,
       vy: 0,
-      r: 6.5,
+      r,
       trail: [],
       inShooterLane: true
     });

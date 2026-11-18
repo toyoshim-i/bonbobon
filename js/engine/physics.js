@@ -6,8 +6,10 @@ window.Physics = {
   // 全テーブル共通の物理・反発定数（調整時の単一参照先）※スコア値は ScoreTable で管理
   BALANCE: {
     TIME_SCALE: 0.75,
+    // ステージ進行ごとの速度スケール（Stage 1 ➔ Stage 5 で段階的に加速、軌道形状や到達高度は不変）
+    STAGE_TIME_SCALES: [0.75, 0.81, 0.87, 0.94, 1.02],
     GRAVITY: 0.118,
-    SUBSTEPS: 6,
+    SUBSTEPS: 8,
     MAX_BALL_SPEED: 13.2,
     PLUNGER_BASE_SPEED: 1.4,
     PLUNGER_MAX_ADD_SPEED: 16.2,
@@ -18,6 +20,12 @@ window.Physics = {
     STUCK_KICK_FRAMES: 360,
     SLINGSHOT_KICK_SPEED: 12.5,
     SLINGSHOT_FEVER: 2
+  },
+
+  getTimeScale(state) {
+    const idx = Math.max(1, Math.min(5, (state && state.stageIndex) || 1));
+    const scales = this.BALANCE.STAGE_TIME_SCALES;
+    return (scales && scales[idx - 1]) || this.BALANCE.TIME_SCALE;
   },
 
   TABLE_GEOM: {
@@ -89,12 +97,20 @@ window.Physics = {
 
   flipperState: [
     { angle: 0.44, prevAngle: 0.44 },
-    { angle: Math.PI - 0.44, prevAngle: Math.PI - 0.44 }
+    { angle: Math.PI - 0.44, prevAngle: Math.PI - 0.44 },
+    { angle: 0.40, prevAngle: 0.40 },
+    { angle: Math.PI - 0.40, prevAngle: Math.PI - 0.40 }
   ],
 
   _flippersCache: [
-    { px: 110, py: 602, len: 56, restAngle: 0.44, activeAngle: -0.44, isLeft: true },
-    { px: 286, py: 602, len: 56, restAngle: Math.PI - 0.44, activeAngle: Math.PI + 0.44, isLeft: false }
+    { px: 110, py: 602, len: 56, restAngle: 0.44, activeAngle: -0.44, isLeft: true, isSubFlipper: false },
+    { px: 286, py: 602, len: 56, restAngle: Math.PI - 0.44, activeAngle: Math.PI + 0.44, isLeft: false, isSubFlipper: false }
+  ],
+  _flippersWithSubCache: [
+    { px: 110, py: 602, len: 56, restAngle: 0.44, activeAngle: -0.44, isLeft: true, isSubFlipper: false },
+    { px: 286, py: 602, len: 56, restAngle: Math.PI - 0.44, activeAngle: Math.PI + 0.44, isLeft: false, isSubFlipper: false },
+    { px: 25,  py: 392, len: 50, restAngle: 0.40, activeAngle: -0.46, isLeft: true, isSubFlipper: true },
+    { px: 371, py: 392, len: 50, restAngle: Math.PI - 0.40, activeAngle: Math.PI + 0.46, isLeft: false, isSubFlipper: true }
   ],
   _cpWall: { x: 0, y: 0, t: 0 },
   _cpFlipper: { x: 0, y: 0, t: 0 },
@@ -124,7 +140,17 @@ window.Physics = {
   },
 
   getFlippers(state) {
-    const ext = (state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 10 : 0;
+    const ext = (state && state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 10 : 0;
+    const deploy = (state && state.stageIndex === 5 && state.boss && state.boss.subFlipperDeploy) || 0;
+    if (deploy > 0.05) {
+      const subExt = (state && state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 6 : 0;
+      const subLen = Math.max(8, (50 + subExt) * Math.min(1, deploy));
+      this._flippersWithSubCache[0].len = 56 + ext;
+      this._flippersWithSubCache[1].len = 56 + ext;
+      this._flippersWithSubCache[2].len = subLen;
+      this._flippersWithSubCache[3].len = subLen;
+      return this._flippersWithSubCache;
+    }
     this._flippersCache[0].len = 56 + ext;
     this._flippersCache[1].len = 56 + ext;
     return this._flippersCache;
@@ -159,29 +185,33 @@ window.Physics = {
       const wasPressed = !!st.wasPressed;
       st.wasPressed = pressed;
 
-      // Track active swing edge (for timed parry, whiff penalty) & 5-tap shuriken shake-off!
+      // Track active swing edge (for timed parry, whiff penalty) & tap shake-off (primary flippers only)
       const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
       const isPinnedNow = (state[pinKey] || 0) > 0;
       if (pressed && !wasPressed) {
         st.justPressedTimer = 12;
         if (isPinnedNow) {
           st.swingActive = false;
-          state[pinKey]--;
-          st.pinShake = 8;
-          const mx = f.px + Math.cos(st.angle) * (f.len * 0.55);
-          const my = f.py + Math.sin(st.angle) * (f.len * 0.55);
-          if (state[pinKey] === 0) {
-            if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
-            if (window.Particles) {
-              Particles.add(state, mx, my, "#e6ff00", 16, 4.8);
-              Particles.addPopup(state, mx, my - 16, t("physics.pinRelease"), "#00f5d4", 1.1);
+          if (!f.isSubFlipper) {
+            state[pinKey]--;
+            st.pinShake = 8;
+            const mx = f.px + Math.cos(st.angle) * (f.len * 0.55);
+            const my = f.py + Math.sin(st.angle) * (f.len * 0.55);
+            if (state[pinKey] === 0) {
+              if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
+              if (window.Particles) {
+                Particles.add(state, mx, my, "#e6ff00", 16, 4.8);
+                Particles.addPopup(state, mx, my - 16, t("physics.pinRelease"), "#00f5d4", 1.1);
+              }
+            } else {
+              if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+              if (window.Particles) {
+                Particles.add(state, mx, my, "#b84dff", 5, 2.4);
+                Particles.addPopup(state, mx, my - 14, t("physics.pinRemain", { count: state[pinKey] }), "#e6ff00", 0.92);
+              }
             }
           } else {
-            if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-            if (window.Particles) {
-              Particles.add(state, mx, my, "#b84dff", 5, 2.4);
-              Particles.addPopup(state, mx, my - 14, t("physics.pinRemain", { count: state[pinKey] }), "#e6ff00", 0.92);
-            }
+            st.pinShake = 8;
           }
         } else {
           st.swingActive = true;
@@ -190,7 +220,7 @@ window.Physics = {
       } else {
         if ((st.justPressedTimer || 0) > 0) st.justPressedTimer--;
         if (!pressed && wasPressed) {
-          if (st.swingActive && !st.swingHit && !isPinnedNow && window.Systems && Systems.deductScore) {
+          if (!f.isSubFlipper && st.swingActive && !st.swingHit && !isPinnedNow && window.Systems && Systems.deductScore) {
             Systems.deductScore(
               state,
               ScoreTable.bonus.FLIPPER_WHIFF_PENALTY,
@@ -204,14 +234,15 @@ window.Physics = {
       }
       if ((st.pinShake || 0) > 0) st.pinShake--;
 
-      // Clamp flipper lift to 1/3 range while pinned by a shuriken!
+      // 拘束中は全ステージ共通で可動域を8%（わずかにピクつく程度）まで強く制限する
       const pinnedCount = f.isLeft ? (state.flipperPinL || 0) : (state.flipperPinR || 0);
       const effectiveActive = pinnedCount > 0
-        ? (f.restAngle + (f.activeAngle - f.restAngle) * 0.33)
+        ? (f.restAngle + (f.activeAngle - f.restAngle) * 0.08)
         : f.activeAngle;
 
       const target = pressed ? effectiveActive : f.restAngle;
-      st.angle += (target - st.angle) * 0.44;
+      const snapRate = Math.min(0.62, 0.44 * (this.getTimeScale(state) / 0.75));
+      st.angle += (target - st.angle) * snapRate;
     });
   },
 
@@ -231,6 +262,7 @@ window.Physics = {
 
     state.balls.forEach(b => {
       if (b._onWireRamp) return;
+      if (b.inShooterLane && b.y > 535 && Math.abs(b.vy) < 1.5) return;
       b.vx += nx * this.BALANCE.NUDGE_IMPULSE * intensity;
       b.vy += ny * this.BALANCE.NUDGE_IMPULSE * intensity;
 
@@ -477,66 +509,99 @@ window.Physics = {
       ball._crotchSpitActive = false;
     }
 
-    // Plunger resting lock
     const geom = this.TABLE_GEOM;
-    if (ball.inShooterLane && state.plunger.waitingForLaunch) {
-      ball.x = geom.SHOOTER_CENTER_X;
-      const headY = (state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
-      ball.y = headY - ball.r;
-      ball.vx = 0;
-      ball.vy = 0;
-      return;
-    }
-
-    const timeScale = this.BALANCE.TIME_SCALE;
-    const prevX = ball.x;
+    const timeScale = this.getTimeScale(state);
+    let prevX = ball.x;
     const prevY = ball.y;
     ball.vy += gravity * timeScale;
     ball.x += (ball.vx * timeScale) / SUBSTEPS;
     ball.y += (ball.vy * timeScale) / SUBSTEPS;
 
-    // Shooter lane plunger spring catch & re-arm
-    if (ball.inShooterLane && ball.x >= geom.SHOOTER_MIN_X && ball.x <= geom.SHOOTER_MAX_X) {
-      const tipY = (state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
-      const contactDist = (ball.y + ball.r) - tipY;
-
-      // 1. スプリング引き込み中にボールが落ちてきた場合：バネのヘッドに乗って一緒に引き下がる
-      if (state.plunger.pulling && contactDist >= 0) {
-        ball.y = tipY - ball.r;
-        ball.vy = 0;
-        ball.vx = 0;
-      } else if (!state.plunger.waitingForLaunch && contactDist >= 0 && ball.vy > 0) {
-        // 2. 落下中ボールのバネ接触
-        ball.y = tipY - ball.r;
-        state.plunger.springVy = (state.plunger.springVy || 0) + Math.min(12, ball.vy * 0.7);
-        ball.vy = -ball.vy * 0.28;
-        ball.vx = 0;
-
-        if (Math.abs(ball.vy) > 0.6 && window.sfx) {
-          window.sfx.metalBumper();
-        }
-
-        // 速度が収束したら通常待機状態にセット
-        if (Math.abs(ball.vy) < 0.5 && ball.y >= 555) {
-          state.plunger.waitingForLaunch = true;
-          ball.vx = 0;
-          ball.vy = 0;
-          ball.x = 393;
-          ball.y = tipY - ball.r;
-          Particles.addPopup(state, 393, 545, "RE-ARMED!", "#00f5d4", 1.0);
-          UI.updateHUD(state);
-          return;
+    // Shooter lane exit check, top re-entry & playfield-side divider guard
+    if (ball.inShooterLane && ball.x < 378 && ball.y < 170) {
+      ball.inShooterLane = false;
+    }
+    if (!ball.inShooterLane) {
+      if (ball.x >= geom.SHOOTER_MIN_X && (prevY <= 182 || ball.y <= 182)) {
+        // 上部ゲート開口（y <= 182）からシューターレーンへ戻った場合はレーン内扱いへ復帰
+        ball.inShooterLane = true;
+      } else if (ball.y > 182 && ball.x > geom.SHOOTER_MIN_X - ball.r - 1.5) {
+        // 盤面中段から壁越しに押し込まれた場合は盤面側へ押し戻し、prevX も揃えて逆押し出しを防ぐ
+        const safePlayX = geom.SHOOTER_MIN_X - ball.r - 2.6;
+        if (ball.x > safePlayX && prevX < geom.SHOOTER_MIN_X + 12) {
+          ball.x = safePlayX;
+          if (prevX > safePlayX) prevX = safePlayX;
+          ball.vx = -Math.abs(ball.vx) - 1.2;
+        } else if (ball.x >= geom.SHOOTER_MIN_X) {
+          ball.inShooterLane = true;
         }
       }
     }
 
-    // Shooter lane exit check & one-way gate
-    if (ball.inShooterLane && ball.x < 378 && ball.y < 170) {
-      ball.inShooterLane = false;
-    }
-    if (!ball.inShooterLane && ball.x > 379 && ball.y > 175) {
-      ball.x = 378;
-      ball.vx = -Math.abs(ball.vx) - 1.5;
+    // 常時稼働の物理プランジャー・バネ判定（フラグ不要：バネ先端との実接触のみで支持＆打ち出し）
+    if ((ball.inShooterLane || ball.x >= geom.SHOOTER_MIN_X) && ball.x >= geom.SHOOTER_MIN_X - 2 && ball.x <= geom.SHOOTER_MAX_X + 2) {
+      ball.inShooterLane = true;
+      const restTipY = geom.PLUNGER_REST_Y - 6;
+      const tipY = (state.plunger.springY || geom.PLUNGER_REST_Y) - 6;
+
+      // 1. リリース直後のバネ跳ね上がりストローク内にボールがある場合のみ物理打撃（空中多段ヒット不能）
+      if (state.plunger.launchFrames > 0 && state.plunger.launchSpeed > 0 && (ball.y + ball.r) >= Math.min(tipY, restTipY) - 2.5) {
+        const launchSpd = state.plunger.launchSpeed;
+        const pwr = state.plunger.launchPower || 50;
+        const pRatio = state.plunger.launchSkillRatio || 0;
+        const pb = this.BALANCE;
+
+        ball.x = geom.SHOOTER_CENTER_X;
+        ball.y = Math.min(ball.y, restTipY - ball.r - 0.5);
+
+        if (window.sfx) window.sfx.plungerLaunch(pwr);
+        if (ball.vy > 1.8) {
+          const counterBoost = ball.vy * 1.25;
+          ball.vy = -(launchSpd + counterBoost);
+          ball.vx = -0.3;
+          if (window.sfx) window.sfx.metalBumper();
+          if (window.Particles) {
+            Particles.add(state, ball.x, ball.y, "#00f5d4", 16, 4.5);
+            Particles.add(state, ball.x, ball.y, "#e6ff00", 12, 3.5);
+            Particles.addPopup(state, ball.x - 15, ball.y - 15, "🚀SUPER COUNTER LAUNCH!", "#e6ff00", 1.2);
+          }
+          if (window.Systems) {
+            Systems.addScore(state, ScoreTable.common.COUNTER_SHOT, ball.x, ball.y, "COUNTER SHOT!");
+          }
+        } else {
+          ball.vy = -launchSpd;
+          ball.vx = -0.3;
+        }
+
+        if (state.boss) state.boss.winkTimer = 35;
+        if (pRatio >= pb.SKILL_SHOT_MIN_RATIO && pRatio <= pb.SKILL_SHOT_MAX_RATIO) {
+          state.skillShotEligible = true;
+        }
+
+        state.plunger.launchSpeed = 0;
+        state.plunger.launchFrames = 0;
+        if (window.UI) UI.updateHUD(state);
+      } else if (state.plunger.pulling && (prevY + ball.r) >= tipY - 3.0) {
+        // 2. バネの上に載っている球は、バネを引くと一緒に下へ追従する（空中の球は追従せず重力落下）
+        ball.x = geom.SHOOTER_CENTER_X;
+        ball.y = tipY - ball.r;
+        ball.vx = 0;
+        ball.vy = 0;
+      } else if ((ball.y + ball.r) >= tipY) {
+        // 3. 常時ソリッドなバネ天面ストッパー（どんな状況でもバネより下へは貫通しない）
+        ball.y = tipY - ball.r;
+        ball.x = geom.SHOOTER_CENTER_X;
+        ball.vx = 0;
+        if (ball.vy > 0) {
+          state.plunger.springVy = (state.plunger.springVy || 0) + Math.min(10, ball.vy * 0.55);
+          if (ball.vy > 2.2) {
+            ball.vy = -ball.vy * 0.25;
+            if (window.sfx) window.sfx.metalBumper();
+          } else {
+            ball.vy = 0;
+          }
+        }
+      }
     }
 
     // Velocity-scaled boundary thickness (tighter in narrow shooter lane to prevent wedging)
@@ -622,6 +687,7 @@ window.Physics = {
 
       if ((dist < minDist && dist > 0.0001) || sweptHit) {
         st.swingHit = true;
+        this.flipperState[f.isLeft ? 0 : 1].swingHit = true;
         ball._crotchSpitActive = false;
         let nx, ny;
         if (sweptHit && (dx * upNx + dy * upNy < 0 || dist >= minDist)) {
@@ -653,9 +719,15 @@ window.Physics = {
             const flipBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult);
             ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;
             ball.vx += nx * 4.2 * springMult;
-            if (window.sfx) window.sfx.flip();
-            Particles.add(state, cp.x, cp.y, "#ff1493", 10, 4.5);
-            if (window.Systems) window.Systems.addScore(state, ScoreTable.common.FLIPPER_HIT, cp.x, cp.y, "FLIP");
+            if (!(ball._flipHitGrace > 0)) {
+              ball._flipHitGrace = 16;
+              if (window.sfx) window.sfx.flip();
+              Particles.add(state, cp.x, cp.y, f.isSubFlipper ? "#e6ff00" : "#ff1493", f.isSubFlipper ? 14 : 10, f.isSubFlipper ? 5.2 : 4.5);
+              if (f.isSubFlipper && state.shockwaves) {
+                state.shockwaves.push({ x: cp.x, y: cp.y, r: 5, maxR: 28, speed: 3.4, color: "#00f5e8", lineWidth: 2.2, alpha: 0.9 });
+              }
+              if (window.Systems) window.Systems.addScore(state, ScoreTable.common.FLIPPER_HIT, cp.x, cp.y, f.isSubFlipper ? "WING FLIP" : "FLIP");
+            }
           } else {
             // 静止中のパドル：通路から流れてきた球が跳ねずにピタッと乗って転がるよう法線反発を抑え、接線転がりを維持
             const tx = -ny;
@@ -671,36 +743,49 @@ window.Physics = {
       }
     }
 
-    // Permanent Installed Defenses (Center Post, Kickbacks)
-    if (s === 0) {
-      if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0 && !ball._crotchSpitActive) {
-        const postR = 7 + state.perm.centerPost * 3.5;
-        const px = geom.CENTER_POST_X;
-        const py = geom.CENTER_POST_Y;
-        const dx = ball.x - px;
-        const dy = ball.y - py;
-        const dist = Math.hypot(dx, dy);
-        if (dist < ball.r + postR && dist > 0.001) {
-          const nx = dx / dist;
-          const ny = dy / dist;
-          ball.x = px + nx * (ball.r + postR + 2);
-          ball.y = py + ny * (ball.r + postR + 2);
-          ball.vx = nx * 8.5;
-          ball.vy = -Math.abs(ny * 8.5) - 2.5;
+    // Permanent Installed Defenses (Center Post: 全サブステップで判定し5面真下排出も確実にガード！)
+    if (state.perm.centerPost > 0 && state.perm.centerPostHP > 0) {
+      const postR = 7 + state.perm.centerPost * 3.5;
+      const px = geom.CENTER_POST_X;
+      const py = geom.CENTER_POST_Y;
+      const dx = ball.x - px;
+      const dy = ball.y - py;
+      const dist = Math.hypot(dx, dy);
+      if (dist < ball.r + postR) {
+        let nx = dist > 0.001 ? (dx / dist) : 0;
+        const ny = dist > 0.001 ? (dy / dist) : -1;
+        // 真上からど真ん中に落ちてきた球（5面真下排出など）が垂直ループしないよう左右パドル側へ逃がす
+        if (Math.abs(nx) < 0.28) {
+          nx = (Math.random() < 0.5 ? -1 : 1) * 0.42;
+        }
+        const nLen = Math.hypot(nx, ny) || 1;
+        nx /= nLen;
+        const effNy = ny / nLen;
 
+        ball._crotchSpitActive = false;
+        ball.x = px + nx * (ball.r + postR + 2);
+        ball.y = py + effNy * (ball.r + postR + 2);
+        ball.vx = nx * 9.2;
+        ball.vy = -Math.max(10.5, Math.abs(effNy * 9.5) + 2.8);
+
+        if (!(ball._postGrace > 0)) {
+          ball._postGrace = 10;
           state.perm.centerPostHP--;
           if (window.sfx) window.sfx.metalBumper();
-          Particles.add(state, px, py, "#00f5d4", 10, 3.5);
+          Particles.add(state, px, py, "#00f5d4", 12, 3.8);
           if (state.perm.centerPostHP === 0) {
             Particles.addPopup(state, px, py - 15, "GUARD BROKEN!", "#ff1493", 1.1);
             if (window.sfx) window.sfx.armorBreak();
           } else {
             Particles.addPopup(state, px, py - 15, t("physics.centerPostSave", { hp: state.perm.centerPostHP }), "#00f5d4", 0.95);
           }
+          if (window.UI) UI.updateHUD(state);
         }
       }
+    }
 
-      // Kickbacks (In the Outlanes)
+    // Kickbacks (In the Outlanes)
+    if (s === 0) {
       const kickbacks = this.KICKBACK_DEFS;
       for (let ki = 0; ki < kickbacks.length; ki++) {
         const kb = kickbacks[ki];

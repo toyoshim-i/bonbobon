@@ -89,7 +89,7 @@ Object.assign(window.Stage5, {
         b.expression = "blink";
         b.expressionTimer = 95;
         Systems.dropReward(state, "major", { x: 198, y: 240 });
-        Systems.addScore(state, 80000, 198, 240, "✨SERAPHIA AWAKENING!!");
+        Systems.addScore(state, ScoreTable.stage5.SERAPHIA_AWAKENING, 198, 240, "✨SERAPHIA AWAKENING!!");
         fs.seraOffsetY = -220;
       } else if (fs.frame <= 160) {
         // Beat 2 (frame 70..160) — Heavenly God-Rays & Slow Descent of Seraphia
@@ -499,7 +499,7 @@ Object.assign(window.Stage5, {
                   clashed = true;
                   if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
                   Particles.add(state, sw.x, sw.y, "#ffd700", 16, 4.2);
-                  Systems.addScore(state, 4000, sw.x, sw.y, "⚔️CLASH!");
+                  Systems.addScore(state, ScoreTable.stage5.SWORD_CLASH, sw.x, sw.y, "⚔️CLASH!");
                   sa.swords.splice(si, 1);
                   break;
                 }
@@ -532,7 +532,7 @@ Object.assign(window.Stage5, {
                 state.shockwaves.push({ x: sw.x, y: sw.y, r: 8, maxR: 50, speed: 4.5, color: "#ffd700", lineWidth: 3.0, alpha: 1.0 });
                 Particles.add(state, sw.x, sw.y, "#ffd700", 20, 5.5);
                 Particles.addPopup(state, sw.x, sw.y - 14, "⚔️SWORD PARRY!!", "#ffd700", 1.2);
-                Systems.addScore(state, 12000, sw.x, sw.y, "⚔️PARRY!");
+                Systems.addScore(state, ScoreTable.stage5.SWORD_PARRY, sw.x, sw.y, "⚔️PARRY!");
                 Systems.addFever(state, 8);
                 continue;
               } else if (hitFlipper) {
@@ -630,7 +630,7 @@ Object.assign(window.Stage5, {
             const ang = (Math.random() < 0.5 ? 0.38 : Math.PI - 0.38) + (Math.random() - 0.5) * 0.28;
             ball.vx = Math.cos(ang) * 10.4;
             ball.vy = Math.sin(ang) * 10.4;
-            Systems.addScore(state, 4500, cm.x, cm.y, "🕳️SINGULARITY SLING!");
+            Systems.addScore(state, ScoreTable.stage5.SINGULARITY_SLING, cm.x, cm.y, "🕳️SINGULARITY SLING!");
             Particles.add(state, cm.x, cm.y, "#b84dff", 18, 5.0);
             state.shockwaves.push({ x: cm.x, y: cm.y, r: 8, maxR: 55, speed: 4.2, color: "#b84dff", lineWidth: 3.0, alpha: 1.0 });
           }
@@ -712,7 +712,7 @@ Object.assign(window.Stage5, {
             clashedBall = true;
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
             Particles.add(state, ring.x, ring.y, "#00f5e8", 14, 4.0);
-            Systems.addScore(state, 3500, ring.x, ring.y, "⚔️CLASH!");
+            Systems.addScore(state, ScoreTable.stage5.HALO_RING_CLASH, ring.x, ring.y, "⚔️CLASH!");
             ha.rings.splice(i, 1);
             break;
           }
@@ -755,7 +755,7 @@ Object.assign(window.Stage5, {
           state.shockwaves.push({ x: ring.x, y: ring.y, r: 6, maxR: 44, speed: 4.2, color: "#e6ff00", lineWidth: 3.0, alpha: 1.0 });
           Particles.add(state, ring.x, ring.y, "#e6ff00", 18, 5.0);
           Particles.addPopup(state, ring.x, ring.y - 14, "⚔️HALO PARRY!!", "#e6ff00", 1.2);
-          Systems.addScore(state, 10000, ring.x, ring.y, "⚔️PARRY!");
+          Systems.addScore(state, ScoreTable.stage5.HALO_RING_PARRY, ring.x, ring.y, "⚔️PARRY!");
           Systems.addFever(state, 8);
           continue;
         } else if (hitFlipper) {
@@ -791,7 +791,7 @@ Object.assign(window.Stage5, {
       minVy: -2.6,
       minSpeed: 9.5,
       maxSpeed: 14.8,
-      entryScore: 6000
+      entryScore: ScoreTable.stage5.RAMP_ENTRY
     })) {
       return;
     }
@@ -874,7 +874,7 @@ Object.assign(window.Stage5, {
           ball.vy = Math.max(ball.vy, 1.8);
         }
         if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
-        Systems.addScore(state, 3000, ball.x, ball.y, "💥GAMMA BURST!");
+        Systems.addScore(state, ScoreTable.stage5.GAMMA_BURST_HIT, ball.x, ball.y, "💥GAMMA BURST!");
         Particles.add(state, ball.x, ball.y, "#e6ff00", 15, 4.5);
         state.shockwaves.push({ x: ball.x, y: ball.y, r: 6, maxR: 40, speed: 4.0, color: "#00f5e8", lineWidth: 2.5, alpha: 0.9 });
       }
@@ -959,13 +959,13 @@ Object.assign(window.Stage5, {
               targetPrism.hp--;
               targetPrism.flash = 20;
               Particles.add(state, cp.x, cp.y, "#e6ff00", 16, 5.0);
-              Systems.addScore(state, 5000, cp.x, cp.y, t("stage5.popup.navelOverload"));
+              Systems.addScore(state, ScoreTable.stage5.NAVEL_OVERLOAD, cp.x, cp.y, t("stage5.popup.navelOverload"));
               if (b.elleBroken && b.noelBroken && b.prismL.hp <= 0 && b.prismR.hp <= 0) {
                 this.triggerSeraphFusion(state);
               }
             }
           } else {
-            Systems.addScore(state, 1800, cp.x, cp.y, t("stage5.popup.navelReflect"));
+            Systems.addScore(state, ScoreTable.stage5.NAVEL_BEAM_REFLECT, cp.x, cp.y, t("stage5.popup.navelReflect"));
           }
         }
       }
@@ -983,7 +983,7 @@ Object.assign(window.Stage5, {
           if (window.sfx && window.sfx.slingshot) window.sfx.slingshot();
           state.shockwaves.push({ x: b.synchroSpark.x, y: b.synchroSpark.y, r: 8, maxR: 48, speed: 4.0, color: "#e6ff00", lineWidth: 3.0, alpha: 1.0 });
           Particles.add(state, b.synchroSpark.x, b.synchroSpark.y, "#e6ff00", 18, 5.0);
-          Systems.addScore(state, 4000, b.synchroSpark.x, b.synchroSpark.y, "🏐TWIN TOSS! +4000");
+          Systems.addScore(state, ScoreTable.stage5.TWIN_TOSS, b.synchroSpark.x, b.synchroSpark.y, "🏐TWIN TOSS!");
           Systems.addFever(state, 5);
         });
       }
@@ -1002,7 +1002,7 @@ Object.assign(window.Stage5, {
         b.blushGauge = Math.min(100, (b.blushGauge || 0) + 6);
 
         const msg = isAlternating ? "⚡SYNCHRO BREAK x2!!" : `${obj.label} HP:${obj.hp}`;
-        Systems.addScore(state, isAlternating ? 12000 : 5000, obj.x, obj.y - 10, msg);
+        Systems.addScore(state, isAlternating ? ScoreTable.stage5.TWIN_PART_SYNCHRO : ScoreTable.stage5.TWIN_PART_HIT, obj.x, obj.y - 10, msg);
         Systems.addFever(state, isAlternating ? 8 : 4);
         Particles.add(state, obj.x, obj.y, obj.color, 14, 4.5);
 
@@ -1060,7 +1060,7 @@ Object.assign(window.Stage5, {
         if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
         Particles.spawnHeart(state, b.charmL.x, b.charmL.y - 8, true);
         Particles.add(state, b.charmL.x, b.charmL.y, b.charmL.color, 12, 3.8);
-        Systems.addScore(state, 4500, b.charmL.x, b.charmL.y - 10, "♥GARTER BOUNCE!");
+        Systems.addScore(state, ScoreTable.stage5.GARTER_CHARM, b.charmL.x, b.charmL.y - 10, "♥GARTER BOUNCE!");
         Systems.addFever(state, 4);
         UI.updateHUD(state);
       });
@@ -1076,7 +1076,7 @@ Object.assign(window.Stage5, {
         if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
         Particles.spawnHeart(state, b.charmR.x, b.charmR.y - 8, true);
         Particles.add(state, b.charmR.x, b.charmR.y, b.charmR.color, 12, 3.8);
-        Systems.addScore(state, 4500, b.charmR.x, b.charmR.y - 10, "♦GARTER BOUNCE!");
+        Systems.addScore(state, ScoreTable.stage5.GARTER_CHARM, b.charmR.x, b.charmR.y - 10, "♦GARTER BOUNCE!");
         Systems.addFever(state, 4);
         UI.updateHUD(state);
       });
@@ -1093,7 +1093,7 @@ Object.assign(window.Stage5, {
             twin.blushTimer = 20;
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
             Particles.add(state, obj.x, obj.y, obj.color, 10, 3.5);
-            Systems.addScore(state, 3000, obj.x, obj.y - 10, "🛡️BROOCH GUARD");
+            Systems.addScore(state, ScoreTable.stage5.BROOCH_GUARD, obj.x, obj.y - 10, "🛡️BROOCH GUARD");
             UI.updateHUD(state);
           });
         } else if (obj.hp > 0) {
@@ -1104,7 +1104,7 @@ Object.assign(window.Stage5, {
             spring.vy -= 4.0;
             b.blushGauge = Math.min(100, (b.blushGauge || 0) + 9);
             Particles.add(state, obj.x, obj.y, obj.color, 16, 4.8);
-            Systems.addScore(state, 8000, obj.x, obj.y - 10, `${obj.label} HP:${obj.hp}`);
+            Systems.addScore(state, ScoreTable.stage5.BROOCH_HIT, obj.x, obj.y - 10, `${obj.label} HP:${obj.hp}`);
             Systems.addFever(state, 6);
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
 
@@ -1134,13 +1134,13 @@ Object.assign(window.Stage5, {
             window.sfx.capsuleCatch();
           }
           Particles.add(state, pipe.x, pipe.y, pipe.col, 14, 4.0);
-          Systems.addScore(state, 4000, pipe.x, pipe.y - 10, "🎹CHIME!");
+          Systems.addScore(state, ScoreTable.stage5.CHIME_PIPE_HIT, pipe.x, pipe.y - 10, "🎹CHIME!");
           Systems.addFever(state, 4);
 
           if (b.chimePipes.every(p => p.lit)) {
             b.harmonyBeamTimer = 55;
             b.chimePipes.forEach(p => { p.lit = false; p.flash = 25; });
-            Systems.addScore(state, 40000, 198, 120, "✨SERAPHIC HARMONY JACKPOT!! +40,000");
+            Systems.addScore(state, ScoreTable.stage5.HARMONY_JACKPOT, 198, 120, "✨SERAPHIC HARMONY JACKPOT!!");
             Particles.addPopup(state, 198, 120, "✨HARMONY JACKPOT!!", "#e6ff00", 1.25);
             if (window.sfx && window.sfx.exSpark) window.sfx.exSpark();
             this.damageActiveBoss(state, 3, 198, 205, "🎹HARMONY LASER -3HP!!");
@@ -1170,7 +1170,7 @@ Object.assign(window.Stage5, {
           }
           if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
           Particles.add(state, ball.x, ball.y, arm % 2 === 0 ? "#ff2ad4" : "#00f5e8", 16, 4.5);
-          Systems.addScore(state, 3000, ball.x, ball.y, "⚔️CROSS DEFLECTION!");
+          Systems.addScore(state, ScoreTable.stage5.CROSS_LASER_DEFLECT, ball.x, ball.y, "⚔️CROSS DEFLECTION!");
           break;
         }
       }
@@ -1225,7 +1225,7 @@ Object.assign(window.Stage5, {
             }
             if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
             Particles.add(state, cup.x, cup.y, "#ff2ad4", 14, 4.4);
-            Systems.addScore(state, 6000, cup.x, cup.y - 12, `ARMOR HP:${b.chestArmorHP}`);
+            Systems.addScore(state, ScoreTable.stage5.SERAPH_CHEST_HIT, cup.x, cup.y - 12, `ARMOR HP:${b.chestArmorHP}`);
             Systems.addFever(state, 5);
 
             if (b.chestArmorHP <= 0) {
@@ -1246,7 +1246,7 @@ Object.assign(window.Stage5, {
             }
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
             Particles.add(state, pld.x, pld.y, "#00f5e8", 12, 4.0);
-            Systems.addScore(state, 4000, pld.x, pld.y - 12, `ARMOR HP:${b.chestArmorHP}`);
+            Systems.addScore(state, ScoreTable.stage5.SERAPH_PAULDRON_HIT, pld.x, pld.y - 12, `ARMOR HP:${b.chestArmorHP}`);
             Systems.addFever(state, 4);
 
             if (b.chestArmorHP <= 0) {
@@ -1270,7 +1270,7 @@ Object.assign(window.Stage5, {
               if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
               state.shockwaves.push({ x: orb.x, y: orb.y, r: 8, maxR: 55, speed: 4.2, color: orb.color, lineWidth: 3.0, alpha: 1.0 });
               Particles.add(state, orb.x, orb.y, "#e6ff00", 20, 5.5);
-              Systems.addScore(state, 18000, orb.x, orb.y - 10, `💥${orb.label} SHATTER!!`);
+              Systems.addScore(state, ScoreTable.stage5.ORB_SHATTER, orb.x, orb.y - 10, `💥${orb.label} SHATTER!!`);
               Systems.addFever(state, 8);
               if (b.cherubOrbs.every(o => !o.active)) {
                 b.orbCooldown = 480;
@@ -1278,7 +1278,7 @@ Object.assign(window.Stage5, {
               }
             } else {
               if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-              Systems.addScore(state, 4500, orb.x, orb.y - 10, `${orb.label} HP:${orb.hp}`);
+              Systems.addScore(state, ScoreTable.stage5.ORB_HIT, orb.x, orb.y - 10, `${orb.label} HP:${orb.hp}`);
             }
             UI.updateHUD(state);
           });
@@ -1290,7 +1290,7 @@ Object.assign(window.Stage5, {
           const isShielded = b.coreGraceTimer > 0 || b.cherubOrbs.some(o => o.active);
           if (isShielded) {
             if (window.sfx && window.sfx.slingshot) window.sfx.slingshot();
-            Systems.addScore(state, 2000, b.core.x, b.core.y - 12, t("stage5.popup.orbBarrier"));
+            Systems.addScore(state, ScoreTable.stage5.CORE_BARRIER, b.core.x, b.core.y - 12, t("stage5.popup.orbBarrier"));
           } else {
             b.core.hp = Math.max(0, b.core.hp - 1);
             b.expression = "wince";
@@ -1298,7 +1298,7 @@ Object.assign(window.Stage5, {
             if (window.sfx && window.sfx.exSpark) window.sfx.exSpark();
             state.shockwaves.push({ x: b.core.x, y: b.core.y, r: 8, maxR: 64, speed: 4.6, color: "#00f5d4", lineWidth: 3.2, alpha: 1.0 });
             Particles.add(state, b.core.x, b.core.y, "#00f5d4", 24, 6.0);
-            Systems.addScore(state, 15000, b.core.x, b.core.y - 14, `💎ARK CORE HP:${b.core.hp}`);
+            Systems.addScore(state, ScoreTable.stage5.CORE_HIT, b.core.x, b.core.y - 14, `💎ARK CORE HP:${b.core.hp}`);
             Systems.addFever(state, 8);
             if (b.core.hp <= 0) {
               this.triggerStageClear(state);
@@ -1331,7 +1331,7 @@ Object.assign(window.Stage5, {
             if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
             Particles.spawnHeart(state, cup.x, cup.y - 8, false);
             Particles.add(state, cup.x, cup.y, "#ff66cc", 14, 4.0);
-            Systems.addScore(state, 7500, cup.x, cup.y - 12, "♥DIVINE BOUNCE!!");
+            Systems.addScore(state, ScoreTable.stage5.DIVINE_BUST_BOUNCE, cup.x, cup.y - 12, "♥DIVINE BOUNCE!!");
             Systems.addFever(state, 6);
             UI.updateHUD(state);
           });
@@ -1359,7 +1359,7 @@ Object.assign(window.Stage5, {
             Particles.spawnHeart(state, gar.x, gar.y - 6, true);
             if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
             Particles.add(state, gar.x, gar.y, "#00f5e8", 10, 3.4);
-            Systems.addScore(state, 4000, gar.x, gar.y - 10, `✨${gar.label}`);
+            Systems.addScore(state, ScoreTable.stage5.SERAPH_GARTER, gar.x, gar.y - 10, `✨${gar.label}`);
             Systems.addFever(state, 4);
             UI.updateHUD(state);
           });
@@ -1381,7 +1381,7 @@ Object.assign(window.Stage5, {
             Particles.spawnHeart(state, b.navelSera.x, b.navelSera.y - 6, false);
             if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
             Particles.add(state, b.navelSera.x, b.navelSera.y, "#ff66cc", 14, 4.2);
-            Systems.addScore(state, 5500, b.navelSera.x, b.navelSera.y - 10, "💖NAVEL TOUCH!");
+            Systems.addScore(state, ScoreTable.stage5.SERAPH_NAVEL, b.navelSera.x, b.navelSera.y - 10, "💖NAVEL TOUCH!");
             Systems.addFever(state, 5);
             UI.updateHUD(state);
           });

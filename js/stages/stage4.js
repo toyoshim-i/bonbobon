@@ -431,7 +431,7 @@ window.Stage4 = {
       x: lt.x, y: lt.y, r: 8, maxR: wasLit ? 34 : 52, speed: 3.4, color: lt.color, lineWidth: 2.4, alpha: 0.9
     });
     Particles.add(state, lt.x, lt.y, lt.color, wasLit ? 9 : 18, 4.2);
-    Systems.addScore(state, wasLit ? 1800 : 5000, lt.x, lt.y, wasLit ? `🏮${lt.kanji}` : `🏮${lt.kanji} LIT UP!`);
+    Systems.addScore(state, wasLit ? ScoreTable.stage4.LANTERN_LIT_REPEAT : ScoreTable.stage4.LANTERN_LIT_NEW, lt.x, lt.y, wasLit ? `🏮${lt.kanji}` : `🏮${lt.kanji} LIT UP!`);
     Systems.addFever(state, wasLit ? 2.5 : 6);
 
     if (!wasLit && !allLit && b.expression === "normal") {
@@ -467,7 +467,7 @@ window.Stage4 = {
       applied: false
     };
 
-    Systems.addScore(state, 45000, 198, 120, "🌸YOZAKURA FULL BLOOM!!");
+    Systems.addScore(state, ScoreTable.stage4.YOZAKURA_FULL_BLOOM, 198, 120, "🌸YOZAKURA FULL BLOOM!!");
     Systems.addFever(state, 24);
     UI.showCutin(t("stage4.cutin.lanternFull"), 210);
   },
@@ -507,7 +507,7 @@ window.Stage4 = {
         tgt.flash = 22;
         state.shockwaves.push({ x: tgt.x, y: tgt.y, r: 6, maxR: 50, speed: 4.2, color: "#e6ff00", lineWidth: 3.0, alpha: 1.0 });
         Particles.add(state, tgt.x, tgt.y, "#e6ff00", 20, 5.5);
-        Systems.addScore(state, 18000, tgt.x, tgt.y - 10, label);
+        Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P1_PART, tgt.x, tgt.y - 10, label);
         if (window.sfx) window.sfx.armorBreak();
         if (tgt.hp === 0) {
           tgt.broken = true;
@@ -523,7 +523,7 @@ window.Stage4 = {
       b.bustR.vy -= 6.8;
       state.shockwaves.push({ x: 198, y: 260, r: 8, maxR: 60, speed: 4.5, color: "#ff2a9d", lineWidth: 3.2, alpha: 1.0 });
       Particles.add(state, 198, 260, "#ff2a9d", 22, 5.8);
-      Systems.addScore(state, 22000, 198, 250, label);
+      Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P2_SUIT, 198, 250, label);
       if (window.sfx) window.sfx.armorBreak();
       if (b.chestArmorHP <= 0) {
         this.breakChestSuit(state);
@@ -535,7 +535,7 @@ window.Stage4 = {
         activeClone.hp = Math.max(0, activeClone.hp - dmg);
         activeClone.flash = 20;
         Particles.add(state, activeClone.x, activeClone.y, activeClone.color, 18, 5.0);
-        Systems.addScore(state, 16000, activeClone.x, activeClone.y - 10, label);
+        Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P3_CLONE, activeClone.x, activeClone.y - 10, label);
         if (activeClone.hp <= 0) {
           activeClone.active = false;
           if (window.sfx) window.sfx.armorBreak();
@@ -550,7 +550,7 @@ window.Stage4 = {
         b.core.flash = 24;
         state.shockwaves.push({ x: b.core.x, y: b.core.y, r: 8, maxR: 64, speed: 4.6, color: "#00f5d4", lineWidth: 3.2, alpha: 1.0 });
         Particles.add(state, b.core.x, b.core.y, "#00f5d4", 24, 6.0);
-        Systems.addScore(state, 28000, b.core.x, b.core.y - 12, label);
+        Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P3_CORE, b.core.x, b.core.y - 12, label);
         if (window.sfx) window.sfx.exSpark();
         if (b.core.hp <= 0) {
           this.triggerStageClear(state);
@@ -581,7 +581,7 @@ window.Stage4 = {
         { expr: "wince", frames: 40 },
         { expr: "shout", frames: 35 }
       ]);
-      Systems.addScore(state, 40000, 198, 260, "🌸SEAL BROKEN! PHASE 2!");
+      Systems.addScore(state, ScoreTable.stage4.PHASE1_CLEAR, 198, 260, "🌸SEAL BROKEN! PHASE 2!");
       Systems.dropReward(state, "major", { x: 198, y: 295 });
       UI.showCutin(t("stage4.cutin.phase1Clear"), 220);
       UI.updateHUD(state);
@@ -614,7 +614,7 @@ window.Stage4 = {
     ]);
 
     Particles.triggerArmorBreakEffect(state, "chest", 198, 260);
-    Systems.addScore(state, 60000, 198, 260, "🌸SHINOBI SUIT PURGED!!");
+    Systems.addScore(state, ScoreTable.stage4.SUIT_PURGE, 198, 260, "🌸SHINOBI SUIT PURGED!!");
     Systems.dropReward(state, "major", { x: 198, y: 268 });
     UI.showCutin(t("stage4.cutin.phase2Clear"), 240);
     UI.updateHUD(state);
@@ -631,7 +631,7 @@ window.Stage4 = {
     }
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
     if (window.sfx) window.sfx.burstTrigger();
-    Systems.addScore(state, 160000, 198, 225, "🌸STAGE 4 CLEAR!!🌸");
+    Systems.addScore(state, ScoreTable.stage4.STAGE_CLEAR, 198, 225, "🌸STAGE 4 CLEAR!!🌸", { exemptDecay: true });
     UI.showCutin(t("stage4.cutin.criticalKO"), 260);
     UI.updateHUD(state);
   }

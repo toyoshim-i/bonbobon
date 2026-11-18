@@ -4,18 +4,38 @@
 
 window.Systems = {
   // 全システム共通のゲームバランス定数（調整時の単一参照先）
+  // ※スコア関連の値は js/engine/score_table.js（ScoreTable）で一元管理する。
   BALANCE: {
     FEVER_DURATION_FRAMES: 60 * 18,
     FEVER_MULT: 5.0,
     FEVER_TARGET_BALLS: 3,
     BURST_DURATION_FRAMES: 60 * 10,
     CAPSULE_LIFE_FRAMES: 960,
-    RADAR_MULT_PER_STACK: 0.25,
-    MISS_PENALTY_MIN_BASE: 30000,
-    MISS_PENALTY_RATIO: 0.35,
-    MISS_FEVER_KEEP_RATIO: 0.5,
-    CLEAR_BONUS_BASE: 50000,
-    NO_MISS_BONUS_BASE: 100000
+    MISS_FEVER_KEEP_RATIO: 0.5
+  },
+
+  // 基礎点を表示スケールへ変換する（ボーナス・ペナルティ等、倍率を通さない加減算用）
+  scaled(basePts) {
+    return Math.round(basePts * (window.ScoreTable.SCORE_SCALE || 1));
+  },
+
+  // カンスト上限（9,999,999,999）でスコアをクランプする
+  capScore(val) {
+    const cap = (window.ScoreTable && ScoreTable.SCORE_CAP) || 9999999999;
+    return Math.min(cap, Math.max(0, Math.round(val)));
+  },
+
+  // 永パ防止：ステージ実プレイ時間が目安を超えた場合のリピート加点・Fever減衰率 (1.0 -> 0.0)
+  getAntiStallScale(state) {
+    if (!state || !window.ScoreTable || !ScoreTable.antiStall) return 1.0;
+    const as = ScoreTable.antiStall;
+    const isStage5 = (state.stageIndex === 5) || (window.currentStage && window.currentStage.id === "stage5");
+    const softStart = isStage5 ? as.STAGE5_SOFT_DECAY_FRAMES : as.SOFT_DECAY_FRAMES;
+    const frames = state.stagePlayFrames || 0;
+    if (frames <= softStart) return 1.0;
+    const over = frames - softStart;
+    if (over >= as.DECAY_SPAN_FRAMES) return 0.0;
+    return Math.max(0.0, 1.0 - over / as.DECAY_SPAN_FRAMES);
   },
 
   PERM_DEFS: {
@@ -76,13 +96,16 @@ window.Systems = {
     return imgs;
   },
 
-  addScore(state, basePts, x, y, label = "") {
+  addScore(state, basePts, x, y, label = "", opts = null) {
+    const stallScale = (opts && opts.exemptDecay) ? 1.0 : this.getAntiStallScale(state);
     const totalMult = state.baseMultiplier * state.burstMultiplier * state.fever.mult;
-    const pts = Math.round(basePts * totalMult);
-    state.score += pts;
+    const pts = Math.round(basePts * (window.ScoreTable.SCORE_SCALE || 1) * totalMult * stallScale);
+    state.score = this.capScore((state.score || 0) + pts);
     state.peakScore = Math.max(state.peakScore || 0, state.score);
 
-    if (label) {
+    if (pts <= 0 && stallScale <= 0) {
+      if (label) Particles.addPopup(state, x, y, `${label} +0`, "#888888", 0.85);
+    } else if (label) {
       Particles.addPopup(state, x, y, `${label} +${pts.toLocaleString()}`, totalMult > 1.5 ? "#e6ff00" : "#00f5d4");
     } else {
       Particles.addPopup(state, x, y, `+${pts.toLocaleString()}`, "#ffffff", 0.9);
@@ -94,7 +117,7 @@ window.Systems = {
   deductScore(state, amount, x, y, label = "") {
     if (!state || state.stageCleared || state.inTitle || state.inEnding || state.gameOver) return;
     if (state.balls && state.balls.length > 0 && state.balls.every(b => b.inShooterLane)) return;
-    const loss = Math.min(state.score || 0, Math.max(0, Math.round(amount)));
+    const loss = Math.min(state.score || 0, Math.max(0, this.scaled(amount)));
     if (loss <= 0) return;
     state.score = Math.max(0, state.score - loss);
     const txt = label ? `${label} -${loss.toLocaleString()}` : `-${loss.toLocaleString()}`;
@@ -104,7 +127,9 @@ window.Systems = {
 
   addFever(state, amount) {
     if (state.fever.active) return;
-    state.fever.gauge = Math.min(100, state.fever.gauge + amount);
+    const effAmount = amount * this.getAntiStallScale(state);
+    if (effAmount <= 0) return;
+    state.fever.gauge = Math.min(100, state.fever.gauge + effAmount);
     if (state.fever.gauge >= 100) {
       this.startFeverMode(state);
     }
@@ -148,26 +173,24 @@ window.Systems = {
     }
     if (window.sfx) window.sfx.burstTrigger();
 
-    let totalMult = 1.0;
-    let spawnExtraBall = false;
+    const bc = (window.ScoreTable && ScoreTable.burst) || { TIER_STEP: 0.75, SLOT_SYNERGY_STEP: 0.20, MAX_MULT: 15.0 };
+    let addSum = 0.0;
     activeList.forEach(item => {
       const def = this.BUFF_DEFS[item.id];
-      const tierFactor = 1 + (item.tier - 1) * 0.65;
-      totalMult *= (def.mult * tierFactor);
+      const tierFactor = 1 + (item.tier - 1) * bc.TIER_STEP;
+      addSum += (def.mult - 1.0) * tierFactor;
       if (item.id === "magnet") state.magnetActive = true;
       if (item.id === "overdrive") state.overdriveActive = true;
-      if (item.id === "fever") spawnExtraBall = true;
     });
 
-    if (activeList.length >= 2) {
-      totalMult *= (1 + activeList.length * 0.25);
-    }
+    const synergy = 1 + (activeList.length - 1) * bc.SLOT_SYNERGY_STEP;
+    const rawMult = Math.min(bc.MAX_MULT, (1.0 + addSum) * synergy);
 
-    state.burstMultiplier = Math.round(totalMult * 10) / 10;
+    state.burstMultiplier = Math.round(rawMult * 10) / 10;
     state.burstTimer = this.BALANCE.BURST_DURATION_FRAMES;
     state.keptBuffs = [null, null, null, null];
 
-    if (spawnExtraBall || activeList.length >= 3) {
+    if (activeList.length >= 3) {
       this.spawnBall(state, 210, 260, (Math.random() - 0.5) * 6, -7);
     }
 
@@ -293,7 +316,7 @@ window.Systems = {
         if (key === "centerPost") state.perm.centerPostHP = 3;
         if (key === "kickbackL") state.perm.kickbackL_charges = 1;
         if (key === "kickbackR") state.perm.kickbackR_charges = 1;
-        this.addScore(state, 3500, cap.x, cap.y, "MAX REPAIR");
+        this.addScore(state, ScoreTable.common.PERM_MAX_REPAIR, cap.x, cap.y, "MAX REPAIR");
       }
     } else {
       const key = cap.subId;

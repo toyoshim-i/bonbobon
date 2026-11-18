@@ -3,14 +3,15 @@
 // =========================================================================
 
 window.GameFlow = {
-  highScoresKey: "bonbobon_highscores_v1",
+  // v2: SCORE_SCALE(×10) 導入に伴いスコア桁が変わったため保存キーを更新
+  highScoresKey: "bonbobon_highscores_v2",
 
   defaultHighScores: [
-    { name: "M.O.T.H.E.R.", score: 1500000, rank: "SSS", date: "2098-11-16" },
-    { name: "ELLE&NOEL",   score: 1100000, rank: "SS",  date: "2098-11-16" },
-    { name: "KASUMI",      score: 800000,  rank: "S",   date: "2098-11-16" },
-    { name: "NOAH",        score: 550000,  rank: "A",   date: "2098-11-16" },
-    { name: "LILITH",      score: 300000,  rank: "B",   date: "2098-11-16" }
+    { name: "M.O.T.H.E.R.", score: 600000000, rank: "SSS", date: "2098-11-16" },
+    { name: "ELLE&NOEL",   score: 180000000, rank: "SS",  date: "2098-11-16" },
+    { name: "KASUMI",      score: 75000000,  rank: "S",   date: "2098-11-16" },
+    { name: "NOAH",        score: 38000000,  rank: "A",   date: "2098-11-16" },
+    { name: "LILITH",      score: 15000000,  rank: "B",   date: "2098-11-16" }
   ],
 
   // Ending State Machine
@@ -135,11 +136,10 @@ window.GameFlow = {
   },
 
   computeRank(score) {
-    if (score >= 1500000) return "SSS";
-    if (score >= 1000000) return "SS";
-    if (score >= 700000)  return "S";
-    if (score >= 450000)  return "A";
-    if (score >= 250000)  return "B";
+    const table = window.ScoreTable.RANK_THRESHOLDS;
+    for (const row of table) {
+      if (score >= row.min) return row.rank;
+    }
     return "C";
   },
 
@@ -1267,8 +1267,9 @@ window.GameFlow = {
     let awardedScore = finalScore;
     if (isNoMiss && !state._perfectBonusAwarded) {
       state._perfectBonusAwarded = true;
-      awardedScore += 200000;
+      awardedScore = Systems.capScore(awardedScore + Systems.scaled(ScoreTable.bonus.PERFECT_ENDING));
       state.score = awardedScore;
+      state.peakScore = Math.max(state.peakScore || 0, awardedScore);
     }
 
     const rank = this.computeRank(awardedScore);

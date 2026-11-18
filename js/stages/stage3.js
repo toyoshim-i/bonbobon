@@ -373,7 +373,11 @@ window.Stage3 = {
     UI.showCutin(t("stage3.cutin.softOverflow"), 185);
     Particles.add(state, 198, 290, "#00f5d4", 28, 6.0);
     Particles.add(state, 198, 290, "#ff1493", 24, 5.5);
-    Systems.dropReward(state, "minor", 5);
+    const maxDrops = (window.ScoreTable && ScoreTable.antiStall.BLUSH_CAPSULE_MAX_DROPS) ?? 6;
+    state.boss.blushDrops = (state.boss.blushDrops || 0) + 1;
+    if (state.boss.blushDrops <= maxDrops) {
+      Systems.dropReward(state, "minor", 5);
+    }
     state.balls.forEach(ball => {
       if (!ball.inShooterLane && !ball._capturedByHand && ball.y < 520) {
         ball.vy = Math.min(ball.vy, -8.5);
@@ -444,7 +448,7 @@ window.Stage3 = {
     Systems.addFever(state, 5);
     Particles.add(state, b.x, b.y, "#ff66b2", 8, 2.8);
     Particles.spawnHeart(state, b.x, b.y, false);
-    Systems.addScore(state, 1800, b.x, b.y - 16, t("stage3.softBounce"));
+    Systems.addScore(state, ScoreTable.stage3.BUST_IMPULSE, b.x, b.y - 16, t("stage3.softBounce"));
 
     if (state.boss.blushGauge >= 100) {
       this.triggerBlushOverflow(state);
@@ -512,7 +516,7 @@ window.Stage3 = {
         const popY = (tgt && state.balls.includes(tgt)) ? Math.max(48, tgt.y - 22) : 280;
         if (window.sfx) window.sfx.capsuleDrop();
         Particles.add(state, popX, popY, "#00f5d4", 16, 4.8);
-        Systems.addScore(state, 5000, popX, popY, "✨LOCK BROKEN!");
+        Systems.addScore(state, ScoreTable.stage3.SNIPE_LOCK_BROKEN, popX, popY, "✨LOCK BROKEN!");
       }
 
       // 発射直後の飛翔中ショートレーザーに対するギリギリ回避（弾頭がまだ球に届く前なら回避成功！）
@@ -526,7 +530,7 @@ window.Stage3 = {
             sl.evadedInFlight = true;
             if (window.sfx) window.sfx.capsuleDrop();
             Particles.add(state, tb.x, tb.y, "#00f5d4", 18, 5.2);
-            Systems.addScore(state, 8000, tb.x, Math.max(48, tb.y - 22), "✨JUST EVADE!!");
+            Systems.addScore(state, ScoreTable.stage3.SNIPE_JUST_EVADE, tb.x, Math.max(48, tb.y - 22), "✨JUST EVADE!!");
           }
         });
       }

@@ -3,8 +3,9 @@
 // =========================================================================
 
 window.Physics = {
-  // 全テーブル共通の物理・反発・スコア定数（調整時の単一参照先）
+  // 全テーブル共通の物理・反発定数（調整時の単一参照先）※スコア値は ScoreTable で管理
   BALANCE: {
+    TIME_SCALE: 0.75,
     GRAVITY: 0.118,
     SUBSTEPS: 6,
     MAX_BALL_SPEED: 13.2,
@@ -16,12 +17,7 @@ window.Physics = {
     STUCK_REMIND_FRAMES: 85,
     STUCK_KICK_FRAMES: 360,
     SLINGSHOT_KICK_SPEED: 12.5,
-    SLINGSHOT_SCORE: 200,
-    SLINGSHOT_FEVER: 2,
-    FLIPPER_HIT_SCORE: 50,
-    FLIPPER_WHIFF_PENALTY: 100,
-    NUDGE_PENALTY: 2000,
-    KICKBACK_SAVE_SCORE: 3000
+    SLINGSHOT_FEVER: 2
   },
 
   TABLE_GEOM: {
@@ -59,18 +55,36 @@ window.Physics = {
     { x1: 346, y1: 420, x2: 346, y2: 558, isLane: true },
     { x1: 346, y1: 558, x2: 286, y2: 598.5, isRamp: true },
 
-    // Slingshot Inner Walls (back/bottom faces form the inner wall of the inlane passage)
-    { x1: 84,  y1: 450, x2: 84,  y2: 535, isLane: true },
-    { x1: 84,  y1: 450, x2: 106, y2: 565, isSlingshot: true, kickDir: { x: 0.98, y: -0.19 } },
-    { x1: 84,  y1: 535, x2: 106, y2: 565, isLane: true },
+    // Slingshot Inner Walls (kept in TABLE_WALLS for rendering/effects; collision handled as solid triangles below)
+    { x1: 84,  y1: 450, x2: 84,  y2: 535, isLane: true, isTriangleEdge: true },
+    { x1: 84,  y1: 450, x2: 106, y2: 565, isSlingshot: true, kickDir: { x: 0.98, y: -0.19 }, isTriangleEdge: true },
+    { x1: 84,  y1: 535, x2: 106, y2: 565, isLane: true, isTriangleEdge: true },
 
-    { x1: 312, y1: 450, x2: 312, y2: 535, isLane: true },
-    { x1: 312, y1: 450, x2: 290, y2: 565, isSlingshot: true, kickDir: { x: -0.98, y: -0.19 } },
-    { x1: 312, y1: 535, x2: 290, y2: 565, isLane: true },
+    { x1: 312, y1: 450, x2: 312, y2: 535, isLane: true, isTriangleEdge: true },
+    { x1: 312, y1: 450, x2: 290, y2: 565, isSlingshot: true, kickDir: { x: -0.98, y: -0.19 }, isTriangleEdge: true },
+    { x1: 312, y1: 535, x2: 290, y2: 565, isLane: true, isTriangleEdge: true },
 
     // Outlane Drain Slopes
     { x1: 16,  y1: 590, x2: 86,  y2: 648, isRamp: true },
     { x1: 380, y1: 590, x2: 310, y2: 648, isRamp: true }
+  ],
+
+  // Solid Slingshot Triangles (each edge has outward unit normal nx, ny)
+  SLINGSHOT_TRIANGLES: [
+    {
+      edges: [
+        { x1: 84, y1: 450, x2: 84,  y2: 535, nx: -1, ny: 0, isLane: true },
+        { x1: 84, y1: 450, x2: 106, y2: 565, nx: 115 / Math.hypot(22, 115), ny: -22 / Math.hypot(22, 115), isSlingshot: true, kickDir: { x: 0.98, y: -0.19 } },
+        { x1: 84, y1: 535, x2: 106, y2: 565, nx: -30 / Math.hypot(22, 30), ny: 22 / Math.hypot(22, 30), isLane: true }
+      ]
+    },
+    {
+      edges: [
+        { x1: 312, y1: 450, x2: 312, y2: 535, nx: 1, ny: 0, isLane: true },
+        { x1: 312, y1: 450, x2: 290, y2: 565, nx: -115 / Math.hypot(22, 115), ny: -22 / Math.hypot(22, 115), isSlingshot: true, kickDir: { x: -0.98, y: -0.19 } },
+        { x1: 312, y1: 535, x2: 290, y2: 565, nx: 30 / Math.hypot(22, 30), ny: 22 / Math.hypot(22, 30), isLane: true }
+      ]
+    }
   ],
 
   flipperState: [
@@ -179,7 +193,7 @@ window.Physics = {
           if (st.swingActive && !st.swingHit && !isPinnedNow && window.Systems && Systems.deductScore) {
             Systems.deductScore(
               state,
-              this.BALANCE.FLIPPER_WHIFF_PENALTY,
+              ScoreTable.bonus.FLIPPER_WHIFF_PENALTY,
               f.px + (f.isLeft ? 22 : -22),
               f.py - 16,
               "WHIFF"
@@ -253,7 +267,7 @@ window.Physics = {
     Particles.addPopup(state, 210, 530, `${dirLabel} NUDGE!`, "#e6ff00", 1.15);
     Particles.add(state, 210, 530, "#e6ff00", 14, 4.2);
     if (window.Systems && Systems.deductScore) {
-      Systems.deductScore(state, this.BALANCE.NUDGE_PENALTY, 210, 555, "NUDGE");
+      Systems.deductScore(state, ScoreTable.bonus.NUDGE_PENALTY, 210, 555, "NUDGE");
     }
   },
 
@@ -321,6 +335,139 @@ window.Physics = {
     return null;
   },
 
+  _segmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+    const rx = bx - ax;
+    const ry = by - ay;
+    const sx = dx - cx;
+    const sy = dy - cy;
+    const denom = rx * sy - ry * sx;
+    if (Math.abs(denom) < 1e-8) return false;
+    const ux = cx - ax;
+    const uy = cy - ay;
+    const t = (ux * sy - uy * sx) / denom;
+    const u = (ux * ry - uy * rx) / denom;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  },
+
+  _resolveWallResponse(state, ball, w, cpX, cpY, cpT, nx, ny, effMinDist) {
+    ball._crotchSpitActive = false;
+    ball.x = cpX + nx * effMinDist;
+    ball.y = cpY + ny * effMinDist;
+
+    const isActiveSlingshotFace =
+      w.isSlingshot &&
+      cpT > 0.06 &&
+      cpT < 0.94 &&
+      (nx * w.kickDir.x + ny * w.kickDir.y) > 0.45;
+    if (isActiveSlingshotFace) {
+      const kickSpd = this.BALANCE.SLINGSHOT_KICK_SPEED;
+      ball.vx = w.kickDir.x * kickSpd + (Math.random() - 0.5) * 1.5;
+      ball.vy = w.kickDir.y * kickSpd - 2.0;
+      if (window.sfx) window.sfx.slingshot();
+      if (window.Systems) window.Systems.addScore(state, ScoreTable.common.SLINGSHOT, cpX, cpY, "SLINGSHOT");
+      if (window.Systems) window.Systems.addFever(state, this.BALANCE.SLINGSHOT_FEVER);
+      if (window.Particles) Particles.add(state, cpX, cpY, "#00f5d4", 12, 4.0);
+    } else {
+      const vn = ball.vx * nx + ball.vy * ny;
+      if (vn < 0) {
+        const tx = -ny;
+        const ty = nx;
+        const vt = ball.vx * tx + ball.vy * ty;
+        // 下部アウトレーン外周壁も通路壁と同様に横跳ねを抑える
+        const isLowerOuterLane = (!ball.inShooterLane && cpY > 415 && (cpX < 55 || cpX > 342));
+        let restN = 0.72;
+        let tangFric = 0.97;
+        if (w.isRamp) {
+          restN = 0.04;
+          tangFric = 0.992;
+        } else if (w.isLane || w.isSlingshot || isLowerOuterLane) {
+          restN = 0.14;
+          tangFric = 0.988;
+        }
+        const newVn = -vn * restN;
+        const newVt = vt * tangFric;
+        ball.vx = nx * newVn + tx * newVt;
+        ball.vy = ny * newVn + ty * newVt;
+      }
+    }
+  },
+
+  _resolveSolidTriangle(state, ball, tri, prevX, prevY, effMinDist) {
+    const edges = tri.edges;
+    let allInside = true;
+    let maxSignedDist = -Infinity;
+    let insideEdge = null;
+
+    let minDist = Infinity;
+    let closestEdge = null;
+    let closestCpX = 0;
+    let closestCpY = 0;
+    let closestCpT = 0;
+
+    let sweptEdge = null;
+    let sweptPrevDist = Infinity;
+
+    const cpTmp = this._cpWall;
+    for (let i = 0; i < edges.length; i++) {
+      const e = edges[i];
+      const signedDist = (ball.x - e.x1) * e.nx + (ball.y - e.y1) * e.ny;
+      if (signedDist > 0) {
+        allInside = false;
+      }
+      if (signedDist > maxSignedDist) {
+        maxSignedDist = signedDist;
+        insideEdge = e;
+      }
+
+      const cp = this.closestPointOnSeg(ball.x, ball.y, e.x1, e.y1, e.x2, e.y2, cpTmp);
+      const d = Math.hypot(ball.x - cp.x, ball.y - cp.y);
+      if (d < minDist) {
+        minDist = d;
+        closestEdge = e;
+        closestCpX = cp.x;
+        closestCpY = cp.y;
+        closestCpT = cp.t;
+      }
+
+      if (this._segmentsIntersect(prevX, prevY, ball.x, ball.y, e.x1, e.y1, e.x2, e.y2)) {
+        const pCp = this.closestPointOnSeg(prevX, prevY, e.x1, e.y1, e.x2, e.y2, cpTmp);
+        const pd = Math.hypot(prevX - pCp.x, prevY - pCp.y);
+        if (pd < sweptPrevDist) {
+          sweptPrevDist = pd;
+          sweptEdge = e;
+        }
+      }
+    }
+
+    if (allInside && insideEdge) {
+      // ボール中心が三角形の内部に入った場合、最も近い辺の外向き法線方向へ確実に押し出す
+      const cp = this.closestPointOnSeg(ball.x, ball.y, insideEdge.x1, insideEdge.y1, insideEdge.x2, insideEdge.y2, cpTmp);
+      this._resolveWallResponse(state, ball, insideEdge, cp.x, cp.y, cp.t, insideEdge.nx, insideEdge.ny, effMinDist);
+      return;
+    }
+
+    if (sweptEdge) {
+      // 1サブステップで辺を貫通した場合、進入前の辺の外向き法線側へ押し戻す
+      const cp = this.closestPointOnSeg(ball.x, ball.y, sweptEdge.x1, sweptEdge.y1, sweptEdge.x2, sweptEdge.y2, cpTmp);
+      this._resolveWallResponse(state, ball, sweptEdge, cp.x, cp.y, cp.t, sweptEdge.nx, sweptEdge.ny, effMinDist);
+      return;
+    }
+
+    if (closestEdge && minDist < effMinDist) {
+      let nx = closestEdge.nx;
+      let ny = closestEdge.ny;
+      if ((closestCpT <= 0.001 || closestCpT >= 0.999) && minDist > 0.0001) {
+        const vnx = (ball.x - closestCpX) / minDist;
+        const vny = (ball.y - closestCpY) / minDist;
+        if (vnx * closestEdge.nx + vny * closestEdge.ny >= 0) {
+          nx = vnx;
+          ny = vny;
+        }
+      }
+      this._resolveWallResponse(state, ball, closestEdge, closestCpX, closestCpY, closestCpT, nx, ny, effMinDist);
+    }
+  },
+
   // Substep ball physics iteration
   stepBallPhysics(state, ball, gravity, SUBSTEPS, s) {
     // Elevated 3D wireform ramp bypasses ground-level walls & flippers
@@ -341,9 +488,12 @@ window.Physics = {
       return;
     }
 
-    ball.vy += gravity;
-    ball.x += ball.vx / SUBSTEPS;
-    ball.y += ball.vy / SUBSTEPS;
+    const timeScale = this.BALANCE.TIME_SCALE;
+    const prevX = ball.x;
+    const prevY = ball.y;
+    ball.vy += gravity * timeScale;
+    ball.x += (ball.vx * timeScale) / SUBSTEPS;
+    ball.y += (ball.vy * timeScale) / SUBSTEPS;
 
     // Shooter lane plunger spring catch & re-arm
     if (ball.inShooterLane && ball.x >= geom.SHOOTER_MIN_X && ball.x <= geom.SHOOTER_MAX_X) {
@@ -389,60 +539,42 @@ window.Physics = {
       ball.vx = -Math.abs(ball.vx) - 1.5;
     }
 
-    // Static Walls & Slingshots collision
+    // Velocity-scaled boundary thickness (tighter in narrow shooter lane to prevent wedging)
+    const stepMove = (Math.hypot(ball.vx, ball.vy) * timeScale) / SUBSTEPS;
+    const wallPad = ball.inShooterLane
+      ? 2.5 + Math.min(0.6, stepMove * 0.15)
+      : 2.5 + Math.min(2.0, stepMove * 0.45);
+    const effMinDist = ball.r + wallPad;
+
+    // Static Walls collision (with velocity-scaled thickness & swept crossing guard)
     const cpWall = this._cpWall;
     const walls = this.TABLE_WALLS;
     for (let wi = 0; wi < walls.length; wi++) {
       const w = walls[wi];
+      if (w.isTriangleEdge) continue;
       const cp = this.closestPointOnSeg(ball.x, ball.y, w.x1, w.y1, w.x2, w.y2, cpWall);
       const dx = ball.x - cp.x;
       const dy = ball.y - cp.y;
       const dist = Math.hypot(dx, dy);
-      const minDist = ball.r + 2.5;
-      if (dist < minDist && dist > 0.0001) {
-        ball._crotchSpitActive = false;
-        const nx = dx / dist;
-        const ny = dy / dist;
-        ball.x = cp.x + nx * minDist;
-        ball.y = cp.y + ny * minDist;
+      const crossed = this._segmentsIntersect(prevX, prevY, ball.x, ball.y, w.x1, w.y1, w.x2, w.y2);
 
-        const isActiveSlingshotFace =
-          w.isSlingshot &&
-          cp.t > 0.06 &&
-          cp.t < 0.94 &&
-          (nx * w.kickDir.x + ny * w.kickDir.y) > 0.45;
-        if (isActiveSlingshotFace) {
-          const kickSpd = this.BALANCE.SLINGSHOT_KICK_SPEED;
-          ball.vx = w.kickDir.x * kickSpd + (Math.random() - 0.5) * 1.5;
-          ball.vy = w.kickDir.y * kickSpd - 2.0;
-          if (window.sfx) window.sfx.slingshot();
-          if (window.Systems) window.Systems.addScore(state, this.BALANCE.SLINGSHOT_SCORE, cp.x, cp.y, "SLINGSHOT");
-          if (window.Systems) window.Systems.addFever(state, this.BALANCE.SLINGSHOT_FEVER);
-          Particles.add(state, cp.x, cp.y, "#00f5d4", 12, 4.0);
-        } else {
-          const vn = ball.vx * nx + ball.vy * ny;
-          if (vn < 0) {
-            const tx = -ny;
-            const ty = nx;
-            const vt = ball.vx * tx + ball.vy * ty;
-            // 下部アウトレーン外周壁も通路壁と同様に横跳ねを抑える
-            const isLowerOuterLane = (!ball.inShooterLane && cp.y > 415 && (cp.x < 55 || cp.x > 342));
-            let restN = 0.72;
-            let tangFric = 0.97;
-            if (w.isRamp) {
-              restN = 0.04;
-              tangFric = 0.992;
-            } else if (w.isLane || w.isSlingshot || isLowerOuterLane) {
-              restN = 0.14;
-              tangFric = 0.988;
-            }
-            const newVn = -vn * restN;
-            const newVt = vt * tangFric;
-            ball.vx = nx * newVn + tx * newVt;
-            ball.vy = ny * newVn + ty * newVt;
-          }
+      if (crossed) {
+        const prevCp = this.closestPointOnSeg(prevX, prevY, w.x1, w.y1, w.x2, w.y2);
+        const pdx = prevX - prevCp.x;
+        const pdy = prevY - prevCp.y;
+        const pdist = Math.hypot(pdx, pdy);
+        if (pdist > 0.0001) {
+          this._resolveWallResponse(state, ball, w, cp.x, cp.y, cp.t, pdx / pdist, pdy / pdist, effMinDist);
         }
+      } else if (dist < effMinDist && dist > 0.0001) {
+        this._resolveWallResponse(state, ball, w, cp.x, cp.y, cp.t, dx / dist, dy / dist, effMinDist);
       }
+    }
+
+    // Solid Slingshot Triangles collision
+    const triangles = this.SLINGSHOT_TRIANGLES;
+    for (let ti = 0; ti < triangles.length; ti++) {
+      this._resolveSolidTriangle(state, ball, triangles[ti], prevX, prevY, effMinDist);
     }
 
     // Flippers collision (interpolated per substep with anti-tunneling sweep on upward swing)
@@ -516,13 +648,14 @@ window.Physics = {
             const rest = 0.65;
             ball.vx = (vRelX - (1 + rest) * effDot * nx) + vxSurface;
             ball.vy = (vRelY - (1 + rest) * effDot * ny) + vySurface;
-            const springMult = (1 + ((state.relics && state.relics.spring) || 0) * 0.14);
+            const springStep = (window.ScoreTable && ScoreTable.multiplier.SPRING_ADD_POWER) || 0.15;
+            const springMult = (1 + ((state.relics && state.relics.spring) || 0) * springStep);
             const flipBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult);
             ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;
             ball.vx += nx * 4.2 * springMult;
             if (window.sfx) window.sfx.flip();
             Particles.add(state, cp.x, cp.y, "#ff1493", 10, 4.5);
-            if (window.Systems) window.Systems.addScore(state, this.BALANCE.FLIPPER_HIT_SCORE, cp.x, cp.y, "FLIP");
+            if (window.Systems) window.Systems.addScore(state, ScoreTable.common.FLIPPER_HIT, cp.x, cp.y, "FLIP");
           } else {
             // 静止中のパドル：通路から流れてきた球が跳ねずにピタッと乗って転がるよう法線反発を抑え、接線転がりを維持
             const tx = -ny;
@@ -579,7 +712,7 @@ window.Physics = {
           if (window.sfx) window.sfx.burstTrigger();
           Particles.add(state, kb.fxX, 560, "#00f5d4", 18, 5.0);
           Particles.add(state, kb.fxX, 560, "#e6ff00", 12, 4.0);
-          if (window.Systems) window.Systems.addScore(state, this.BALANCE.KICKBACK_SAVE_SCORE, kb.fxX, 540, kb.label);
+          if (window.Systems) window.Systems.addScore(state, ScoreTable.common.KICKBACK_SAVE, kb.fxX, 540, kb.label);
           if (window.UI) window.UI.showCutin(t(kb.cutinKey), 90);
         }
       }

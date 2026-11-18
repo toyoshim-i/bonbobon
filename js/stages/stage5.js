@@ -480,7 +480,7 @@ window.Stage5 = {
         const latDir = Math.abs(nx) > 0.2 ? Math.sign(nx) : (Math.random() < 0.5 ? -1 : 1);
         ball.vx = latDir * 5.6;
         ball.vy = Math.min(ball.vy, 4.8);
-        Systems.addScore(state, 15000, ball.x, ball.y, "⚡NUDGE SAVE!! +15000");
+        Systems.addScore(state, ScoreTable.stage5.NUDGE_SAVE, ball.x, ball.y, "⚡NUDGE SAVE!!");
         Particles.add(state, ball.x, ball.y, "#00f5e8", 16, 4.5);
       }
     });
@@ -538,7 +538,7 @@ window.Stage5 = {
         tgt.flash = 22;
         state.shockwaves.push({ x: tgt.x, y: tgt.y, r: 6, maxR: 50, speed: 4.2, color: "#e6ff00", lineWidth: 3.0, alpha: 1.0 });
         Particles.add(state, tgt.x, tgt.y, "#e6ff00", 20, 5.5);
-        Systems.addScore(state, 12000, tgt.x, tgt.y - 10, label);
+        Systems.addScore(state, ScoreTable.stage5.SKILL_DMG_TWIN_PART, tgt.x, tgt.y - 10, label);
         if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
         if (tgt.hp === 0) {
           tgt.broken = true;
@@ -550,7 +550,7 @@ window.Stage5 = {
         prismTgt.flash = 22;
         state.shockwaves.push({ x: prismTgt.x, y: prismTgt.y, r: 6, maxR: 50, speed: 4.2, color: prismTgt.color, lineWidth: 3.0, alpha: 1.0 });
         Particles.add(state, prismTgt.x, prismTgt.y, prismTgt.color, 18, 5.0);
-        Systems.addScore(state, 15000, prismTgt.x, prismTgt.y - 10, label);
+        Systems.addScore(state, ScoreTable.stage5.SKILL_DMG_BROOCH, prismTgt.x, prismTgt.y - 10, label);
         if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
         if (prismTgt.hp <= 0) {
           prismTgt.broken = true;
@@ -569,7 +569,7 @@ window.Stage5 = {
         b.bustR.vy -= 6.0;
         state.shockwaves.push({ x: 198, y: 208, r: 8, maxR: 55, speed: 4.5, color: "#ff2ad4", lineWidth: 3.0, alpha: 1.0 });
         Particles.add(state, 198, 208, "#ff2ad4", 20, 5.5);
-        Systems.addScore(state, 20000, 198, 208, label);
+        Systems.addScore(state, ScoreTable.stage5.SKILL_DMG_SERAPH_ARMOR, 198, 208, label);
         if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
         if (b.chestArmorHP <= 0) {
           this.breakSeraphiaArmor(state);
@@ -580,7 +580,7 @@ window.Stage5 = {
           activeOrb.hp = Math.max(0, activeOrb.hp - dmg);
           activeOrb.flash = 20;
           Particles.add(state, activeOrb.x, activeOrb.y, activeOrb.color, 16, 4.8);
-          Systems.addScore(state, 15000, activeOrb.x, activeOrb.y - 10, label);
+          Systems.addScore(state, ScoreTable.stage5.SKILL_DMG_ORB, activeOrb.x, activeOrb.y - 10, label);
           if (activeOrb.hp <= 0) {
             activeOrb.active = false;
             if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
@@ -594,7 +594,7 @@ window.Stage5 = {
           b.core.flash = 24;
           state.shockwaves.push({ x: b.core.x, y: b.core.y, r: 8, maxR: 64, speed: 4.6, color: "#00f5d4", lineWidth: 3.2, alpha: 1.0 });
           Particles.add(state, b.core.x, b.core.y, "#00f5d4", 24, 6.0);
-          Systems.addScore(state, 25000, b.core.x, b.core.y - 12, label);
+          Systems.addScore(state, ScoreTable.stage5.SKILL_DMG_CORE, b.core.x, b.core.y - 12, label);
           if (window.sfx && window.sfx.exSpark) window.sfx.exSpark();
           if (b.core.hp <= 0) {
             this.triggerStageClear(state);
@@ -636,10 +636,10 @@ window.Stage5 = {
       }
     } else if (newlyBrokenL) {
       UI.showCutin(t("stage5.cutin.elleBreak"), 175);
-      Systems.addScore(state, 25000, b.prismL.x, b.prismL.y, "💥ELLE BREAK!!");
+      Systems.addScore(state, ScoreTable.stage5.TWIN_SOLO_BREAK, b.prismL.x, b.prismL.y, "💥ELLE BREAK!!");
     } else if (newlyBrokenR) {
       UI.showCutin(t("stage5.cutin.noelBreak"), 175);
-      Systems.addScore(state, 25000, b.prismR.x, b.prismR.y, "💥NOEL BREAK!!");
+      Systems.addScore(state, ScoreTable.stage5.TWIN_SOLO_BREAK, b.prismR.x, b.prismR.y, "💥NOEL BREAK!!");
     }
   },
 
@@ -654,7 +654,7 @@ window.Stage5 = {
     }
     if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
     UI.showCutin(t("stage5.cutin.twinsBreak"), 190);
-    Systems.addScore(state, 40000, 198, 250, "💥BOTH TWINS BROKEN!");
+    Systems.addScore(state, ScoreTable.stage5.BOTH_TWINS_BROKEN, 198, 250, "💥BOTH TWINS BROKEN!");
     Systems.dropReward(state, "major", { x: 198, y: 250 });
     UI.updateHUD(state);
   },
@@ -693,7 +693,7 @@ window.Stage5 = {
     Particles.triggerArmorBreakEffect(state, "chest", 198, 208);
     if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
     UI.showCutin(t("stage5.cutin.seraphiaArmor"), 220);
-    Systems.addScore(state, 100000, 198, 208, "💖ARMOR PURGED!!");
+    Systems.addScore(state, ScoreTable.stage5.SERAPHIA_ARMOR_PURGE, 198, 208, "💖ARMOR PURGED!!");
     Systems.dropReward(state, "major", { x: 198, y: 208 });
     StageCommon.setExpressionSequence(state, [
       { expr: "shock", frames: 30 },
@@ -712,7 +712,7 @@ window.Stage5 = {
     }
     StageCommon.startClearSequence(state, Physics.TABLE_WALLS);
     if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
-    Systems.addScore(state, 200000, 198, 225, "✨STAGE 5 ALL CLEAR!!✨");
+    Systems.addScore(state, ScoreTable.stage5.STAGE_CLEAR, 198, 225, "✨STAGE 5 ALL CLEAR!!✨", { exemptDecay: true });
     UI.showCutin(t("stage5.cutin.seraphiaClear"), 260);
     UI.updateHUD(state);
   }

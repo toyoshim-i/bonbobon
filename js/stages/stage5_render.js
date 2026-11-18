@@ -1180,7 +1180,7 @@ Object.assign(window.Stage5, {
 
       // High-Five Synchro Spark (スコア稼ぎ × サポート)
       if (!b.elleBroken && !b.noelBroken) {
-        drawGuide(b.synchroSpark.x, b.synchroSpark.y, b.synchroSpark.r, TC.SCORE, b.synchroSpark.flash, animTick * 0.05, "🏐TWIN TOSS", "+4000", { innerColor: TC.SUPPORT });
+        drawGuide(b.synchroSpark.x, b.synchroSpark.y, b.synchroSpark.r, TC.SCORE, b.synchroSpark.flash, animTick * 0.05, "🏐TWIN TOSS", "BONUS", { innerColor: TC.SUPPORT });
       }
     } else {
       // Phase 3

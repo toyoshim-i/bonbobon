@@ -109,6 +109,7 @@ window.GameEngine = {
       gameOver: false,
       totalMisses: 0,
       stageMisses: 0,
+      stagePlayFrames: 0,
       relics: { radar: 0, spring: 0, drone: 0 },
       selectedRelic: "radar",
       baseMultiplier: 1.0,
@@ -178,6 +179,7 @@ window.GameEngine = {
 
     this.state.boss = stage.createBossState();
     this.state.phase = 1;
+    this.state.stagePlayFrames = 0;
     this.state.stageCleared = false;
     this.state._clearBonusAwarded = false;
     this.state.clearSequence = this.createDefaultClearSequence();
@@ -235,8 +237,9 @@ window.GameEngine = {
     this.state = this.createInitialState();
     this.state.gameMode = "practice";
     this.state.stageIndex = stageNum;
-    this.state.score = 50000;
-    this.state.peakScore = 50000;
+    const practiceStart = Systems.scaled(ScoreTable.bonus.PRACTICE_START);
+    this.state.score = practiceStart;
+    this.state.peakScore = practiceStart;
     this.state.totalMisses = 0;
     this.state.stageMisses = 0;
     this.state.inTitle = false;
@@ -252,8 +255,8 @@ window.GameEngine = {
       this.state.relics[chosenRelic] = (this.state.relics[chosenRelic] || 0) + 1;
       this.state.selectedRelic = chosenRelic;
       if (chosenRelic === "radar") {
-        const perStack = (window.Systems && Systems.BALANCE.RADAR_MULT_PER_STACK) || 0.25;
-        this.state.baseMultiplier = +(1.0 + (this.state.relics.radar || 0) * perStack).toFixed(2);
+        const addMult = (window.ScoreTable && ScoreTable.multiplier.RADAR_ADD_MULT) || 0.5;
+        this.state.baseMultiplier = +((this.state.baseMultiplier || 1.0) + addMult).toFixed(2);
       }
     }
     const nextIdx = (this.state.stageIndex || 1) + 1;
@@ -309,7 +312,7 @@ window.GameEngine = {
           Particles.add(this.state, ballInLane.x, ballInLane.y, "#00f5d4", 16, 4.5);
           Particles.add(this.state, ballInLane.x, ballInLane.y, "#e6ff00", 12, 3.5);
           Particles.addPopup(this.state, ballInLane.x - 15, ballInLane.y - 15, "🚀SUPER COUNTER LAUNCH!", "#e6ff00", 1.2);
-          Systems.addScore(this.state, 3000, ballInLane.x, ballInLane.y, "COUNTER SHOT!");
+          Systems.addScore(this.state, ScoreTable.common.COUNTER_SHOT, ballInLane.x, ballInLane.y, "COUNTER SHOT!");
         } else {
           // 通常の静止・上昇中打ち出し
           ballInLane.vy = -launchSpeed;
@@ -462,11 +465,14 @@ window.GameEngine = {
     }
 
     // Update Balls & Drain Check
+    let hasActivePlayBall = false;
     for (let bi = state.balls.length - 1; bi >= 0; bi--) {
       const ball = state.balls[bi];
       if (!ball.trail) ball.trail = [];
       Physics.pushTrailPoint(ball.trail, ball.x, ball.y, 9);
       if (ball.crotchHitTimer > 0) ball.crotchHitTimer--;
+      if (ball._bumperGrace > 0) ball._bumperGrace--;
+      if (!ball.inShooterLane) hasActivePlayBall = true;
 
       // Ball Stagnation / Stuck Detection (Universal pinball feature)
       const speed = Math.hypot(ball.vx, ball.vy);
@@ -505,7 +511,8 @@ window.GameEngine = {
             // Sonic Ring-Scatter Survival!
             const stageNum = state.stageIndex || 1;
             const bal = Systems.BALANCE;
-            const loss = Math.min(state.score, Math.max(bal.MISS_PENALTY_MIN_BASE * stageNum, Math.floor(state.score * bal.MISS_PENALTY_RATIO)));
+            const sb = ScoreTable.bonus;
+            const loss = Math.min(state.score, Math.max(Systems.scaled(sb.MISS_PENALTY_MIN_PER_STAGE * stageNum), Math.floor(state.score * sb.MISS_PENALTY_RATIO)));
             state.score = Math.max(0, state.score - loss);
             state.totalMisses = (state.totalMisses || 0) + 1;
             state.stageMisses = (state.stageMisses || 0) + 1;
@@ -555,6 +562,18 @@ window.GameEngine = {
             }
           }
           UI.updateHUD(state);
+        }
+      }
+    }
+
+    // 永パ防止用：盤面上にアクティブなボールが存在する実プレイフレーム数を計測
+    if (hasActivePlayBall && !state.stageCleared) {
+      state.stagePlayFrames = (state.stagePlayFrames || 0) + 1;
+      const as = window.ScoreTable && ScoreTable.antiStall;
+      if (as) {
+        const softStart = (state.stageIndex === 5) ? as.STAGE5_SOFT_DECAY_FRAMES : as.SOFT_DECAY_FRAMES;
+        if (state.stagePlayFrames === softStart) {
+          Particles.addPopup(state, 198, 280, "⚠️TIME OVER! SCORE DECAY", "#e6ff00", 1.1);
         }
       }
     }

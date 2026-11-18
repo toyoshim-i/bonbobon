@@ -634,7 +634,7 @@ Object.assign(window.Stage3, {
             if (window.sfx) window.sfx.capsuleCatch();
             Particles.add(state, h.x, h.y, "#ff1493", 20, 4.8);
             Particles.add(state, h.x, h.y, "#00f5d4", 14, 4.0);
-            Systems.addScore(state, 4000 + spec.level * 1200, h.x, h.y - 16, `🌀${h.side}-HAND CATCH LV.${spec.level}!`);
+            Systems.addScore(state, ScoreTable.stage3.HAND_CATCH_BASE + spec.level * ScoreTable.stage3.HAND_CATCH_PER_LV, h.x, h.y - 16, `🌀${h.side}-HAND CATCH LV.${spec.level}!`);
             StageCommon.setExpressionSequence(state, [
               { expr: spec.level >= 3 ? "wince" : "wink", frames: 20 },
               { expr: spec.level >= 4 ? "open_blush" : "talk", frames: 22 }
@@ -743,7 +743,7 @@ Object.assign(window.Stage3, {
         });
         Particles.add(state, exitHand.x, exitHand.y, "#00f5d4", 20 + spec.level * 3, 6.0);
         Particles.add(state, exitHand.x, exitHand.y, "#e6ff00", 14 + spec.level * 2, 5.0);
-        Systems.addScore(state, 7000 + spec.level * 1500, exitHand.x, exitHand.y - 18, `⚡${exitHand.side}-HAND THROW!`);
+        Systems.addScore(state, ScoreTable.stage3.HAND_THROW_BASE + spec.level * ScoreTable.stage3.HAND_THROW_PER_LV, exitHand.x, exitHand.y - 18, `⚡${exitHand.side}-HAND THROW!`);
 
         StageCommon.setExpressionSequence(state, [
           { expr: "shout", frames: 22 },
@@ -895,7 +895,7 @@ Object.assign(window.Stage3, {
             if (window.sfx) window.sfx.exSpark();
             Particles.add(state, hit.qx, hit.qy, "#00f5d4", 12, 4.5);
             Particles.add(state, hit.qx, hit.qy, "#ff1493", 10, 4.0);
-            Systems.addScore(state, 2400, hit.qx, hit.qy - 12, "🔺DELTA BEAM!");
+            Systems.addScore(state, ScoreTable.stage3.DELTA_BEAM_HIT, hit.qx, hit.qy - 12, "🔺DELTA BEAM!");
             break;
           }
         }
@@ -922,7 +922,12 @@ Object.assign(window.Stage3, {
 
     if (s !== 0) return;
 
-    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, cb);
+    const graceFrames = (window.ScoreTable && ScoreTable.antiStall.BUMPER_GRACE_FRAMES) || 10;
+    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, () => {
+      if (ball._bumperGrace > 0) return;
+      ball._bumperGrace = graceFrames;
+      if (cb) cb(bumper);
+    });
 
     // 1. カチューシャのアンテナ（電撃なし：当たるとバネで揺れて弾き返す！）
     const ant = b.antenna;
@@ -969,11 +974,12 @@ Object.assign(window.Stage3, {
 
         if (state.skillShotEligible) {
           state.skillShotEligible = false;
-          Systems.addScore(state, 25000, hit.qx, hit.qy, "★SKILL SHOT!!");
+          Systems.addScore(state, ScoreTable.stage3.ANTENNA_SKILL_SHOT, hit.qx, hit.qy, "★SKILL SHOT!!");
           UI.showCutin(t("stage3.cutin.skillShot"), 180);
           Systems.dropReward(state, "rare", 2);
-        } else {
-          Systems.addScore(state, 3000, hit.qx, hit.qy - 12, "📡ANTENNA BOING!");
+        } else if (!(ball._bumperGrace > 0)) {
+          ball._bumperGrace = graceFrames;
+          Systems.addScore(state, ScoreTable.stage3.ANTENNA_BOUNCE, hit.qx, hit.qy - 12, "📡ANTENNA BOING!");
         }
         UI.updateHUD(state);
       }
@@ -990,7 +996,7 @@ Object.assign(window.Stage3, {
 
         if (state.skillShotEligible && (bit.id === "bitTopL" || bit.id === "bitTopR")) {
           state.skillShotEligible = false;
-          Systems.addScore(state, 20000, dynBit.x, dynBit.y - 16, "★SKILL SHOT!!");
+          Systems.addScore(state, ScoreTable.stage3.BIT_SKILL_SHOT, dynBit.x, dynBit.y - 16, "★SKILL SHOT!!");
           Systems.dropReward(state, "rare", 1);
         }
 
@@ -1000,7 +1006,7 @@ Object.assign(window.Stage3, {
             { expr: "wince", frames: 20 },
             { expr: "talk_sm", frames: 18 }
           ]);
-          Systems.addScore(state, 3500, dynBit.x, dynBit.y - 12, `${bit.label} HIT! HP:${bit.hp}`);
+          Systems.addScore(state, ScoreTable.stage3.BIT_HIT, dynBit.x, dynBit.y - 12, `${bit.label} HIT! HP:${bit.hp}`);
 
           if (bit.hp === 0) {
             bit.broken = true;
@@ -1010,7 +1016,7 @@ Object.assign(window.Stage3, {
               { expr: "shout", frames: 28 },
               { expr: "wince", frames: 32 }
             ]);
-            Systems.addScore(state, 22000, dynBit.x, dynBit.y, `💥${bit.label} DESTROYED!`);
+            Systems.addScore(state, ScoreTable.stage3.BIT_DESTROY, dynBit.x, dynBit.y, `💥${bit.label} DESTROYED!`);
 
             const remBits = this.getAllBits(b).filter(x => !x.broken).length;
             if (b.bitLasers) {
@@ -1050,7 +1056,7 @@ Object.assign(window.Stage3, {
           Particles.add(state, h.x, h.y, "#ff1493", 14, 4.5);
           Particles.add(state, h.x, h.y, "#00f5d4", 8, 3.5);
           StageCommon.setExpressionSequence(state, [{ expr: "wink", frames: 30 }]);
-          Systems.addScore(state, 2800, h.x, h.y - 14, `🖐️${h.label} BOUNCE!`);
+          Systems.addScore(state, ScoreTable.stage3.HAND_OPEN_BOUNCE, h.x, h.y - 14, `🖐️${h.label} BOUNCE!`);
         });
       });
     }
@@ -1068,13 +1074,13 @@ Object.assign(window.Stage3, {
           hPort.hp--;
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, hPort.x, hPort.y, "#00f5d4", 14, 4.5);
-          Systems.addScore(state, 3600, hPort.x, hPort.y - 12, `HIP PORT! HP:${hPort.hp}`);
+          Systems.addScore(state, ScoreTable.stage3.HIP_PORT_HIT, hPort.x, hPort.y - 12, `HIP PORT! HP:${hPort.hp}`);
 
           if (hPort.hp === 0) {
             hPort.broken = true;
-            state.baseMultiplier += 0.3;
+            state.baseMultiplier += ScoreTable.stage3.BASE_MULT_HIP_PORT;
             Particles.triggerArmorBreakEffect(state, "hip_port", hPort.x, hPort.y);
-            Systems.addScore(state, 20000, hPort.x, hPort.y, "💥HIP LOCK OVERLOAD!!");
+            Systems.addScore(state, ScoreTable.stage3.HIP_PORT_OVERLOAD, hPort.x, hPort.y, "💥HIP LOCK OVERLOAD!!");
             UI.showCutin(t("stage3.cutin.hipOverload"), 190);
             Systems.dropReward(state, "major", 3);
           }
@@ -1082,7 +1088,7 @@ Object.assign(window.Stage3, {
         } else {
           if (window.sfx) window.sfx.exSpark();
           Particles.add(state, hPort.x, hPort.y, "#e6ff00", 14, 4.5);
-          Systems.addScore(state, 4200, hPort.x, hPort.y - 12, "⚡HIP SPARK & BOING!");
+          Systems.addScore(state, ScoreTable.stage3.HIP_PORT_SPARK, hPort.x, hPort.y - 12, "⚡HIP SPARK & BOING!");
         }
         UI.updateHUD(state);
       });
@@ -1115,11 +1121,14 @@ Object.assign(window.Stage3, {
         ball.vx = nx * newNormal + tanX * tanSpd * 0.94;
         ball.vy = ny * newNormal + tanY * tanSpd * 0.94;
 
-        if (window.sfx) window.sfx.slingshot();
-        Particles.add(state, cx, cy, "#00f5d4", 8, 3.6);
-        this.impulseHip(state, -nx * 4.8, -ny * 4.8, true);
-        const multBonus = (b.hipPort && b.hipPort.broken) ? 4500 : 2800;
-        Systems.addScore(state, multBonus, cx, cy - 12, "🎀RIBBON BOING!");
+        if (!(ball._bumperGrace > 0)) {
+          ball._bumperGrace = graceFrames;
+          if (window.sfx) window.sfx.slingshot();
+          Particles.add(state, cx, cy, "#00f5d4", 8, 3.6);
+          this.impulseHip(state, -nx * 4.8, -ny * 4.8, true);
+          const multBonus = (b.hipPort && b.hipPort.broken) ? ScoreTable.stage3.RIBBON_BOUNCE_BOOSTED : ScoreTable.stage3.RIBBON_BOUNCE;
+          Systems.addScore(state, multBonus, cx, cy - 12, "🎀RIBBON BOING!");
+        }
       }
     }
 
@@ -1138,7 +1147,7 @@ Object.assign(window.Stage3, {
         if (window.sfx) window.sfx.slingshot();
         Particles.add(state, boot.x, boot.y, "#00f5d4", 12, 4.4);
         Particles.add(state, boot.x, boot.y, "#ff1493", 8, 3.6);
-        Systems.addScore(state, 2400, boot.x, boot.y - 14, "👢BOOT BOUNCE!");
+        Systems.addScore(state, ScoreTable.stage3.BOOT_BOUNCE, boot.x, boot.y - 14, "👢BOOT BOUNCE!");
       });
     }
 
@@ -1155,7 +1164,7 @@ Object.assign(window.Stage3, {
             { expr: "wince", frames: 24 },
             { expr: "talk_sm", frames: 18 }
           ]);
-          Systems.addScore(state, 3500, knee.x, knee.y - 14, `KNEE PAD! HP:${knee.hp}`);
+          Systems.addScore(state, ScoreTable.stage3.KNEE_PAD_HIT, knee.x, knee.y - 14, `KNEE PAD! HP:${knee.hp}`);
 
           if (knee.hp === 0) {
             knee.broken = true;
@@ -1165,7 +1174,7 @@ Object.assign(window.Stage3, {
               { expr: "shout", frames: 28 },
               { expr: "open_blush", frames: 48 }
             ]);
-            Systems.addScore(state, 25000, knee.x, knee.y, "★KNEE PAD PURGED!★");
+            Systems.addScore(state, ScoreTable.stage3.KNEE_PAD_PURGE, knee.x, knee.y, "★KNEE PAD PURGED!★");
             UI.showCutin(t("stage3.cutin.kneeBreak"), 190);
             Systems.dropReward(state, "major", { x: knee.x, y: knee.y });
             this.checkPhase1Clear(state);
@@ -1174,7 +1183,7 @@ Object.assign(window.Stage3, {
         } else {
           if (window.sfx) window.sfx.slingshot();
           Particles.add(state, knee.x, knee.y, "#ff66b2", 12, 4.0);
-          Systems.addScore(state, 2400, knee.x, knee.y - 12, "⚡KNEE BOUNCE!");
+          Systems.addScore(state, ScoreTable.stage3.KNEE_BOUNCE, knee.x, knee.y - 12, "⚡KNEE BOUNCE!");
         }
         UI.updateHUD(state);
       });
@@ -1211,7 +1220,7 @@ Object.assign(window.Stage3, {
           if (state.phase < 2) {
             if (window.sfx) window.sfx.metalBumper();
             Particles.add(state, cup.x, cup.y, "#00f5d4", 10, 3.8);
-            Systems.addScore(state, 1200, cup.x, cup.y - 14, "🛡️KNEE LOCK!");
+            Systems.addScore(state, ScoreTable.stage3.BUSTIER_LOCKED, cup.x, cup.y - 14, "🛡️KNEE LOCK!");
           } else if (b.chestArmorHP > 0) {
             b.chestArmorHP--;
             if (window.sfx) window.sfx.metalBumper();
@@ -1225,7 +1234,7 @@ Object.assign(window.Stage3, {
             if (b.chestArmorHP === 0) {
               this.triggerChestPurge(state);
             } else {
-              Systems.addScore(state, 4500, cup.x, cup.y - 14, `BUSTIER HIT! HP:${b.chestArmorHP}`);
+              Systems.addScore(state, ScoreTable.stage3.BUSTIER_HIT, cup.x, cup.y - 14, `BUSTIER HIT! HP:${b.chestArmorHP}`);
               this.checkSuctionEscalationNotice(state);
             }
           }
@@ -1272,7 +1281,7 @@ Object.assign(window.Stage3, {
             this.impulseBust(state, side, -nx * 7.2, -ny * 7.2);
             Systems.addScore(
               state,
-              state.fever.active ? 6000 : 3000,
+              state.fever.active ? ScoreTable.stage3.BUST_SOFT_FEVER : ScoreTable.stage3.BUST_SOFT_NORMAL,
               cx,
               cy - 14,
               state.fever.active ? "♥HYPER BOING♥" : "♥PURU-PURU♥"
@@ -1305,7 +1314,7 @@ Object.assign(window.Stage3, {
           { expr: "shout", frames: 28 },
           { expr: "open_blush", frames: 55 }
         ]);
-        Systems.addScore(state, 12000, core.x, core.y - 18, `💥PENDANT CORE! HP:${core.hp}`);
+        Systems.addScore(state, ScoreTable.stage3.CORE_HIT, core.x, core.y - 18, `💥PENDANT CORE! HP:${core.hp}`);
 
         if (core.hp === 0) {
           this.triggerClear(state, engine);
@@ -1360,7 +1369,7 @@ Object.assign(window.Stage3, {
       { expr: "open_blush", frames: 999 }
     ]);
 
-    Systems.addScore(state, 45000, 198, 270, "★CYBER BUSTIER PURGED!! +45,000★");
+    Systems.addScore(state, ScoreTable.stage3.BUSTIER_PURGE, 198, 270, "★CYBER BUSTIER PURGED!!★");
     UI.showCutin(t("stage3.cutin.phase2Clear"), 260);
     Systems.dropReward(state, "rare", 3);
     Systems.dropReward(state, "major", 4);

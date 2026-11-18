@@ -661,7 +661,8 @@ window.StageCommon = {
     const b = state.boss;
     if (ball._onWireRamp) {
       const rs = ball._onWireRamp;
-      rs.dist += rs.speed / substeps;
+      const timeScale = (window.Physics && Physics.BALANCE.TIME_SCALE) || 1.0;
+      rs.dist += (rs.speed * timeScale) / substeps;
       const samp = stage.sampleRamp(rs.rampId, rs.dist);
       ball.x = samp.x;
       ball.y = samp.y;
@@ -702,7 +703,7 @@ window.StageCommon = {
     if (canEnter && !ball._rampExitCooldown && ball.vy < minVy && b && b.lastFlipActiveTimer > 0) {
       const minSpeed = opts.minSpeed ?? 9.2;
       const maxSpeed = opts.maxSpeed ?? 14.5;
-      const entryScore = opts.entryScore ?? 5500;
+      const entryScore = opts.entryScore ?? ScoreTable.common.WIRE_RAMP_ENTRY_DEFAULT;
       for (const rampKey of ["left", "right"]) {
         const rd = stage.WIRE_RAMPS[rampKey];
         if (!rd) continue;

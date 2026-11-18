@@ -216,7 +216,7 @@ window.Stage1 = {
 
     Systems.addFever(state, 12);
     Particles.add(state, b.x, b.y, "#ff66b2", 8, 2.8);
-    Systems.addScore(state, 600, b.x, b.y - 18, t("stage1.softBounce"));
+    Systems.addScore(state, ScoreTable.stage1.BUST_IMPULSE, b.x, b.y - 18, t("stage1.softBounce"));
 
     // EMP Counter at 100% Blush
     if (state.boss.blushGauge >= 100) {
@@ -226,7 +226,11 @@ window.Stage1 = {
       if (window.sfx) window.sfx.armorBreak();
       UI.showCutin(t("stage1.empCounter"), 180);
       Particles.add(state, 210, 390, "#ff1493", 32, 6.5);
-      Systems.dropReward(state, "minor", 5);
+      const maxDrops = (window.ScoreTable && ScoreTable.antiStall.BLUSH_CAPSULE_MAX_DROPS) ?? 6;
+      state.boss.blushDrops = (state.boss.blushDrops || 0) + 1;
+      if (state.boss.blushDrops <= maxDrops) {
+        Systems.dropReward(state, "minor", 5);
+      }
       state.balls.forEach(ball => {
         ball.vy = -12 - Math.random() * 4;
         ball.vx = (Math.random() - 0.5) * 12;

@@ -1134,14 +1134,16 @@ window.UI = {
   presentStageClearModal(state, cfg = {}) {
     const stageIdx = state.stageIndex || 1;
     const bal = (window.Systems && Systems.BALANCE) || {};
-    const clearBonus = (bal.CLEAR_BONUS_BASE ?? 50000) * stageIdx;
+    const sb = window.ScoreTable.bonus;
+    const clearBonus = Systems.scaled(sb.CLEAR_PER_STAGE * stageIdx);
     const isNoMiss = (state.stageMisses || 0) === 0;
-    const noMissBonus = isNoMiss ? (bal.NO_MISS_BONUS_BASE ?? 100000) * stageIdx : 0;
+    const noMissBonus = isNoMiss ? Systems.scaled(sb.NO_MISS_PER_STAGE * stageIdx) : 0;
     const totalBonus = clearBonus + noMissBonus;
 
     if (!state._clearBonusAwarded) {
       state._clearBonusAwarded = true;
-      state.score = (state.score || 0) + totalBonus;
+      const nextScore = (state.score || 0) + totalBonus;
+      state.score = (window.Systems && Systems.capScore) ? Systems.capScore(nextScore) : nextScore;
       state.peakScore = Math.max(state.peakScore || 0, state.score);
     }
 

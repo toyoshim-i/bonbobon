@@ -262,7 +262,7 @@ Object.assign(window.Stage2, {
               Particles.add(state, hit.qx, hit.qy, "#ffffff", 20, 6.0);
               Particles.add(state, hit.qx, hit.qy, "#ff007f", 16, 5.0);
               Particles.addPopup(state, hit.qx, hit.qy - 14, "⚡LASER FISSION!! MINI-BALLS SPLIT!⚡", "#00f5d4", 1.4);
-              Systems.addScore(state, 12000, hit.qx, hit.qy, "★FISSION MULTI-BALL!★");
+              Systems.addScore(state, ScoreTable.stage2.LASER_FISSION, hit.qx, hit.qy, "★FISSION MULTI-BALL!★");
               UI.showCutin(t("stage2.cutin.laserSplit"), 160);
             } else {
               // かすり当たり、または既に分裂済みのミニボール：強烈にノックバック＆吹き飛ばし！
@@ -273,7 +273,7 @@ Object.assign(window.Stage2, {
               if (window.sfx) window.sfx.metalBumper();
               Particles.add(state, ball.x, ball.y, "#00f5d4", 18, 5.5);
               Particles.add(state, ball.x, ball.y, "#ffffff", 12, 4.5);
-              Systems.addScore(state, 5000, ball.x, ball.y, "⚡LASER HIT! +5,000⚡");
+              Systems.addScore(state, ScoreTable.stage2.LASER_HIT, ball.x, ball.y, "⚡LASER HIT!⚡");
             }
           } else if (holo.laserTimer === 30) {
             // ニアミス回避ボーナス判定（発射直後、至近距離を高速で通り抜けて回避）
@@ -287,7 +287,7 @@ Object.assign(window.Stage2, {
             const dist = Math.hypot(ball.x - qx, ball.y - qy);
             const ballSpeed = Math.hypot(ball.vx, ball.vy);
             if (dist < 42 && ballSpeed > 6.5) {
-              Systems.addScore(state, 3000, ball.x, ball.y, "✨DODGE BONUS! +3,000✨");
+              Systems.addScore(state, ScoreTable.stage2.LASER_DODGE, ball.x, ball.y, "✨DODGE BONUS!✨");
               Particles.add(state, ball.x, ball.y, "#e6ff00", 12, 3.5);
             }
           }
@@ -401,7 +401,12 @@ Object.assign(window.Stage2, {
 
   checkCollisions(ball, state, engine, s) {
     if (s !== 0) return;
-    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, cb);
+    const graceFrames = (window.ScoreTable && ScoreTable.antiStall.BUMPER_GRACE_FRAMES) || 10;
+    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, () => {
+      if (ball._bumperGrace > 0) return;
+      ball._bumperGrace = graceFrames;
+      if (cb) cb(bumper);
+    });
 
     // 1. カチューシャのアンテナ先端（放電時は強烈に弾く、停止時は通過！ 接触でHP減少）
     const ant = state.boss.antenna;
@@ -427,14 +432,14 @@ Object.assign(window.Stage2, {
 
               if (ant.hp > 0) {
                 ant.hp--;
-                Systems.addScore(state, 4000, ant.x, ant.y, `⚡ELECTRIC REPEL! HP:${ant.hp}`);
+                Systems.addScore(state, ScoreTable.stage2.ANTENNA_REPEL, ant.x, ant.y, `⚡ELECTRIC REPEL! HP:${ant.hp}`);
                 if (ant.hp === 0) {
                   ant.broken = true;
                   ant.isActive = false;
                   ant.isWarning = false;
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
                   UI.showCutin(t("stage2.cutin.antennaBreak"), 200);
-                  Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
+                  Systems.addScore(state, ScoreTable.stage2.ANTENNA_DESTROY, ant.x, ant.y, "★ANTENNA DESTROYED!★");
                   Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
                 }
@@ -450,7 +455,7 @@ Object.assign(window.Stage2, {
 
               if (ant.hp > 0) {
                 ant.hp--;
-                Systems.addScore(state, 8000, ant.x, ant.y, `★GATE PASS! HP:${ant.hp}★`);
+                Systems.addScore(state, ScoreTable.stage2.ANTENNA_GATE_PASS, ant.x, ant.y, `★GATE PASS! HP:${ant.hp}★`);
                 Particles.addPopup(state, ant.x, ant.y - 14, `★GATE PASS HP:${ant.hp}★`, "#e6ff00", 1.1);
                 if (ant.hp === 0) {
                   ant.broken = true;
@@ -458,12 +463,12 @@ Object.assign(window.Stage2, {
                   ant.isWarning = false;
                   Particles.triggerArmorBreakEffect(state, "antenna", ant.x, ant.y);
                   UI.showCutin(t("stage2.cutin.antennaBreak"), 200);
-                  Systems.addScore(state, 25000, ant.x, ant.y, "★ANTENNA DESTROYED!★");
+                  Systems.addScore(state, ScoreTable.stage2.ANTENNA_DESTROY, ant.x, ant.y, "★ANTENNA DESTROYED!★");
                   Systems.dropReward(state, "major", { x: ant.x, y: ant.y });
                   this.checkPhase1Clear(state);
                 }
               } else {
-                Systems.addScore(state, 8000, ant.x, ant.y, "★ORBIT GATE CLEAR!!★");
+                Systems.addScore(state, ScoreTable.stage2.ANTENNA_GATE_PASS, ant.x, ant.y, "★ORBIT GATE CLEAR!!★");
               }
             }
           }
@@ -486,7 +491,7 @@ Object.assign(window.Stage2, {
             { expr: "wince", frames: 28 },
             { expr: "talk_sm", frames: 20 }
           ]);
-          Systems.addScore(state, 3000, sh.x, sh.y, `${sideLabel} SHOULDER! HP:${sh.hp}`);
+          Systems.addScore(state, ScoreTable.stage2.SHOULDER_HIT, sh.x, sh.y, `${sideLabel} SHOULDER! HP:${sh.hp}`);
           if (sh.hp === 0) {
             sh.broken = true;
             Particles.triggerArmorBreakEffect(state, sideLabel.toLowerCase() + "_shoulder", sh.x, sh.y);
@@ -496,12 +501,12 @@ Object.assign(window.Stage2, {
               { expr: "wince", frames: 45 }
             ]);
             UI.showCutin(t("stage2.cutin.shoulderBreak", { side: sideLabel }), 200);
-            Systems.addScore(state, 30000, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
+            Systems.addScore(state, ScoreTable.stage2.SHOULDER_PURGE, sh.x, sh.y, `★${sideLabel} SHOULDER PURGED!★`);
             Systems.dropReward(state, "major", { x: sh.x, y: sh.y });
             this.checkPhase1Clear(state);
           }
         } else {
-          Systems.addScore(state, 3500, sh.x, sh.y, `⚡${sideLabel} SHOULDER SPARK!`);
+          Systems.addScore(state, ScoreTable.stage2.SHOULDER_SPARK, sh.x, sh.y, `⚡${sideLabel} SHOULDER SPARK!`);
         }
       });
     };
@@ -522,7 +527,7 @@ Object.assign(window.Stage2, {
             { expr: "wince", frames: 25 },
             { expr: "talk_sm", frames: 18 }
           ]);
-          Systems.addScore(state, 3500, elb.x, elb.y, `${sideLabel}-ARM! HP:${elb.hp}`);
+          Systems.addScore(state, ScoreTable.stage2.ARM_HIT, elb.x, elb.y, `${sideLabel}-ARM! HP:${elb.hp}`);
 
           if (elb.hp === 0) {
             elb.broken = true;
@@ -533,14 +538,14 @@ Object.assign(window.Stage2, {
               { expr: "wince", frames: 40 }
             ]);
             UI.showCutin(t("stage2.cutin.armBreak", { side: sideLabel }), 200);
-            Systems.addScore(state, 30000, elb.x, elb.y, `★${sideLabel} ARM DESTROYED!★`);
+            Systems.addScore(state, ScoreTable.stage2.ARM_DESTROY, elb.x, elb.y, `★${sideLabel} ARM DESTROYED!★`);
             Systems.dropReward(state, "major", { x: elb.x, y: elb.y });
             this.checkPhase1Clear(state);
           }
         } else {
           // 破壊後：小スパーク散布
           Particles.add(state, elb.x, elb.y, "#e6ff00", 12, 3.5);
-          Systems.addScore(state, 2500, elb.x, elb.y, `⚡${sideLabel} ARM SPARK!`);
+          Systems.addScore(state, ScoreTable.stage2.ARM_SPARK, elb.x, elb.y, `⚡${sideLabel} ARM SPARK!`);
         }
       });
     };
@@ -556,13 +561,18 @@ Object.assign(window.Stage2, {
         if (window.sfx) window.sfx.metalBumper();
         Particles.add(state, noz.x, noz.y, "#ff007f", 16, 4.5);
 
+        if (state.phase < 2 && !noz.broken) {
+          Systems.addScore(state, ScoreTable.stage2.NOZZLE_ARMORED, noz.x, noz.y, "🛡️NOZZLE ARMORED");
+          return;
+        }
+
         if (noz.hp > 0) {
           noz.hp--;
           StageCommon.setExpressionSequence(state, [
             { expr: "shock", frames: 20 },
             { expr: "wince", frames: 25 }
           ]);
-          Systems.addScore(state, 4000, noz.x, noz.y, `NOZZLE-${nozLabel}! HP:${noz.hp}`);
+          Systems.addScore(state, ScoreTable.stage2.NOZZLE_HIT, noz.x, noz.y, `NOZZLE-${nozLabel}! HP:${noz.hp}`);
 
           if (noz.hp === 0) {
             noz.broken = true;
@@ -572,7 +582,7 @@ Object.assign(window.Stage2, {
               { expr: "shout", frames: 32 }
             ]);
             UI.showCutin(t("stage2.cutin.nozzleBreak", { side: nozLabel }), 200);
-            Systems.addScore(state, 25000, noz.x, noz.y, `★NOZZLE-${nozLabel} DESTROYED!★`);
+            Systems.addScore(state, ScoreTable.stage2.NOZZLE_DESTROY, noz.x, noz.y, `★NOZZLE-${nozLabel} DESTROYED!★`);
             Systems.dropReward(state, "major", { x: noz.x, y: noz.y });
 
             // 両ノズル大破チェック
@@ -583,13 +593,13 @@ Object.assign(window.Stage2, {
                 state.boss.jet.active = false;
               }
               UI.showCutin(t("stage2.cutin.allNozzleBreak"), 220);
-              Systems.addScore(state, 30000, noz.x, noz.y, "★ALL THRUSTERS DOWN!★");
+              Systems.addScore(state, ScoreTable.stage2.ALL_THRUSTERS_DOWN, noz.x, noz.y, "★ALL THRUSTERS DOWN!★");
               this.checkPhase2Clear(state);
             }
           }
         } else {
           Particles.add(state, noz.x, noz.y, "#555555", 8, 2.5);
-          Systems.addScore(state, 2000, noz.x, noz.y, "⚡NOZZLE SCRAP");
+          Systems.addScore(state, ScoreTable.stage2.NOZZLE_SCRAP, noz.x, noz.y, "⚡NOZZLE SCRAP");
         }
       });
     };
@@ -605,12 +615,12 @@ Object.assign(window.Stage2, {
         if (holo.broken) {
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, holo.x, holo.y, "#00f5d4", 10, 3.5);
-          Systems.addScore(state, 2000, holo.x, holo.y, "HOLO SCRAP");
+          Systems.addScore(state, ScoreTable.stage2.HOLO_SCRAP, holo.x, holo.y, "HOLO SCRAP");
         } else if (holo.isShielded || state.phase < 2) {
           // Phase 1: ホログラムシールドで反射
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, holo.x, holo.y, "#00f5d4", 14, 4.5);
-          Systems.addScore(state, 1500, holo.x, holo.y, "⚡HOLO SHIELDED⚡");
+          Systems.addScore(state, ScoreTable.stage2.HOLO_SHIELDED, holo.x, holo.y, "⚡HOLO SHIELDED⚡");
         } else {
           // Phase 2: シールド解除！ ホログラム砲台コアへ直接ダメージ
           if (window.sfx) window.sfx.metalBumper();
@@ -623,7 +633,7 @@ Object.assign(window.Stage2, {
               { expr: "shock", frames: 20 },
               { expr: "wince", frames: 28 }
             ]);
-            Systems.addScore(state, 6000, holo.x, holo.y, `💥HOLO CANNON! HP:${holo.hp}`);
+            Systems.addScore(state, ScoreTable.stage2.HOLO_HIT, holo.x, holo.y, `💥HOLO CANNON! HP:${holo.hp}`);
 
             if (holo.hp === 0) {
               holo.broken = true;
@@ -636,7 +646,7 @@ Object.assign(window.Stage2, {
                 { expr: "open_blush", frames: 50 }
               ]);
               UI.showCutin(t("stage2.cutin.holoBreak"), 220);
-              Systems.addScore(state, 40000, holo.x, holo.y, "★HOLO CANNON DESTROYED!★");
+              Systems.addScore(state, ScoreTable.stage2.HOLO_DESTROY, holo.x, holo.y, "★HOLO CANNON DESTROYED!★");
               Systems.dropReward(state, "major", { x: holo.x, y: holo.y });
               this.checkPhase2Clear(state);
             }
@@ -664,19 +674,24 @@ Object.assign(window.Stage2, {
         state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 30);
         this.triggerJetBlast(state);
 
+        if (state.phase < 2 && !bust.broken) {
+          Systems.addScore(state, ScoreTable.stage2.BUST_ARMORED, bust.x, bust.y, "🔒BUST LOCKED");
+          return;
+        }
+
         if (!bust.broken && bust.hp > 0) {
           bust.hp--;
-          Systems.addScore(state, 12000, bust.x, bust.y, `♥BUST SENSITIVE! HP:${bust.hp}♥`);
+          Systems.addScore(state, ScoreTable.stage2.BUST_TIP_HIT, bust.x, bust.y, `♥BUST SENSITIVE! HP:${bust.hp}♥`);
           if (bust.hp === 0) {
             bust.broken = true;
             Particles.triggerArmorBreakEffect(state, "bust_armor", bust.x, bust.y);
             UI.showCutin(t("stage2.cutin.bustPurge"), 200);
-            Systems.addScore(state, 30000, bust.x, bust.y, "★BUST ARMOR PURGED!★");
+            Systems.addScore(state, ScoreTable.stage2.BUST_ARMOR_PURGE, bust.x, bust.y, "★BUST ARMOR PURGED!★");
             Systems.dropReward(state, "major", { x: bust.x, y: bust.y });
             this.checkPhase2Clear(state);
           }
         } else {
-          Systems.addScore(state, 12000, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
+          Systems.addScore(state, ScoreTable.stage2.BUST_TIP_SENSITIVE, bust.x, bust.y, "♥BUST TIP SENSITIVE!♥");
         }
       });
     }
@@ -697,7 +712,7 @@ Object.assign(window.Stage2, {
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, core.x, core.y, "#00f5d4", 26, 6.0);
           Particles.add(state, core.x, core.y, "#ffffff", 20, 5.0);
-          Systems.addScore(state, 15000, core.x, core.y - 18, `💥CORE HIT! HP:${core.hp}`);
+          Systems.addScore(state, ScoreTable.stage2.CORE_HIT, core.x, core.y - 18, `💥CORE HIT! HP:${core.hp}`);
 
           if (core.hp === 0) {
             this.triggerClear(state, engine);
@@ -705,12 +720,12 @@ Object.assign(window.Stage2, {
         } else if (core.unlocked) {
           if (window.sfx) window.sfx.burstTrigger();
           Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
-          Systems.addScore(state, 5000, core.x, core.y - 16, "★REACTOR OVERDRIVE!★");
+          Systems.addScore(state, ScoreTable.stage2.CORE_OVERDRIVE, core.x, core.y - 16, "★REACTOR OVERDRIVE!★");
         } else {
           core.flash = 12;
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, core.x, core.y, "#00f5d4", 10, 3.0);
-          Systems.addScore(state, 1500, core.x, core.y - 14, "⚡CORE SHIELDED⚡");
+          Systems.addScore(state, ScoreTable.stage2.CORE_SHIELDED, core.x, core.y - 14, "⚡CORE SHIELDED⚡");
         }
         UI.updateHUD(state);
       });
@@ -753,7 +768,7 @@ Object.assign(window.Stage2, {
           { expr: "wince", frames: 25 },
           { expr: "open_blush", frames: 55 }
         ]);
-        Systems.addScore(state, 4500, dynamicHip.x, dynamicHip.y, "⚡HIP CYBER BUMPER!⚡");
+        Systems.addScore(state, ScoreTable.stage2.HIP_BUMPER, dynamicHip.x, dynamicHip.y, "⚡HIP CYBER BUMPER!⚡");
       });
     }
 
@@ -796,7 +811,10 @@ Object.assign(window.Stage2, {
           StageCommon.setExpressionSequence(state, [
             { expr: "wink", frames: 45 }
           ]);
-          Systems.addScore(state, 3500, ball.x, ball.y, `⚡${earName} CAT EAR BOUNCE!⚡`);
+          if (!(ball._bumperGrace > 0)) {
+            ball._bumperGrace = graceFrames;
+            Systems.addScore(state, ScoreTable.stage2.CAT_EAR_BOUNCE, ball.x, ball.y, `⚡${earName} CAT EAR BOUNCE!⚡`);
+          }
           return;
         }
       }
@@ -851,7 +869,7 @@ Object.assign(window.Stage2, {
         { expr: "wince", frames: 50 },
         { expr: "open_blush", frames: 999 }
       ]);
-      Systems.addScore(state, 50000, b.core.x, b.core.y, "★ALL ARMORS PURGED! +50,000★");
+      Systems.addScore(state, ScoreTable.stage2.ALL_ARMORS_PURGED, b.core.x, b.core.y, "★ALL ARMORS PURGED!★");
       UI.showCutin(t("stage2.cutin.phase2Clear"), 260);
       Systems.addFever(state, 100);
       Systems.dropReward(state, "rare", 3);

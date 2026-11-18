@@ -107,8 +107,13 @@ Object.assign(window.Stage1, {
   checkCollisions(ball, state, engine, s) {
     if (s !== 0) return;
 
-    // Helper alias
-    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, cb);
+    // Helper alias (10f grace prevents 60fps wedge spam while keeping physics bounce)
+    const graceFrames = (window.ScoreTable && ScoreTable.antiStall.BUMPER_GRACE_FRAMES) || 10;
+    const checkBumper = (bumper, speed, cb) => Physics.checkCircleBumper(ball, bumper, speed, () => {
+      if (ball._bumperGrace > 0) return;
+      ball._bumperGrace = graceFrames;
+      if (cb) cb(bumper);
+    });
     const checkCapsule = (ax, ay, bx, by, cr) => Physics.checkCapsuleHit(ball, ax, ay, bx, by, cr);
     const checkEllipse = (cx, cy, rx, ry) => Physics.checkEllipseHit(ball, cx, cy, rx, ry);
 
@@ -126,7 +131,7 @@ Object.assign(window.Stage1, {
             v.hp--;
             state.boss.chestArmorHP = (state.boss.ventL ? state.boss.ventL.hp : 0) + (state.boss.ventR ? state.boss.ventR.hp : 0);
             Systems.addFever(state, 8);
-            Systems.addScore(state, 4000, v.x, v.y, `${sideLabel}-VENT HIT! HP:${v.hp}`);
+            Systems.addScore(state, ScoreTable.stage1.VENT_HIT, v.x, v.y, `${sideLabel}-VENT HIT! HP:${v.hp}`);
             StageCommon.setExpressionSequence(state, [
               { expr: "shock", frames: 14 },
               { expr: "wince", frames: 20 },
@@ -142,13 +147,13 @@ Object.assign(window.Stage1, {
                 { expr: "open_blush", frames: 70 }
               ]);
               UI.showCutin(t("stage1.cutin.ventPurge"), 220);
-              Systems.addScore(state, 20000, 198, 353, "TORSO PURGED!!");
+              Systems.addScore(state, ScoreTable.stage1.TORSO_PURGE_VENT, 198, 353, "TORSO PURGED!!");
               Systems.dropReward(state, "major", 2);
               Systems.dropReward(state, "minor", 5);
 
               if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
                 state.boss.allArmorsPurged = true;
-                Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+                Systems.addScore(state, ScoreTable.stage1.ALL_ARMOR_PURGE, 198, 300, "★ALL ARMOR PURGED!!★");
                 UI.showCutin(t("stage1.cutin.allPurge"), 260);
                 Systems.startFeverMode(state);
               }
@@ -187,21 +192,21 @@ Object.assign(window.Stage1, {
             state.boss.expression = "blush";
             state.boss.expressionTimer = 85;
             UI.showCutin(t("stage1.cutin.chestPurge"), 220);
-            Systems.addScore(state, 18000, hit.cx, hit.cy, "TORSO PURGED!!");
+            Systems.addScore(state, ScoreTable.stage1.TORSO_PURGE_PLATE, hit.cx, hit.cy, "TORSO PURGED!!");
             Systems.dropReward(state, "major", 2);
             Systems.dropReward(state, "minor", 5);
 
             if (state.boss.armR_Broken && state.boss.armL_Broken && !state.boss.allArmorsPurged) {
               state.boss.allArmorsPurged = true;
-              Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+              Systems.addScore(state, ScoreTable.stage1.ALL_ARMOR_PURGE, 198, 300, "★ALL ARMOR PURGED!!★");
               UI.showCutin(t("stage1.cutin.allPurge"), 260);
               Systems.startFeverMode(state);
             }
           } else {
-            Systems.addScore(state, 1500, hit.cx, hit.cy, `TORSO HIT [${state.boss.chestArmorHP}]`);
+            Systems.addScore(state, ScoreTable.stage1.TORSO_PLATE_HIT, hit.cx, hit.cy, `TORSO HIT [${state.boss.chestArmorHP}]`);
           }
         } else {
-          Systems.addScore(state, 400, hit.cx, hit.cy, "ARMOR RICOCHET");
+          Systems.addScore(state, ScoreTable.stage1.TORSO_RICOCHET, hit.cx, hit.cy, "ARMOR RICOCHET");
         }
         UI.updateHUD(state);
       }
@@ -234,30 +239,33 @@ Object.assign(window.Stage1, {
           ball.vx = nx * newNormalSpd + tanX * tanSpd * 0.94;
           ball.vy = ny * newNormalSpd + tanY * tanSpd * 0.94;
 
-          this.impulseBust(state, side, -nx * 4.2, -ny * 4.2);
+          if (!(ball._bumperGrace > 0)) {
+            ball._bumperGrace = graceFrames;
+            this.impulseBust(state, side, -nx * 4.2, -ny * 4.2);
 
-          b.flash = 22;
-          if (window.sfx) window.sfx.softPuru();
+            b.flash = 22;
+            if (window.sfx) window.sfx.softPuru();
 
-          StageCommon.setExpressionSequence(state, [
-            { expr: "shock", frames: 12 },
-            { expr: "wince", frames: 16 },
-            { expr: "open_blush", frames: 60 }
-          ]);
-          state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
+            StageCommon.setExpressionSequence(state, [
+              { expr: "shock", frames: 12 },
+              { expr: "wince", frames: 16 },
+              { expr: "open_blush", frames: 60 }
+            ]);
+            state.boss.blushGauge = Math.min(100, state.boss.blushGauge + 18);
 
-          // Boost bust excitement (scales crotch suction heavily!)
-          state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 40);
+            // Boost bust excitement (scales crotch suction heavily!)
+            state.boss.bustExcitement = Math.min(100, (state.boss.bustExcitement || 0) + 40);
 
-          Systems.addFever(state, state.fever.active ? 10 : 8);
-          Systems.addScore(state, state.fever.active ? 6000 : 2500, cx, cy, state.fever.active ? "♥HYPER BOING♥" : "♥PURU-PURU♥");
+            Systems.addFever(state, state.fever.active ? 10 : 8);
+            Systems.addScore(state, state.fever.active ? ScoreTable.stage1.BUST_SOFT_FEVER : ScoreTable.stage1.BUST_SOFT_NORMAL, cx, cy, state.fever.active ? "♥HYPER BOING♥" : "♥PURU-PURU♥");
 
-          for (let h = 0; h < (state.fever.active ? 4 : 2); h++) {
-            Particles.spawnHeart(state, cx, cy, false);
-          }
-          if (state.phase === 2 && state.boss.chestArmorBroken) {
-            state.phase = 3;
-            state.boss.coreUnlocked = true;
+            for (let h = 0; h < (state.fever.active ? 4 : 2); h++) {
+              Particles.spawnHeart(state, cx, cy, false);
+            }
+            if (state.phase === 2 && state.boss.chestArmorBroken) {
+              state.phase = 3;
+              state.boss.coreUnlocked = true;
+            }
           }
         }
       });
@@ -276,19 +284,19 @@ Object.assign(window.Stage1, {
         const hpKey = which === "L" ? "droneL_HP" : "droneR_HP";
         if (state.boss[hpKey] > 0) {
           state.boss[hpKey]--;
-          Systems.addScore(state, 2000, d.x, d.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
+          Systems.addScore(state, ScoreTable.stage1.DRONE_HIT, d.x, d.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
           if (state.boss[hpKey] === 0) {
             if (window.sfx) window.sfx.armorBreak();
             Particles.add(state, d.x, d.y, "#ff1493", 22, 6.0);
-            Systems.addScore(state, 6000, d.x, d.y - 15, `💥${tag} DESTROYED!`);
+            Systems.addScore(state, ScoreTable.stage1.DRONE_DESTROY, d.x, d.y - 15, `💥${tag} DESTROYED!`);
             UI.showCutin(t("stage1.cutin.droneKill", { tag }), 160);
             Systems.dropReward(state, "major", which === "L" ? 0 : 1);
-            state.baseMultiplier += 0.25;
+            state.baseMultiplier += ScoreTable.stage1.BASE_MULT_DRONE;
             this.checkPhase1Clear(state);
           }
         } else {
           if (window.sfx) window.sfx.exSpark();
-          Systems.addScore(state, 2500, d.x, d.y - 12, "⚡EX-BUMP!");
+          Systems.addScore(state, ScoreTable.stage1.DRONE_EX_BUMP, d.x, d.y - 12, "⚡EX-BUMP!");
         }
         UI.updateHUD(state);
       });
@@ -317,16 +325,19 @@ Object.assign(window.Stage1, {
         const normalizedTorque = Math.max(-1.5, Math.min(1.5, crossTorque * 0.003));
         this.impulseEar(state, which, normalizedTorque, ball.vx * 0.25, ball.vy * 0.25);
 
-        Systems.addFever(state, 8);
-        Particles.add(state, hit.qx, hit.qy, "#b84dff", 14, 4.0);
-
         if (state.skillShotEligible) {
           state.skillShotEligible = false;
-          Systems.addScore(state, 25000, hit.qx, hit.qy, "★SKILL SHOT!!");
+          ball._bumperGrace = graceFrames;
+          Systems.addFever(state, 8);
+          Particles.add(state, hit.qx, hit.qy, "#b84dff", 14, 4.0);
+          Systems.addScore(state, ScoreTable.stage1.EAR_SKILL_SHOT, hit.qx, hit.qy, "★SKILL SHOT!!");
           UI.showCutin(t("stage1.cutin.skillShot"), 180);
           Systems.dropReward(state, "rare", 2);
-        } else {
-          Systems.addScore(state, 2000, hit.qx, hit.qy, "🐰FUNYON DAMP!");
+        } else if (!(ball._bumperGrace > 0)) {
+          ball._bumperGrace = graceFrames;
+          Systems.addFever(state, 8);
+          Particles.add(state, hit.qx, hit.qy, "#b84dff", 14, 4.0);
+          Systems.addScore(state, ScoreTable.stage1.EAR_DAMP, hit.qx, hit.qy, "🐰FUNYON DAMP!");
           Particles.addPopup(state, hit.qx, hit.qy - 18, t("stage1.popup.earDamp"), "#e6ff00", 1.0);
         }
 
@@ -354,7 +365,7 @@ Object.assign(window.Stage1, {
         if (isShielded) {
           if (window.sfx) window.sfx.metalBumper();
           Particles.add(state, pod.x, pod.y, "#00f5d4", 16, 4.5);
-          Systems.addScore(state, 500, pod.x, pod.y - 12, "🛡️SHIELDED!");
+          Systems.addScore(state, ScoreTable.stage1.ARM_SHIELDED, pod.x, pod.y - 12, "🛡️SHIELDED!");
           Particles.addPopup(state, pod.x, pod.y - 15, t("stage1.popup.droneFirst", { which }), "#00f5d4", 0.95);
         } else {
           if (!state.boss[brokenKey] && state.boss[hpKey] > 0) {
@@ -362,14 +373,14 @@ Object.assign(window.Stage1, {
             if (window.sfx) window.sfx.metalBumper();
             Systems.addFever(state, 5);
             Particles.add(state, pod.x, pod.y, "#ff1493", 14, 4.5);
-            Systems.addScore(state, 2000, pod.x, pod.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
+            Systems.addScore(state, ScoreTable.stage1.ARM_HIT, pod.x, pod.y - 12, `${tag} HIT! HP:${state.boss[hpKey]}`);
 
             if (state.boss[hpKey] === 0) {
               state.boss[brokenKey] = true;
               Particles.triggerArmorBreakEffect(state, which === "L" ? "shoulder_l" : "shoulder_r", pod.x, pod.y);
               state.boss.expression = "shock";
               state.boss.expressionTimer = 65;
-              Systems.addScore(state, 12000, pod.x, pod.y, `💥${tag} PURGED!!`);
+              Systems.addScore(state, ScoreTable.stage1.ARM_PURGE, pod.x, pod.y, `💥${tag} PURGED!!`);
               UI.showCutin(t("stage1.cutin.armPurge", { label: t(labelKey), tag }), 200);
               Systems.dropReward(state, "rare", which === "L" ? 3 : 4);
               this.checkPhase1Clear(state);
@@ -377,7 +388,7 @@ Object.assign(window.Stage1, {
               // Check full armor strip bonus
               if (state.boss.armR_Broken && state.boss.armL_Broken && state.boss.chestArmorBroken && !state.boss.allArmorsPurged) {
                 state.boss.allArmorsPurged = true;
-                Systems.addScore(state, 40000, 198, 300, "★ALL ARMOR PURGED!!★");
+                Systems.addScore(state, ScoreTable.stage1.ALL_ARMOR_PURGE, 198, 300, "★ALL ARMOR PURGED!!★");
                 UI.showCutin(t("stage1.cutin.allPurge"), 260);
                 Systems.startFeverMode(state);
               }
@@ -389,7 +400,7 @@ Object.assign(window.Stage1, {
             Systems.addFever(state, 5);
             Particles.add(state, pod.x, pod.y, "#00f5d4", 18, 5.0);
             Particles.add(state, pod.x, pod.y, "#e6ff00", 12, 4.0);
-            Systems.addScore(state, 5000, pod.x, pod.y, "⚡EX-SPARK!!");
+            Systems.addScore(state, ScoreTable.stage1.ARM_EX_SPARK, pod.x, pod.y, "⚡EX-SPARK!!");
           }
           UI.updateHUD(state);
         }
@@ -408,17 +419,17 @@ Object.assign(window.Stage1, {
         Particles.add(state, hip.x, hip.y, "#00f5d4", 8, 3.5);
         if (hip.hp > 0) {
           hip.hp--;
-          Systems.addScore(state, 2500, hip.x, hip.y - 12, `${tag} HIT! HP:${hip.hp}`);
+          Systems.addScore(state, ScoreTable.stage1.HIP_HIT, hip.x, hip.y - 12, `${tag} HIT! HP:${hip.hp}`);
           if (hip.hp === 0) {
             Particles.triggerArmorBreakEffect(state, side === "L" ? "shoulder_l" : "shoulder_r", hip.x, hip.y);
-            Systems.addScore(state, 8000, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
+            Systems.addScore(state, ScoreTable.stage1.HIP_OVERHEAT, hip.x, hip.y - 15, `💥${tag} OVERHEAT!`);
             UI.showCutin(t("stage1.cutin.hipHeat", { side: t(`stage1.side.${side}`) }), 160);
-            state.baseMultiplier += 0.5;
+            state.baseMultiplier += ScoreTable.stage1.BASE_MULT_HIP;
             Systems.addFever(state, 15);
           }
         } else {
           if (window.sfx) window.sfx.exSpark();
-          Systems.addScore(state, 3000, hip.x, hip.y - 12, "⚡HIP SPARK!");
+          Systems.addScore(state, ScoreTable.stage1.HIP_SPARK, hip.x, hip.y - 12, "⚡HIP SPARK!");
         }
         UI.updateHUD(state);
       });
@@ -487,7 +498,7 @@ Object.assign(window.Stage1, {
 
           if (crotch.cooldown && crotch.cooldown > 0) {
             if (window.sfx) window.sfx.metalBumper();
-            Systems.addScore(state, 1500, crotch.x, crotch.y - 14, "GRAV RESIDUE");
+            Systems.addScore(state, ScoreTable.stage1.GRAV_RESIDUE, crotch.x, crotch.y - 14, "GRAV RESIDUE");
           } else {
             crotch.charge++;
             state.boss.expression = "blush";
@@ -497,7 +508,7 @@ Object.assign(window.Stage1, {
             Particles.add(state, crotch.x, crotch.y, "#ff1493", 14, 3.5);
 
             if (crotch.charge < crotch.maxCharge) {
-              Systems.addScore(state, 5000 * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY TRAP ${crotch.charge}/${crotch.maxCharge}`);
+              Systems.addScore(state, ScoreTable.stage1.GRAV_TRAP_PER_CHARGE * crotch.charge, crotch.x, crotch.y - 16, `🌀GRAVITY TRAP ${crotch.charge}/${crotch.maxCharge}`);
               Particles.addPopup(state, crotch.x, crotch.y - 30, t("stage1.popup.crotchTrap"), "#ff66b2", 1.05);
             } else {
               crotch.charge = 0;
@@ -506,7 +517,7 @@ Object.assign(window.Stage1, {
                 window.sfx.burstTrigger();
                 window.sfx.exSpark();
               }
-              Systems.addScore(state, 30000, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!! +30,000");
+              Systems.addScore(state, ScoreTable.stage1.GRAV_OVERLOAD, crotch.x, crotch.y - 20, "★GRAVITY OVERLOAD!!");
               Particles.addPopup(state, crotch.x, crotch.y - 35, t("stage1.popup.crotchOverload"), "#e6ff00", 1.3);
               UI.showCutin(t("stage1.cutin.gravityOverload"), 220);
 
@@ -536,7 +547,7 @@ Object.assign(window.Stage1, {
         state.boss.expressionTimer = 85;
         if (window.sfx) window.sfx.metalBumper();
         Particles.add(state, core.x, core.y, "#ff1493", 26, 6.0);
-        Systems.addScore(state, 8000, core.x, core.y - 20, `💥CORE HIT! HP:${state.boss.coreHP}`);
+        Systems.addScore(state, ScoreTable.stage1.CORE_HIT, core.x, core.y - 20, `💥CORE HIT! HP:${state.boss.coreHP}`);
 
         if (state.boss.coreHP === 0) {
           this.triggerClear(state, engine);
@@ -544,11 +555,15 @@ Object.assign(window.Stage1, {
       } else if (state.boss.coreUnlocked) {
         if (window.sfx) window.sfx.burstTrigger();
         Particles.add(state, core.x, core.y, "#e6ff00", 20, 4.5);
-        Systems.addScore(state, 500, core.x, core.y - 18, "★JACKPOT!!");
-        Systems.dropReward(state, "minor", 5);
+        Systems.addScore(state, ScoreTable.stage1.CORE_JACKPOT, core.x, core.y - 18, "★JACKPOT!!");
+        const maxJackpotDrops = (window.ScoreTable && ScoreTable.antiStall.STAGE1_EARLY_JACKPOT_MAX_DROPS) ?? 3;
+        state.boss.earlyJackpotDrops = (state.boss.earlyJackpotDrops || 0) + 1;
+        if (state.boss.earlyJackpotDrops <= maxJackpotDrops) {
+          Systems.dropReward(state, "minor", 5);
+        }
       } else {
         if (window.sfx) window.sfx.metalBumper();
-        Systems.addScore(state, 1500, core.x, core.y - 16, "CORE SHIELDED");
+        Systems.addScore(state, ScoreTable.stage1.CORE_SHIELDED, core.x, core.y - 16, "CORE SHIELDED");
       }
       UI.updateHUD(state);
     });

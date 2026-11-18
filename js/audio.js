@@ -26,6 +26,10 @@ class FMSoundEngine {
     this.masterGain = null;
     this.compressor = null;
     this._enabled = true;
+    this._needsReunlock = true;
+    this._rebuildNextGesture = false;
+    this._suspendedSfxCount = 0;
+    this._bindLifecycleRecovery();
   }
 
   get enabled() {
@@ -39,46 +43,138 @@ class FMSoundEngine {
     }
   }
 
-  init() {
+  _refreshAudioSession(forceReset = false) {
     if (typeof navigator !== "undefined" && navigator.audioSession) {
       try {
+        if (forceReset) {
+          navigator.audioSession.type = "auto";
+        }
         if (navigator.audioSession.type !== "playback") {
           navigator.audioSession.type = "playback";
         }
       } catch (_) {}
     }
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(this._enabled ? 0.9 : 0, this.ctx.currentTime);
-        this.masterGain.connect(this.ctx.destination);
-      }
+  }
+
+  _createContext() {
+    const AudioCtx = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
+    if (!AudioCtx) return;
+    if (this.ctx) {
+      try { this.ctx.onstatechange = null; } catch (_) {}
+      try { if (this.ctx.state !== "closed") this.ctx.close(); } catch (_) {}
     }
-    if (this.ctx && this.ctx.state !== "running") {
-      try {
-        const p = this.ctx.resume();
-        if (p && typeof p.then === "function") {
-          p.then(() => pushDebugLog(`resume ok: ${this.ctx.state}`))
-           .catch((err) => pushDebugLog(`resume err: ${err && err.message ? err.message : err}`));
+    this.ctx = new AudioCtx();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.setValueAtTime(this._enabled ? 0.9 : 0, this.ctx.currentTime);
+    this.masterGain.connect(this.ctx.destination);
+    this._suspendedSfxCount = 0;
+    this.ctx.onstatechange = () => {
+      if (!this.ctx) return;
+      pushDebugLog(`ctx state: ${this.ctx.state}`);
+      if (this.ctx.state === "running") {
+        this._suspendedSfxCount = 0;
+      } else {
+        // iOS スリープ復帰時の "interrupted" / "suspended" 検知で再アンロックを要求
+        this._needsReunlock = true;
+        this._bufUnlocked = false;
+        this._htmlAudioUnlocked = false;
+      }
+    };
+  }
+
+  _markInterrupted(reason) {
+    this._needsReunlock = true;
+    this._bufUnlocked = false;
+    this._htmlAudioUnlocked = false;
+    if (reason) pushDebugLog(`sleep/hide: ${reason}`);
+  }
+
+  _bindLifecycleRecovery() {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        this._markInterrupted("hidden");
+      } else {
+        this._markInterrupted("visible");
+        this._refreshAudioSession(true);
+        if (this.ctx && this.ctx.state !== "running") {
+          try {
+            const p = this.ctx.resume();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+          } catch (_) {}
         }
-      } catch (err) {
-        pushDebugLog(`resume throw: ${err && err.message ? err.message : err}`);
       }
+    });
+
+    window.addEventListener("pagehide", () => this._markInterrupted("pagehide"));
+    window.addEventListener("pageshow", () => {
+      this._markInterrupted("pageshow");
+      this._refreshAudioSession(true);
+    });
+    window.addEventListener("focus", () => {
+      if (this.ctx && this.ctx.state !== "running") {
+        this._markInterrupted("focus");
+      }
+    });
+
+    // iOS Safari / WebKit では pointerdown(preventDefault) 単体だと復帰が拒否される場合があるため、
+    // capture フェーズの touchstart / touchend / click / keydown 全般で確実に再アンロックする
+    const onUserGesture = () => {
+      if (!this._enabled) return;
+      if (!this.ctx || this.ctx.state !== "running" || this._needsReunlock || this._rebuildNextGesture) {
+        this.unlockFromGesture();
+      }
+    };
+    ["touchstart", "touchend", "pointerdown", "mousedown", "click", "keydown"].forEach((ev) => {
+      document.addEventListener(ev, onUserGesture, { capture: true, passive: true });
+    });
+  }
+
+  unlockFromGesture() {
+    this._refreshAudioSession(this._needsReunlock);
+
+    if (!this.ctx || this.ctx.state === "closed" || this._rebuildNextGesture) {
+      this._rebuildNextGesture = false;
+      this._createContext();
+      pushDebugLog("ctx created/rebuilt");
     }
-    if (this.ctx && !this._bufUnlocked) {
+    if (!this.ctx) return;
+
+    const targetCtx = this.ctx;
+    const t0 = targetCtx.currentTime;
+
+    if (targetCtx.state !== "running") {
       try {
-        const buf = this.ctx.createBuffer(1, 1, 22050);
-        const src = this.ctx.createBufferSource();
+        const p = targetCtx.resume();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            pushDebugLog(`resume ok: ${targetCtx.state}`);
+          }).catch(() => {
+            // iOS "interrupted" 固着対策: suspend() -> resume() で復帰を試みる
+            try {
+              if (targetCtx.state !== "running" && targetCtx.state !== "closed") {
+                targetCtx.suspend().then(() => targetCtx.resume()).catch(() => {});
+              }
+            } catch (_) {}
+          });
+        }
+      } catch (_) {}
+    }
+
+    if (!this._bufUnlocked) {
+      try {
+        const buf = targetCtx.createBuffer(1, 1, 22050);
+        const src = targetCtx.createBufferSource();
         src.buffer = buf;
-        src.connect(this.ctx.destination);
+        src.connect(targetCtx.destination);
         src.start(0);
         this._bufUnlocked = true;
       } catch (err) {
         pushDebugLog(`buf err: ${err && err.message ? err.message : err}`);
       }
     }
+
     if (!this._htmlAudioUnlocked && typeof Audio !== "undefined") {
       try {
         if (!this._silentAudio) {
@@ -86,20 +182,47 @@ class FMSoundEngine {
           this._silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
           this._silentAudio.playsInline = true;
         }
+        this._silentAudio.currentTime = 0;
         const ap = this._silentAudio.play();
         if (ap && typeof ap.then === "function") {
           ap.then(() => {
             this._htmlAudioUnlocked = true;
-            pushDebugLog("htmlAudio ok");
-          }).catch((err) => {
-            pushDebugLog(`htmlAudio rej: ${err && err.name ? err.name : err}`);
-          });
+          }).catch(() => {});
         } else {
           this._htmlAudioUnlocked = true;
         }
-      } catch (err) {
-        pushDebugLog(`htmlAudio err: ${err && err.message ? err.message : err}`);
-      }
+      } catch (_) {}
+    }
+
+    // iOS 長時間スリープ後のゾンビ AudioContext（currentTime が進まない／interrupted 固着）検知
+    if (!this._watchdogTimer) {
+      this._watchdogTimer = setTimeout(() => {
+        this._watchdogTimer = null;
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (this.ctx !== targetCtx) return;
+        if (targetCtx.state === "running" && targetCtx.currentTime > t0) {
+          this._needsReunlock = false;
+          this._suspendedSfxCount = 0;
+        } else {
+          // 次回タッチ（例: touchstart 直後の touchend）で新しい AudioContext に作り直す
+          this._rebuildNextGesture = true;
+          this._needsReunlock = true;
+          pushDebugLog(`ctx stuck (${targetCtx.state}) -> arm rebuild`);
+        }
+      }, 140);
+    }
+  }
+
+  init() {
+    this._refreshAudioSession(false);
+    if (!this.ctx || this.ctx.state === "closed") {
+      this._createContext();
+    }
+    if (this.ctx && this.ctx.state !== "running") {
+      try {
+        const p = this.ctx.resume();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch (_) {}
     }
   }
 
@@ -119,6 +242,13 @@ class FMSoundEngine {
     if (!this._enabled) return;
     this.init();
     if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state !== "running") {
+      // 未稼働中に物理ループの効果音が大量蓄積して復帰瞬間に爆音化するのを防止
+      if (this._suspendedSfxCount >= 2) return;
+      this._suspendedSfxCount++;
+    } else {
+      this._suspendedSfxCount = 0;
+    }
     const now = this.ctx.currentTime + delaySec;
     const osc = this.ctx.createOscillator();
     const mod = this.ctx.createOscillator();

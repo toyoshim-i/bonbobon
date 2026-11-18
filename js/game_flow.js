@@ -359,10 +359,11 @@ window.GameFlow = {
 
     const viewH = (viewport && viewport.clientHeight) || 176;
     const trackH = (track && track.offsetHeight) || 220;
-    const speed = 0.22; // ~13.2 px/sec constant non-stop crawl
+    const scaleRatio = viewH / 176;
+    const speed = 0.22 * scaleRatio; // 画面サイズに依らず同一のスクロール秒数を維持
 
-    const startY = viewH - 6; // Starts right at bottom fade zone
-    const fadeStartY = (viewH * 0.5) - trackH + 17; // Last line reaches vertical center
+    const startY = viewH - 6 * scaleRatio; // Starts right at bottom fade zone
+    const fadeStartY = (viewH * 0.5) - trackH + 17 * scaleRatio; // Last line reaches vertical center
     const distToFadeStart = Math.max(24, startY - fadeStartY);
 
     const fadeOutStart = Math.ceil(distToFadeStart / speed);
@@ -383,11 +384,11 @@ window.GameFlow = {
   buildAttractCutHtml(cut) {
     const isEn = window.I18N && I18N.lang === "en";
     const bodyCls = isEn
-      ? "text-[16px] sm:text-[18px] font-black leading-[1.6] tracking-wide text-[#f8f2ff]"
-      : "text-[19px] sm:text-[21px] font-black leading-[1.65] tracking-wide text-[#f8f2ff] whitespace-nowrap";
+      ? "attract-body-en font-black tracking-wide text-[#f8f2ff]"
+      : "attract-body-ja font-black tracking-wide text-[#f8f2ff] whitespace-nowrap";
     const punchClsBase = isEn
-      ? "text-[18px] sm:text-[20px] font-black leading-[1.5] tracking-wider"
-      : "text-[21px] sm:text-[23px] font-black leading-[1.55] tracking-wider whitespace-nowrap";
+      ? "attract-punch-en font-black tracking-wider"
+      : "attract-punch-ja font-black tracking-wider whitespace-nowrap";
     let html = '';
     if (cut.body) {
       const paras = cut.body.split("\n\n");
@@ -879,9 +880,9 @@ window.GameFlow = {
   },
 
   getCodecSpeakerMeta(speaker) {
-    if (speaker === "elon") return { name: t("ending.speaker.elon"), cls: "text-[#e6ff00] font-black text-[13px] sm:text-[14px] tracking-wider" };
-    if (speaker === "ball") return { name: t("ending.speaker.ball"), cls: "text-[#00f5e8] font-black text-[13px] sm:text-[14px] tracking-wider" };
-    return { name: t("ending.speaker.colonel"), cls: "text-[#9effc4] font-black text-[13px] sm:text-[14px] tracking-wider" };
+    if (speaker === "elon") return { name: t("ending.speaker.elon"), cls: "codec-speaker-hdr text-[#e6ff00] font-black tracking-wider" };
+    if (speaker === "ball") return { name: t("ending.speaker.ball"), cls: "codec-speaker-hdr text-[#00f5e8] font-black tracking-wider" };
+    return { name: t("ending.speaker.colonel"), cls: "codec-speaker-hdr text-[#9effc4] font-black tracking-wider" };
   },
 
   wrapCodecSegments(segments, maxW = 22) {
@@ -987,12 +988,12 @@ window.GameFlow = {
         if (!s.inline) {
           const meta = this.getCodecSpeakerMeta(s.speaker);
           const hdr = document.createElement("div");
-          hdr.className = idx > 0 ? `${meta.cls} mt-1.5` : meta.cls;
+          hdr.className = idx > 0 ? `${meta.cls} codec-speaker-gap` : meta.cls;
           hdr.textContent = meta.name;
           dialogEl.appendChild(hdr);
 
           bodyBox = document.createElement("div");
-          bodyBox.className = "pl-5 whitespace-pre-wrap";
+          bodyBox.className = "codec-speaker-body";
           dialogEl.appendChild(bodyBox);
         }
         const sp = document.createElement("span");
@@ -1081,12 +1082,12 @@ window.GameFlow = {
       if (!seg.inline) {
         const meta = this.getCodecSpeakerMeta(seg.speaker);
         const hdr = document.createElement("div");
-        hdr.className = idx > 0 ? `${meta.cls} mt-1.5` : meta.cls;
+        hdr.className = idx > 0 ? `${meta.cls} codec-speaker-gap` : meta.cls;
         hdr.textContent = meta.name;
         dialogEl.appendChild(hdr);
 
         currentBodyBox = document.createElement("div");
-        currentBodyBox.className = "pl-5 whitespace-pre-wrap";
+        currentBodyBox.className = "codec-speaker-body";
         dialogEl.appendChild(currentBodyBox);
       }
       const sp = document.createElement("span");
@@ -1167,18 +1168,18 @@ window.GameFlow = {
 
   buildEndingAct2Html() {
     const lines = [
-      { text: t("ending.act2.l0"), cls: "text-base sm:text-lg font-black text-[#00f5d4] tracking-wider mb-1", shadow: "#00f5d4" },
-      { text: t("ending.act2.l1"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: t("ending.act2.l2"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: t("ending.act2.l3"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: t("ending.act2.l4"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: t("ending.act2.l5"), cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
-      { text: t("ending.act2.l6"), cls: "text-xl sm:text-2xl font-black text-[#ff66b2] tracking-widest", shadow: "#ff1493" },
-      { text: t("ending.act2.l7"), cls: "text-[15px] sm:text-[17px] font-bold text-white leading-relaxed" },
-      { text: t("ending.act2.l8"), cls: "text-[15px] sm:text-[17px] font-bold text-[#00f5d4] leading-relaxed" },
-      { text: t("ending.act2.l9"), cls: "text-[15px] sm:text-[17px] font-bold text-[#e6ff00] leading-relaxed" },
-      { text: t("ending.act2.l10"), cls: "text-lg sm:text-xl font-black text-[#e6ff00] tracking-wider mb-1", shadow: "#e6ff00" },
-      { text: "✨ THE END ✨", cls: "text-base sm:text-lg font-mono font-black text-[#00f5e8] tracking-widest animate-pulse", shadow: "#00f5e8" }
+      { text: t("ending.act2.l0"), cls: "act2-line-lg font-black text-[#00f5d4] tracking-wider mb-1", shadow: "#00f5d4" },
+      { text: t("ending.act2.l1"), cls: "act2-line font-bold text-white" },
+      { text: t("ending.act2.l2"), cls: "act2-line font-bold text-white" },
+      { text: t("ending.act2.l3"), cls: "act2-line font-bold text-white" },
+      { text: t("ending.act2.l4"), cls: "act2-line font-bold text-white" },
+      { text: t("ending.act2.l5"), cls: "act2-line font-bold text-[#e6ff00]" },
+      { text: t("ending.act2.l6"), cls: "act2-line-xl font-black text-[#ff66b2] tracking-widest", shadow: "#ff1493" },
+      { text: t("ending.act2.l7"), cls: "act2-line font-bold text-white" },
+      { text: t("ending.act2.l8"), cls: "act2-line font-bold text-[#00f5d4]" },
+      { text: t("ending.act2.l9"), cls: "act2-line font-bold text-[#e6ff00]" },
+      { text: t("ending.act2.l10"), cls: "act2-line-lg font-black text-[#e6ff00] tracking-wider mb-1", shadow: "#e6ff00" },
+      { text: "✨ THE END ✨", cls: "act2-line-lg font-mono font-black text-[#00f5e8] tracking-widest animate-pulse", shadow: "#00f5e8" }
     ];
     return lines.map(l => {
       const outline = "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px #000, 0 0 10px #000";
@@ -1217,10 +1218,11 @@ window.GameFlow = {
       }, 1100);
     }
 
-    const viewH = (viewport && viewport.clientHeight) || 230;
+    const viewH = (viewport && viewport.clientHeight) || 235;
     const trackH = (track && track.offsetHeight) || 360;
+    this.ending.act2ScrollStep = 0.42 * (viewH / 235);
     this.ending.act2ScrollStartY = viewH * 0.85;
-    this.ending.act2ScrollMinY = -(trackH + 24);
+    this.ending.act2ScrollMinY = -(trackH + 24 * (viewH / 235));
     this.ending.act2ScrollY = this.ending.act2ScrollStartY;
     if (track) {
       track.style.transform = `translateY(${this.ending.act2ScrollStartY.toFixed(1)}px)`;
@@ -1484,7 +1486,8 @@ window.GameFlow = {
         const track = document.getElementById("endingAct2ScrollTrack");
         if (track) {
           const minY = this.ending.act2ScrollMinY ?? -200;
-          this.ending.act2ScrollY = Math.max(minY, (this.ending.act2ScrollY ?? 180) - 0.42);
+          const step = this.ending.act2ScrollStep || 0.42;
+          this.ending.act2ScrollY = Math.max(minY, (this.ending.act2ScrollY ?? 180) - step);
           track.style.transform = `translateY(${this.ending.act2ScrollY.toFixed(1)}px)`;
         }
       }

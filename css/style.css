@@ -91,20 +91,108 @@ body {
   height: auto;
   max-width: 100%;
   max-height: 100%;
+  container: stage-frame / inline-size;
 }
 #playfieldFrame.title-screen-mode {
-  aspect-ratio: auto !important;
-  width: 100% !important;
-  height: 100% !important;
+  aspect-ratio: 768 / 1376;
 }
 @supports (width: min(10px, 20px)) {
   #playfieldArea {
-    container-type: size;
+    container: playfield-area / size;
   }
   #playfieldFrame {
     width: min(100cqw, calc(100cqh * 420 / 660));
     height: min(100cqh, calc(100cqw * 660 / 420));
   }
+  #playfieldFrame.title-screen-mode {
+    width: min(100cqw, calc(100cqh * 768 / 1376));
+    height: min(100cqh, calc(100cqw * 1376 / 768));
+  }
+}
+
+/* Proportional Demo & Ending Scaling (locks exact 22-col wrap & row count on all phones) */
+#endingModal {
+  padding: 1.9vw;
+}
+.codec-frame {
+  padding: 2vw;
+  gap: 1.9vw;
+}
+.codec-top-bar {
+  font-size: 2vw;
+  padding-block-end: 0.9vw;
+}
+.codec-portraits {
+  gap: 2.4vw;
+}
+.codec-portrait-label {
+  font-size: 2.15vw;
+  padding-block: 0.4vw;
+}
+.codec-freq-bar {
+  padding: 1.3vw 2.8vw;
+  gap: 2.6vw;
+}
+.codec-freq-num {
+  font-size: 5vw;
+}
+.codec-dialogue-box {
+  padding: 2.6vw;
+}
+#codecDialogueText {
+  font-size: clamp(0.6rem, 3.62vw, 1.1rem);
+  line-height: 1.6;
+  overscroll-behavior: contain;
+}
+.codec-speaker-hdr {
+  font-size: clamp(0.55rem, 3.25vw, 1rem);
+  line-height: 1.45;
+}
+.codec-speaker-gap {
+  margin-block-start: 1.5vw;
+}
+.codec-speaker-body {
+  padding-inline-start: 4.4vw;
+  white-space: pre-wrap;
+}
+#attractScrollViewport {
+  block-size: 42vw;
+  padding-inline: 3vw;
+}
+.attract-body-ja { font-size: clamp(0.75rem, 4.5vw, 1.35rem); line-height: 1.65; }
+.attract-body-en { font-size: clamp(0.65rem, 3.9vw, 1.2rem); line-height: 1.6; }
+.attract-punch-ja { font-size: clamp(0.85rem, 5vw, 1.5rem); line-height: 1.55; }
+.attract-punch-en { font-size: clamp(0.75rem, 4.4vw, 1.3rem); line-height: 1.5; }
+#endingAct2Viewport {
+  block-size: 56vw;
+  padding-inline: 3vw;
+}
+.act2-line { font-size: clamp(0.6rem, 3.65vw, 1.1rem); line-height: 1.62; }
+.act2-line-lg { font-size: clamp(0.7rem, 4.3vw, 1.3rem); line-height: 1.5; }
+.act2-line-xl { font-size: clamp(0.85rem, 5vw, 1.5rem); line-height: 1.45; }
+
+@supports (font-size: 1cqi) {
+  #endingModal { padding: 1.9cqi; }
+  .codec-frame { padding: 2cqi; gap: 1.9cqi; }
+  .codec-top-bar { font-size: clamp(0.45rem, 2cqi, 0.9rem); padding-block-end: 0.9cqi; }
+  .codec-portraits { gap: 2.4cqi; }
+  .codec-portrait-label { font-size: clamp(0.45rem, 2.15cqi, 0.95rem); padding-block: 0.4cqi; }
+  .codec-freq-bar { padding: 1.3cqi 2.8cqi; gap: 2.6cqi; }
+  .codec-freq-num { font-size: clamp(0.85rem, 5cqi, 1.6rem); }
+  .codec-dialogue-box { padding: 2.6cqi; }
+  #codecDialogueText { font-size: clamp(0.55rem, 3.62cqi, 1.15rem); }
+  .codec-speaker-hdr { font-size: clamp(0.5rem, 3.25cqi, 1.05rem); }
+  .codec-speaker-gap { margin-block-start: 1.5cqi; }
+  .codec-speaker-body { padding-inline-start: 4.4cqi; }
+  #attractScrollViewport { block-size: 42cqi; padding-inline: 3cqi; }
+  .attract-body-ja { font-size: clamp(0.7rem, 4.5cqi, 1.4rem); }
+  .attract-body-en { font-size: clamp(0.6rem, 3.9cqi, 1.25rem); }
+  .attract-punch-ja { font-size: clamp(0.8rem, 5cqi, 1.55rem); }
+  .attract-punch-en { font-size: clamp(0.7rem, 4.4cqi, 1.35rem); }
+  #endingAct2Viewport { block-size: 56cqi; padding-inline: 3cqi; }
+  .act2-line { font-size: clamp(0.55rem, 3.65cqi, 1.15rem); }
+  .act2-line-lg { font-size: clamp(0.65rem, 4.3cqi, 1.35rem); }
+  .act2-line-xl { font-size: clamp(0.8rem, 5cqi, 1.55rem); }
 }
 
 /* CODEC Green CRT & Glitch Effect */

@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>桃色装甲ボンぼや〜ジュッ！ - MOMOIRO SOUKOU BON-VOYAGE!</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <link rel="stylesheet" href="./css/style.css?v=17" />
+  <link rel="stylesheet" href="./css/style.css?v=18" />
   <link rel="icon" href="data:," />
 </head>
 <body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-3 box-border">
@@ -422,7 +422,7 @@
           <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.88) 24%, rgba(0,0,0,0.45) 33%, rgba(0,0,0,0.0) 42%);"></div>
 
           <!-- LOWER STORY SCROLL VIEWPORT (TOP & BOTTOM GRADIENT-MASKED) -->
-          <div id="attractScrollViewport" class="relative z-20 mt-auto w-full h-[176px] overflow-hidden pointer-events-none px-3" style="-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);">
+          <div id="attractScrollViewport" class="relative z-20 mt-auto w-full overflow-clip pointer-events-none" style="-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);">
             <div id="attractScrollTrack" class="w-full flex flex-col items-center text-center will-change-transform"></div>
           </div>
 
@@ -477,64 +477,64 @@
         </div>
 
         <!-- 3-ACT ENDING MODAL (METAL GEAR CODEC -> ULTRAMAN LAUNCH -> ROLL CALL) -->
-        <div id="endingModal" class="absolute inset-0 z-50 hidden flex-col justify-between p-2 bg-[#020b06] pointer-events-auto transition-opacity duration-300 opacity-0">
+        <div id="endingModal" class="absolute inset-0 z-50 hidden flex-col justify-between bg-[#020b06] pointer-events-auto transition-opacity duration-300 opacity-0">
           <!-- BACKGROUND ANIMATION CANVAS (3D WIREFRAME M.O.T.H.E.R. / SPACE LAUNCH) -->
-          <canvas id="endingCanvas" width="420" height="660" class="absolute inset-0 w-full h-full block pointer-events-none"></canvas>
+          <canvas id="endingCanvas" width="420" height="752" class="absolute inset-0 w-full h-full block pointer-events-none"></canvas>
 
           <!-- ACT 1: METAL GEAR SOLID / MSX2 CODEC PARODY -->
-          <div id="endingAct1" class="relative z-10 flex-1 min-h-0 flex flex-col gap-2 p-2">
+          <div id="endingAct1" class="codec-frame relative z-10 flex-1 min-h-0 flex flex-col">
             <!-- CODEC TOP TECH HEADER -->
-            <div class="flex items-center justify-between text-[8px] font-mono font-bold text-[#34ff8a] border-b border-[#125830] pb-1 shrink-0">
+            <div class="codec-top-bar flex items-center justify-between font-mono font-bold text-[#34ff8a] border-b border-[#125830] shrink-0">
               <span>◀ PTT</span>
               <span class="tracking-widest">TACTICAL CODEC // ENCRYPTED</span>
               <span>MEMORY ▶</span>
             </div>
 
             <!-- TOP ROW: LARGE LEFT & RIGHT PORTRAITS -->
-            <div class="grid grid-cols-2 gap-2.5 shrink-0">
+            <div class="codec-portraits grid grid-cols-2 shrink-0">
               <!-- LEFT: COLONEL / DR. ELON PORTRAIT -->
-              <div id="codecLeftBox" class="aspect-square w-full rounded border-2 border-[#34ff8a] bg-black/90 overflow-hidden flex flex-col relative shadow-[0_0_12px_rgba(52,255,138,0.28)] transition-opacity duration-150">
-                <img id="codecLeftPortraitImg" src="./assets/ui/commander.jpg?v=193" alt="Colonel" class="w-full h-full object-cover codec-crt-img" onerror="this.style.display='none'">
+              <div id="codecLeftBox" class="aspect-square w-full rounded border-2 border-[#34ff8a] bg-black/90 overflow-clip flex flex-col relative shadow-[0_0_12px_rgba(52,255,138,0.28)] transition-opacity duration-150">
+                <img id="codecLeftPortraitImg" src="./assets/ui/commander.jpg?v=193" alt="Colonel" class="w-full h-full object-cover block codec-crt-img" onerror="this.style.display='none'">
                 <div class="absolute inset-0 codec-scanlines"></div>
-                <div id="codecLeftLabel" class="absolute bottom-0 inset-x-0 bg-black/90 text-center text-[9px] font-mono font-bold text-[#34ff8a] py-0.5 border-t border-[#125830] z-10">
+                <div id="codecLeftLabel" class="codec-portrait-label absolute bottom-0 inset-x-0 bg-black/90 text-center font-mono font-bold text-[#34ff8a] border-t border-[#125830] z-10">
                   [COLONEL]
                 </div>
               </div>
 
               <!-- RIGHT: SILVER BALL PORTRAIT -->
-              <div id="codecRightBox" class="aspect-square w-full rounded border-2 border-[#34ff8a] bg-black/90 overflow-hidden flex flex-col relative shadow-[0_0_12px_rgba(52,255,138,0.28)] transition-opacity duration-150">
-                <img id="codecRightPortraitImg" src="./assets/ui/silver_ball.jpg?v=196" alt="Silver Ball" class="w-full h-full object-cover codec-crt-img" onerror="this.style.display='none'">
+              <div id="codecRightBox" class="aspect-square w-full rounded border-2 border-[#34ff8a] bg-black/90 overflow-clip flex flex-col relative shadow-[0_0_12px_rgba(52,255,138,0.28)] transition-opacity duration-150">
+                <img id="codecRightPortraitImg" src="./assets/ui/silver_ball.jpg?v=196" alt="Silver Ball" class="w-full h-full object-cover block codec-crt-img" onerror="this.style.display='none'">
                 <div class="absolute inset-0 codec-scanlines"></div>
-                <div class="absolute bottom-0 inset-x-0 bg-black/90 text-center text-[9px] font-mono font-bold text-[#34ff8a] py-0.5 border-t border-[#125830] z-10">
+                <div class="codec-portrait-label absolute bottom-0 inset-x-0 bg-black/90 text-center font-mono font-bold text-[#34ff8a] border-t border-[#125830] z-10">
                   [SILVER BALL]
                 </div>
               </div>
             </div>
 
             <!-- MIDDLE ROW: FREQUENCY & SIGNAL ANALYZER -->
-            <div class="bg-black/85 border border-[#125830] rounded px-3 py-1.5 flex items-center justify-between gap-3 shrink-0">
-              <div class="flex items-center gap-2 shrink-0">
+            <div class="codec-freq-bar bg-black/85 border border-[#125830] rounded flex items-center justify-between shrink-0">
+              <div class="flex items-center gap-1.5 shrink-0">
                 <span class="text-[8px] font-mono text-[#34ff8a]/70 font-bold">◀ TUNE ▶</span>
-                <span class="text-xl sm:text-2xl font-mono font-black text-[#34ff8a] tracking-widest leading-none drop-shadow-[0_0_8px_#34ff8a]">
+                <span class="codec-freq-num font-mono font-black text-[#34ff8a] tracking-widest leading-none drop-shadow-[0_0_8px_#34ff8a]">
                   110.29
                 </span>
               </div>
-              <div class="flex-1 flex flex-col justify-center">
+              <div class="flex-1 min-w-0 flex flex-col justify-center">
                 <div class="w-full h-5 flex items-end justify-center gap-1 border-b border-[#125830]" id="codecSignalBars"></div>
                 <div class="text-[7px] font-mono text-[#34ff8a]/60 text-right mt-0.5">SECURE COMM</div>
               </div>
             </div>
 
             <!-- BOTTOM ROW: LARGE DIALOGUE AREA -->
-            <div class="flex-1 min-h-0 bg-black/90 border-2 border-[#34ff8a] rounded-lg p-3 flex flex-col shadow-[0_0_15px_rgba(52,255,138,0.2)]">
-              <div id="codecDialogueText" class="flex-1 overflow-y-auto text-[15px] sm:text-[17px] text-[#34ff8a] font-mono leading-[1.65]"></div>
+            <div class="codec-dialogue-box flex-1 min-h-0 bg-black/90 border-2 border-[#34ff8a] rounded-lg flex flex-col shadow-[0_0_15px_rgba(52,255,138,0.2)]">
+              <div id="codecDialogueText" class="flex-1 min-h-0 overflow-y-auto text-[#34ff8a] font-mono"></div>
             </div>
           </div>
 
           <!-- ACT 2: ULTRAMAN-STYLE FLEET LAUNCH OVER EARTH -->
-          <div id="endingAct2" class="hidden relative z-10 flex-1 flex flex-col justify-end pointer-events-none opacity-0 transition-opacity duration-700 overflow-hidden">
+          <div id="endingAct2" class="hidden relative z-10 flex-1 flex flex-col justify-end pointer-events-none opacity-0 transition-opacity duration-700 overflow-clip">
             <!-- CINEMATIC ENDING ROLL VIEWPORT -->
-            <div id="endingAct2Viewport" class="relative z-10 w-full h-[230px] sm:h-[250px] overflow-hidden px-3 mb-1" style="-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 84%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 84%, transparent 100%);">
+            <div id="endingAct2Viewport" class="relative z-10 w-full overflow-clip mb-1" style="-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 84%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 84%, transparent 100%);">
               <div id="endingAct2ScrollTrack" class="w-full flex flex-col items-center text-center will-change-transform"></div>
             </div>
           </div>
@@ -785,38 +785,38 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
-  <script src="./js/i18n/i18n.js?v=210"></script>
-  <script src="./js/i18n/ja.js?v=210"></script>
-  <script src="./js/i18n/en.js?v=210"></script>
+  <script src="./js/i18n/i18n.js?v=211"></script>
+  <script src="./js/i18n/ja.js?v=211"></script>
+  <script src="./js/i18n/en.js?v=211"></script>
   <script src="./js/stage1_assets.js?v=198"></script>
   <script src="./js/stage2_assets.js?v=198"></script>
   <script src="./js/stage3_assets.js?v=198"></script>
   <script src="./js/stage4_assets.js?v=198"></script>
   <script src="./js/stage5_assets.js?v=198"></script>
-  <script src="./js/audio.js?v=210"></script>
-  <script src="./js/engine/score_table.js?v=210"></script>
-  <script src="./js/engine/particles.js?v=210"></script>
-  <script src="./js/engine/physics.js?v=210"></script>
-  <script src="./js/engine/systems.js?v=210"></script>
-  <script src="./js/engine/stage_common.js?v=210"></script>
-  <script src="./js/engine/ui.js?v=210"></script>
-  <script src="./js/stages/stage1.js?v=210"></script>
-  <script src="./js/stages/stage1_physics.js?v=210"></script>
-  <script src="./js/stages/stage1_render.js?v=210"></script>
-  <script src="./js/stages/stage2.js?v=210"></script>
-  <script src="./js/stages/stage2_physics.js?v=210"></script>
-  <script src="./js/stages/stage2_render.js?v=210"></script>
-  <script src="./js/stages/stage3.js?v=210"></script>
-  <script src="./js/stages/stage3_physics.js?v=210"></script>
-  <script src="./js/stages/stage3_render.js?v=210"></script>
-  <script src="./js/stages/stage4.js?v=210"></script>
-  <script src="./js/stages/stage4_physics.js?v=210"></script>
-  <script src="./js/stages/stage4_render.js?v=210"></script>
-  <script src="./js/stages/stage5.js?v=210"></script>
-  <script src="./js/stages/stage5_physics.js?v=210"></script>
-  <script src="./js/stages/stage5_render.js?v=210"></script>
-  <script src="./js/engine/game_engine.js?v=210"></script>
-  <script src="./js/game_flow.js?v=210"></script>
-  <script src="./js/main.js?v=210"></script>
+  <script src="./js/audio.js?v=211"></script>
+  <script src="./js/engine/score_table.js?v=211"></script>
+  <script src="./js/engine/particles.js?v=211"></script>
+  <script src="./js/engine/physics.js?v=211"></script>
+  <script src="./js/engine/systems.js?v=211"></script>
+  <script src="./js/engine/stage_common.js?v=211"></script>
+  <script src="./js/engine/ui.js?v=211"></script>
+  <script src="./js/stages/stage1.js?v=211"></script>
+  <script src="./js/stages/stage1_physics.js?v=211"></script>
+  <script src="./js/stages/stage1_render.js?v=211"></script>
+  <script src="./js/stages/stage2.js?v=211"></script>
+  <script src="./js/stages/stage2_physics.js?v=211"></script>
+  <script src="./js/stages/stage2_render.js?v=211"></script>
+  <script src="./js/stages/stage3.js?v=211"></script>
+  <script src="./js/stages/stage3_physics.js?v=211"></script>
+  <script src="./js/stages/stage3_render.js?v=211"></script>
+  <script src="./js/stages/stage4.js?v=211"></script>
+  <script src="./js/stages/stage4_physics.js?v=211"></script>
+  <script src="./js/stages/stage4_render.js?v=211"></script>
+  <script src="./js/stages/stage5.js?v=211"></script>
+  <script src="./js/stages/stage5_physics.js?v=211"></script>
+  <script src="./js/stages/stage5_render.js?v=211"></script>
+  <script src="./js/engine/game_engine.js?v=211"></script>
+  <script src="./js/game_flow.js?v=211"></script>
+  <script src="./js/main.js?v=211"></script>
 </body>
 </html>

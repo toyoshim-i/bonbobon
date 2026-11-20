@@ -240,6 +240,7 @@ window.ScoreTable = {
     SERAPHIA_ARMOR_PURGE: 100000,      // セラフィア胸部装甲パージ
     STAGE_CLEAR: 200000,               // Stage 5 最終撃破クリア点
     RAMP_ENTRY: 6000,                  // NOEL/ELLE RAMP 進入
+    HALO_PASS_BONUS: 12000,            // ランプ落下による天使の輪くぐり抜けボーナス
     SWORD_CLASH: 4000,                 // 光剣のボール相殺
     SWORD_PARRY: 12000,                // 光剣のフリッパーパリィ
     SINGULARITY_SLING: 4500,           // ブラックホール特異点スリング
@@ -252,6 +253,7 @@ window.ScoreTable = {
     TWIN_PART_HIT: 5000,               // 双子装備ヒット（通常）
     TWIN_PART_SYNCHRO: 12000,          // 双子装備ヒット（左右交互2倍）
     GARTER_CHARM: 4500,                // 双子太ももガーターチャーム
+    ANTENNA_BOUNCE: 3000,              // ノエルのヘッドセットアンテナ揺れバウンス
     BROOCH_GUARD: 3000,                // ロック中の胸ブローチ
     BROOCH_HIT: 8000,                  // 露出後の胸ブローチヒット
     CHIME_PIPE_HIT: 4000,              // パイプオルガン単体ヒット
@@ -261,6 +263,11 @@ window.ScoreTable = {
     SERAPH_PAULDRON_HIT: 4000,         // Phase 3A セラフィア肩装甲ヒット
     ORB_HIT: 4500,                     // 精霊オーブヒット
     ORB_SHATTER: 18000,                // 精霊オーブ撃破
+    ORB_BOLT_CLASH: 3000,              // 精霊オーブ光弾のボール相殺
+    ORB_BOLT_PARRY: 8000,              // 精霊オーブ光弾のフリッパーパリィ
+    LASER_GRAZE_BONUS: 6000,           // 垂直・十字レーザー接触／かすりボーナス
+    PARRY_RALLY_BONUS: 18000,          // パリィ返し応酬ラリーボーナス基礎点
+    CORE_PARRY_DEFLECT: 15000,         // アークコア通常パリィ弾かれ時スコアボーナス
     CORE_BARRIER: 2000,                // 結界中のアークコアヒット
     CORE_HIT: 15000,                   // 露出中のアークコアヒット
     DIVINE_BUST_BOUNCE: 7500,          // Phase 3B パージ後バストバウンス

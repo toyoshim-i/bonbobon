@@ -1208,6 +1208,18 @@ window.UI = {
     if (btnSelS4) btnSelS4.addEventListener("click", () => loadStageFromUI(window.Stage4));
     const btnSelS5 = document.getElementById("btnSelectStage5");
     if (btnSelS5) btnSelS5.addEventListener("click", () => loadStageFromUI(window.Stage5));
+    const btnSelS5B = document.getElementById("btnSelectStage5B");
+    if (btnSelS5B) {
+      btnSelS5B.addEventListener("click", () => {
+        if (!window.Stage5) return;
+        if (window.sfx) window.sfx.capsuleCatch();
+        if (window.GameFlow && window.GameFlow.hideAllModals) {
+          window.GameFlow.hideAllModals();
+        }
+        engine.startPracticeStage(5, { startPhase: 3 });
+        closeMenu();
+      });
+    }
     const btnSelEnding = document.getElementById("btnSelectEnding");
     if (btnSelEnding) {
       btnSelEnding.addEventListener("click", () => {

@@ -41,6 +41,151 @@ Object.assign(window.Stage5, {
     const twinRIntact = makeScaledBuffer(this.assets.twinRIntactImg, wR, hR);
     const twinRBroken = makeScaledBuffer(this.assets.twinRBrokenImg, wR, hR);
 
+    const extractNoelAntennas = (buf) => {
+      if (!buf || !buf.canvas || !buf.ctx || !buf.data || buf.w <= 0 || buf.h <= 0) return null;
+      const w = buf.w;
+      const h = buf.h;
+      const sx = w / 193;
+      const sy = h / 339;
+      const scaleAvg = (sx + sy) * 0.5;
+      const axR = (295.0 - 187.1) * sx;
+      const ayR = (162.5 - 116.6) * sy;
+      const bxR = (309.5 - 187.1) * sx;
+      const byR = (119.5 - 116.6) * sy;
+      const axL = (217.5 - 187.1) * sx;
+      const ayL = (138.0 - 116.6) * sy;
+
+      const imgData = buf.ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      const orig = new Uint8ClampedArray(data);
+
+      const makeCropCanvas = (x0, y0, x1, y1) => {
+        const cx0 = Math.max(0, Math.floor(x0));
+        const cy0 = Math.max(0, Math.floor(y0));
+        const cx1 = Math.min(w, Math.ceil(x1));
+        const cy1 = Math.min(h, Math.ceil(y1));
+        const cw = Math.max(1, cx1 - cx0);
+        const ch = Math.max(1, cy1 - cy0);
+        const c = document.createElement("canvas");
+        c.width = cw;
+        c.height = ch;
+        const cx = c.getContext("2d");
+        const cImg = cx.createImageData(cw, ch);
+        return { canvas: c, ctx: cx, imgData: cImg, data: cImg.data, x0: cx0, y0: cy0, x1: cx1, y1: cy1, w: cw, h: ch };
+      };
+
+      const antL = makeCropCanvas(24 * sx, 0, 37 * sx, 25 * sy);
+      const antR = makeCropCanvas(100 * sx, 0, 128 * sx, 50 * sy);
+
+      for (let y = antL.y0; y < antL.y1; y++) {
+        for (let x = antL.x0; x < antL.x1; x++) {
+          const si = (y * w + x) * 4;
+          const a = orig[si + 3];
+          if (a < 10) continue;
+          const lx = x / sx;
+          const ly = y / sy;
+          if (lx < 25 || lx > 35 || ly > 24) continue;
+          const hairY = 23.0 - Math.max(0, (lx - 29.0) * 1.6);
+          if (ly < hairY) {
+            const di = ((y - antL.y0) * antL.w + (x - antL.x0)) * 4;
+            antL.data[di] = orig[si];
+            antL.data[di + 1] = orig[si + 1];
+            antL.data[di + 2] = orig[si + 2];
+            antL.data[di + 3] = a;
+            data[si] = data[si + 1] = data[si + 2] = data[si + 3] = 0;
+          }
+        }
+      }
+
+      const vxR = bxR - axR;
+      const vyR = byR - ayR;
+      const lenR2 = vxR * vxR + vyR * vyR;
+      const rodMask = new Uint8Array(w * h);
+      const minRX = Math.max(0, Math.floor(101 * sx));
+      const maxRX = Math.min(w - 1, Math.ceil(128 * sx));
+      const maxRY = Math.min(h - 1, Math.ceil(49 * sy));
+
+      for (let y = 0; y <= maxRY; y++) {
+        for (let x = minRX; x <= maxRX; x++) {
+          const si = (y * w + x) * 4;
+          const a = orig[si + 3];
+          if (a < 10) continue;
+          const t = ((x - axR) * vxR + (y - ayR) * vyR) / lenR2;
+          if (t < -0.02 || t > 1.06) continue;
+          const tClamp = Math.max(0, Math.min(1, t));
+          const px = axR + t * vxR;
+          const py = ayR + t * vyR;
+          const dist = Math.hypot(x - px, y - py);
+          const halfW = (3.1 - 0.7 * tClamp) * scaleAvg;
+          if (dist <= halfW) {
+            const r = orig[si];
+            const g = orig[si + 1];
+            const b = orig[si + 2];
+            const isOverlap = (y / sy) >= 26;
+            const isRodColor = (b >= r - 6 && (r + g + b) > 260) || (r > 190 && g > 190 && b > 200);
+            if (!isOverlap || dist <= 1.8 * scaleAvg || isRodColor) {
+              if (x >= antR.x0 && x < antR.x1 && y >= antR.y0 && y < antR.y1) {
+                const di = ((y - antR.y0) * antR.w + (x - antR.x0)) * 4;
+                antR.data[di] = r;
+                antR.data[di + 1] = g;
+                antR.data[di + 2] = b;
+                antR.data[di + 3] = a;
+              }
+              rodMask[y * w + x] = 1;
+            }
+          }
+        }
+      }
+
+      const searchR = Math.max(4, Math.round(8 * sx));
+      for (let y = 0; y <= maxRY; y++) {
+        for (let x = minRX; x <= maxRX; x++) {
+          if (!rodMask[y * w + x]) continue;
+          const si = (y * w + x) * 4;
+          if ((y / sy) < 36) {
+            data[si] = data[si + 1] = data[si + 2] = data[si + 3] = 0;
+            continue;
+          }
+          let lx = -1;
+          for (let xx = x - 1; xx >= Math.max(0, x - searchR); xx--) {
+            if (!rodMask[y * w + xx]) { lx = xx; break; }
+          }
+          let rx = -1;
+          for (let xx = x + 1; xx <= Math.min(w - 1, x + searchR); xx++) {
+            if (!rodMask[y * w + xx]) { rx = xx; break; }
+          }
+          if (lx >= 0 && rx >= 0) {
+            const lsi = (y * w + lx) * 4;
+            const rsi = (y * w + rx) * 4;
+            if (orig[lsi + 3] > 120 && orig[rsi + 3] > 120) {
+              const wt = (x - lx) / Math.max(1, rx - lx);
+              data[si] = Math.round(orig[lsi] * (1 - wt) + orig[rsi] * wt);
+              data[si + 1] = Math.round(orig[lsi + 1] * (1 - wt) + orig[rsi + 1] * wt);
+              data[si + 2] = Math.round(orig[lsi + 2] * (1 - wt) + orig[rsi + 2] * wt);
+              data[si + 3] = Math.round(orig[lsi + 3] * (1 - wt) + orig[rsi + 3] * wt);
+              continue;
+            }
+          }
+          data[si] = data[si + 1] = data[si + 2] = data[si + 3] = 0;
+        }
+      }
+
+      antL.ctx.putImageData(antL.imgData, 0, 0);
+      antR.ctx.putImageData(antR.imgData, 0, 0);
+      buf.ctx.putImageData(imgData, 0, 0);
+      buf.data = imgData.data;
+
+      return {
+        antL: { canvas: antL.canvas, pivX: axL, pivY: ayL, offX: antL.x0 - axL, offY: antL.y0 - ayL, w: antL.w, h: antL.h },
+        antR: { canvas: antR.canvas, pivX: axR, pivY: ayR, offX: antR.x0 - axR, offY: antR.y0 - ayR, w: antR.w, h: antR.h }
+      };
+    };
+
+    const noelAntSprites = {
+      intact: extractNoelAntennas(twinRIntact),
+      broken: extractNoelAntennas(twinRBroken)
+    };
+
     const seraphiaIntact = makeScaledBuffer(this.assets.seraphiaIntactImg, W, H);
     const seraphiaBroken = makeScaledBuffer(this.assets.seraphiaBrokenImg, W, H);
 
@@ -424,6 +569,7 @@ Object.assign(window.Stage5, {
       twinLBroken,
       twinRIntact,
       twinRBroken,
+      noelAntSprites,
       seraphiaIntact,
       seraphiaBroken,
       circuitSpritesIntact,
@@ -537,12 +683,14 @@ Object.assign(window.Stage5, {
       }
       ctx.drawImage(phaseBg, IMG_BOX.x, IMG_BOX.y);
 
-      const crossColor = state.phase === 1 ? "rgba(0, 245, 232, 0.50)" : (state.phase === 2 ? "rgba(0, 245, 232, 0.50)" : "rgba(230, 255, 0, 0.50)");
+      const crossColor = b.finalCrescendo
+        ? (t % 12 < 6 ? "rgba(255, 42, 212, 0.65)" : "rgba(230, 255, 0, 0.65)")
+        : (state.phase === 1 ? "rgba(0, 245, 232, 0.50)" : (state.phase === 2 ? "rgba(0, 245, 232, 0.50)" : "rgba(230, 255, 0, 0.50)"));
 
       ctx.save();
 
-      // Scrolling horizontal cross-lines (Phase 3 fusion accelerates cyber-sanctuary warp speed!)
-      const gridSpeed = state.phase === 3 ? (b.chestArmorBroken ? 0.048 : 0.036) : 0.015;
+      // Scrolling horizontal cross-lines (Phase 3 fusion & Final Crescendo accelerate warp speed!)
+      const gridSpeed = b.finalCrescendo ? 0.082 : (state.phase === 3 ? (b.chestArmorBroken ? 0.048 : 0.036) : 0.015);
       const gridScroll = (t * gridSpeed) % 1;
       ctx.strokeStyle = crossColor;
       ctx.lineWidth = 1.2;
@@ -574,8 +722,9 @@ Object.assign(window.Stage5, {
 
       // Render 28 Twinkling Stars
       if (cache && cache.starSprites) {
+        const starSpeedMult = b.finalCrescendo ? 2.2 : 1.0;
         b.stars.forEach(st => {
-          const p = 0.55 + 0.45 * Math.sin(t * st.spd + st.phase);
+          const p = 0.55 + 0.45 * Math.sin(t * st.spd * starSpeedMult + st.phase);
           const sz = 20 * p * st.baseScale;
           const half = sz * 0.5;
           ctx.drawImage(cache.starSprites[st.colorIdx], st.x - half, st.y - half, sz, sz);
@@ -729,21 +878,33 @@ Object.assign(window.Stage5, {
           this.drawArticulatedWing(ctx, boxR.x + 58, boxR.y + 106, -1, "cyan", wScaleR * 0.88, t + 14, wSpdR, -0.52);
           this.drawArticulatedWing(ctx, boxR.x + 108, boxR.y + 110, 1, "cyan", wScaleR, t + 6, wSpdR, -0.38);
 
-          // Intact Halos & High-Five Starburst Spark (spark only while neither twin is broken!)
-          if (!b.haloL.broken && cache.haloSprites.magenta) {
+          // Intact / Pass-Blinking Halos & High-Five Starburst Spark (spark only while neither twin is broken!)
+          const drawTwinHalo = (h, baseSprite) => {
+            if (!h || (h.broken && !(h.passFlashTimer > 0))) return;
+            const pf = h.passFlashTimer || 0;
+            const blinkOn = pf > 0 && (Math.floor(pf / 3) % 2 === 0);
+            const sp = (pf > 0 && blinkOn && cache.haloSprites.gold) ? cache.haloSprites.gold : baseSprite;
+            if (!sp) return;
             ctx.save();
-            ctx.translate(b.haloL.x, b.haloL.y);
-            ctx.rotate(b.haloL.tilt);
-            ctx.drawImage(cache.haloSprites.magenta, -42, -20);
+            ctx.translate(h.x, h.y);
+            ctx.rotate(h.tilt);
+            if (pf > 0) {
+              const pulseScale = 1.0 + (blinkOn ? 0.14 : 0.04) * (pf / 46);
+              ctx.scale(pulseScale, pulseScale);
+              ctx.globalAlpha = h.broken ? (blinkOn ? 0.95 : 0.35) : (blinkOn ? 1.0 : 0.55);
+            }
+            ctx.drawImage(sp, -42, -20);
+            if (pf > 0 && blinkOn) {
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = 2.6;
+              ctx.beginPath();
+              ctx.ellipse(0, 0, h.rx, h.ry, 0, 0, Math.PI * 2);
+              ctx.stroke();
+            }
             ctx.restore();
-          }
-          if (!b.haloR.broken && cache.haloSprites.cyan) {
-            ctx.save();
-            ctx.translate(b.haloR.x, b.haloR.y);
-            ctx.rotate(b.haloR.tilt);
-            ctx.drawImage(cache.haloSprites.cyan, -42, -20);
-            ctx.restore();
-          }
+          };
+          drawTwinHalo(b.haloL, cache.haloSprites.magenta);
+          drawTwinHalo(b.haloR, cache.haloSprites.cyan);
           if (!b.elleBroken && !b.noelBroken) {
             // Dazzling High-Five Starburst Spark between Elle & Noel's palms
             const sx = b.synchroSpark.x;
@@ -786,6 +947,16 @@ Object.assign(window.Stage5, {
 
           // Warp & draw Right Twin (Noel - switches independently on b.noelBroken!)
           const bufR = !b.noelBroken ? cache.twinRIntact : cache.twinRBroken;
+          const antSet = cache.noelAntSprites && (!b.noelBroken ? cache.noelAntSprites.intact : cache.noelAntSprites.broken);
+          const drawAntSprite = (sp, ant) => {
+            if (!sp || !sp.canvas) return;
+            ctx.save();
+            ctx.translate(boxR.x + sp.pivX, boxR.y + sp.pivY);
+            ctx.rotate((ant && ant.angle) || 0);
+            ctx.drawImage(sp.canvas, sp.offX, sp.offY, sp.w, sp.h);
+            ctx.restore();
+          };
+          if (antSet) drawAntSprite(antSet.antL, b.noelAntL);
           StageCommon.renderSoftWarp(ctx, boxR, bufR, [b.noelSpring, b.noelBelly, b.noelHip], {
             slotStore: cache.warpSlots,
             slotName: "twinR",
@@ -794,6 +965,7 @@ Object.assign(window.Stage5, {
             rgba: true,
             shear: false
           });
+          if (antSet) drawAntSprite(antSet.antR, b.noelAntR);
 
           // Mystery Navel-to-Navel One-Way Intercept Beam (rendered when charging or active!)
           const nbMode = b.navelBeam.mode;
@@ -1091,25 +1263,28 @@ Object.assign(window.Stage5, {
 
   drawEllipticalHaloGuide(ctx, animTick, h) {
     const TC = Particles.TARGET_COLORS;
+    const pf = h.passFlashTimer || 0;
+    const isPassBlinking = pf > 0;
+    const blinkOn = isPassBlinking && (Math.floor(pf / 3) % 2 === 0);
     ctx.save();
     ctx.translate(h.x, h.y);
     ctx.rotate(h.tilt);
-    const strokeCol = h.flash > 0 ? "#ffffff" : TC.ATTACK;
-    const innerCol = h.flash > 0 ? "#ffffff" : h.color;
+    const strokeCol = isPassBlinking ? (blinkOn ? "#ffffff" : "#ffd700") : (h.flash > 0 ? "#ffffff" : TC.ATTACK);
+    const innerCol = isPassBlinking ? (blinkOn ? "#ffd700" : "#ffffff") : (h.flash > 0 ? "#ffffff" : h.color);
 
     // Solid inner ellipse (キャラ陣営色)
     ctx.strokeStyle = innerCol;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = isPassBlinking && blinkOn ? 3.2 : 2.2;
     ctx.beginPath();
     ctx.ellipse(0, 0, h.rx, h.ry, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Sleek outer dashed guide (進行必須: ネオンレッド)
+    // Sleek outer dashed guide (進行必須: ネオンレッド / 通過点滅: ゴールド)
     ctx.setLineDash([6, 4]);
     ctx.lineDashOffset = -(animTick * 1.5);
     ctx.strokeStyle = strokeCol;
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = isPassBlinking ? (blinkOn ? 1.0 : 0.45) : 0.85;
+    ctx.lineWidth = isPassBlinking && blinkOn ? 2.4 : 1.6;
     ctx.beginPath();
     ctx.ellipse(0, 0, h.rx + 3.5, h.ry + 3.5, 0, 0, Math.PI * 2);
     ctx.stroke();
@@ -1133,7 +1308,8 @@ Object.assign(window.Stage5, {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = strokeCol;
-    ctx.fillText(`${h.label} HP:${h.hp}/${h.maxHP}`, 0, -h.ry - 8);
+    const labelText = (isPassBlinking && (h.broken || blinkOn)) ? "✨PASS BONUS!" : `${h.label} HP:${h.hp}/${h.maxHP}`;
+    ctx.fillText(labelText, 0, -h.ry - 8);
     ctx.restore();
   },
 
@@ -1150,7 +1326,7 @@ Object.assign(window.Stage5, {
 
     // 2. Targets by Phase (independent per twin in Phases 1 & 2!)
     if (state.phase < 3) {
-      // Rotated Elliptical Halo Targets
+      // Rotated Elliptical Halo Targets (hidden cleanly once broken — Option 1 milk bonus!)
       if (!b.haloL.broken) {
         this.drawEllipticalHaloGuide(ctx, animTick, b.haloL);
       }
@@ -1165,6 +1341,28 @@ Object.assign(window.Stage5, {
       if (!b.antennaR.broken) {
         drawGuide(b.antennaR.x, b.antennaR.y, b.antennaR.r, TC.ATTACK, b.antennaR.flash, -animTick * 0.03, b.antennaR.label, `HP:${b.antennaR.hp}/${b.antennaR.maxHP}`, { innerColor: b.antennaR.color, isAttack: true });
       }
+
+      // Elastic Wobbling Headset Antenna Guides (Noel)
+      [b.noelAntR, b.noelAntL].forEach(ant => {
+        if (!ant) return;
+        const ep = this.getNoelAntennaEndpoints(ant);
+        const pulse = Particles.guidePulse(animTick);
+        const isHit = ant.flash > 0;
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = isHit ? "#ffffff" : "rgba(0, 245, 232, 0.48)";
+        ctx.lineWidth = (isHit ? 6.5 : 4.0) * pulse;
+        ctx.beginPath();
+        ctx.moveTo(ep.ax, ep.ay);
+        ctx.lineTo(ep.bx, ep.by);
+        ctx.stroke();
+
+        ctx.fillStyle = isHit ? "#ffffff" : "#00f5e8";
+        ctx.beginPath();
+        ctx.arc(ep.bx, ep.by, 2.5 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
 
       // Knee Ring Targets (外周: 進行必須赤 / 内周: 双子キャラ色)
       if (!b.kneeL.broken) {
@@ -1254,6 +1452,42 @@ Object.assign(window.Stage5, {
         drawGuide(b.bustL.x + b.bustL.dx * 0.25, b.bustL.y + b.bustL.dy * 0.25, b.bustL.r, TC.ATTACK, b.bustL.flash, animTick * 0.03, "L-CHEST", `HP:${b.chestArmorHP}`, { innerColor: TC.SEXY, isAttack: true });
         drawGuide(b.bustR.x + b.bustR.dx * 0.25, b.bustR.y + b.bustR.dy * 0.25, b.bustR.r, TC.ATTACK, b.bustR.flash, -animTick * 0.03, "R-CHEST", `HP:${b.chestArmorHP}`, { innerColor: TC.SEXY, isAttack: true });
       } else {
+        // Final Crescendo Aura & Entry Flash
+        if (b.finalCrescendo) {
+          ctx.save();
+          ctx.globalAlpha = 0.38;
+          ctx.lineWidth = 2.0;
+          ctx.save();
+          ctx.translate(198, 205);
+          ctx.rotate(animTick * 0.032);
+          ctx.strokeStyle = "#ff1493";
+          ctx.setLineDash([10, 6]);
+          ctx.beginPath();
+          ctx.arc(0, 0, 74, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.save();
+          ctx.translate(198, 205);
+          ctx.rotate(-animTick * 0.026);
+          ctx.strokeStyle = "#e6ff00";
+          ctx.setLineDash([7, 7]);
+          ctx.beginPath();
+          ctx.arc(0, 0, 96, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          if ((b.crescendoFlash || 0) > 0) {
+            const box = (engine && engine.IMG_BOX) ? engine.IMG_BOX : { x: 16, y: 16, w: 364, h: 644 };
+            ctx.globalAlpha = Math.min(0.75, (b.crescendoFlash / 50) * 0.75);
+            ctx.strokeStyle = animTick % 6 < 3 ? "#ff1493" : "#e6ff00";
+            ctx.lineWidth = 4.0;
+            ctx.setLineDash([]);
+            ctx.strokeRect(box.x + 2, box.y + 2, box.w - 4, box.h - 4);
+          }
+          ctx.restore();
+        }
+
         // Hexagonal Barrier Polygon around Core if shielded
         const isShielded = b.coreGraceTimer > 0 || b.cherubOrbs.some(o => o.active);
         if (isShielded) {
@@ -1357,7 +1591,81 @@ Object.assign(window.Stage5, {
           ctx.restore();
 
           drawGuide(orb.x, orb.y, orb.r + 3, TC.DEFENSE, orb.flash, animTick * 0.05, orb.label, `HP:${orb.hp}/${orb.maxHP}`, { innerColor: orb.color, isAttack: true });
+
+          // Orb charge aim reticle & sightline
+          if ((orb.chargeTimer || 0) > 0) {
+            ctx.save();
+            ctx.strokeStyle = (animTick % 4 < 2) ? "#e6ff00" : orb.color;
+            ctx.lineWidth = 1.6;
+            ctx.setLineDash([5, 4]);
+            ctx.lineDashOffset = -(animTick * 2.4);
+            ctx.beginPath();
+            ctx.moveTo(orb.x, orb.y);
+            ctx.lineTo(orb.aimX || 198, orb.aimY || 600);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(orb.x, orb.y, orb.r + 6 + Math.sin(animTick * 0.4) * 2.5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
         });
+
+        // Active Cherub Orb Plasma Bolts
+        if (b.orbAttack && b.orbAttack.bolts && b.orbAttack.bolts.length > 0) {
+          b.orbAttack.bolts.forEach(bolt => {
+            const bCol = bolt.countered ? "#ff1493" : (bolt.parried ? "#e6ff00" : bolt.color);
+            if (bolt.trail) {
+              for (let ti = 0; ti < bolt.trail.length; ti++) {
+                const pt = bolt.trail[ti];
+                ctx.save();
+                ctx.globalAlpha = ((ti + 1) / bolt.trail.length) * (bolt.countered ? 0.62 : 0.45);
+                ctx.fillStyle = bCol;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 2.2 + (ti / bolt.trail.length) * (bolt.countered ? 3.8 : 3.0), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+              }
+            }
+            ctx.save();
+            ctx.translate(bolt.x, bolt.y);
+            ctx.rotate(Math.atan2(bolt.vy, bolt.vx));
+            ctx.fillStyle = bCol;
+            ctx.beginPath();
+            ctx.moveTo(11, 0);
+            ctx.lineTo(0, 6);
+            ctx.lineTo(-9, 0);
+            ctx.lineTo(0, -6);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.moveTo(7, 0);
+            ctx.lineTo(0, 3);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(0, -3);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = bolt.countered ? "#ffd700" : (bolt.parried ? "#e6ff00" : "#ffffff");
+            ctx.lineWidth = bolt.countered ? 1.8 : 1.2;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(0, 0, bolt.r, 0, Math.PI * 2);
+            ctx.stroke();
+            if (bolt.countered) {
+              ctx.strokeStyle = "#ff1493";
+              ctx.lineWidth = 1.6;
+              ctx.setLineDash([]);
+              ctx.beginPath();
+              ctx.arc(0, 0, bolt.r + 3.2, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+            ctx.restore();
+          });
+        }
 
         // Soft bounce guides (お色気統一: ローズピンク / Fever時は黄色)
         const bustCol = state.fever.active ? TC.FEVER : TC.SEXY;
@@ -1373,6 +1681,7 @@ Object.assign(window.Stage5, {
       // Grand Phase 3 Attack Visuals: Cross-Seraphim Laser & Cyber Light-Swords
       const sa = b.seraphAttack;
       if (sa) {
+        const armCount = sa.armCount || 4;
         if (sa.mode === "cross_warn") {
           ctx.save();
           ctx.translate(198, 224);
@@ -1381,58 +1690,217 @@ Object.assign(window.Stage5, {
           ctx.lineWidth = 2.0;
           ctx.setLineDash([8, 6]);
           ctx.beginPath();
-          for (let arm = 0; arm < 4; arm++) {
+          for (let arm = 0; arm < armCount; arm++) {
+            const aAng = (arm * Math.PI * 2) / armCount;
             ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(arm * Math.PI / 2) * 450, Math.sin(arm * Math.PI / 2) * 450);
+            ctx.lineTo(Math.cos(aAng) * 450, Math.sin(aAng) * 450);
           }
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = "rgba(230, 255, 0, 0.72)";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(0, 0, 28 + Math.sin(animTick * 0.25) * 4, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         } else if (sa.mode === "cross_fire") {
           ctx.save();
           ctx.translate(198, 224);
           ctx.rotate(sa.baseAngle);
-          for (let arm = 0; arm < 4; arm++) {
-            const aAng = arm * Math.PI / 2;
+          for (let arm = 0; arm < armCount; arm++) {
+            const aAng = (arm * Math.PI * 2) / armCount;
             const cosA = Math.cos(aAng);
             const sinA = Math.sin(aAng);
-            ctx.strokeStyle = arm % 2 === 0 ? "rgba(255, 42, 212, 0.85)" : "rgba(0, 245, 232, 0.85)";
-            ctx.lineWidth = 14;
+            const armCol = arm % 2 === 0 ? "rgba(255, 42, 212, 0.36)" : "rgba(0, 245, 232, 0.36)";
+            const midCol = arm % 2 === 0 ? "rgba(255, 42, 212, 0.90)" : "rgba(0, 245, 232, 0.90)";
             ctx.lineCap = "round";
+
+            ctx.strokeStyle = armCol;
+            ctx.lineWidth = 20;
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(cosA * 450, sinA * 450);
             ctx.stroke();
 
+            ctx.strokeStyle = midCol;
+            ctx.lineWidth = 11;
+            ctx.stroke();
+
             ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 3.5;
             ctx.stroke();
           }
+          // Sacred star magic ring at laser origin
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(0, 0, 26, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          for (let k = 0; k < armCount; k++) {
+            const a1 = (k * Math.PI * 2) / armCount;
+            const px = Math.cos(a1) * 26;
+            const py = Math.sin(a1) * 26;
+            if (k === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
           ctx.restore();
         } else if (sa.mode === "sword_warn") {
-          const portalSpawns = [{ x: 110, y: 120 }, { x: 198, y: 96 }, { x: 286, y: 120 }];
+          const portalSpawns = (sa.portals && sa.portals.length > 0)
+            ? sa.portals
+            : [
+                { x: 86,  y: 126, targetX: 132 },
+                { x: 158, y: 98,  targetX: 248 },
+                { x: 238, y: 98,  targetX: 148 },
+                { x: 310, y: 126, targetX: 264 }
+              ];
           portalSpawns.forEach(p => {
             ctx.save();
+            ctx.strokeStyle = (animTick % 6 < 3) ? "rgba(255, 215, 0, 0.58)" : "rgba(255, 255, 255, 0.58)";
+            ctx.lineWidth = 1.6;
+            ctx.setLineDash([6, 5]);
+            ctx.lineDashOffset = -(animTick * 2.8);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.targetX, 600);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
             ctx.translate(p.x, p.y);
-            ctx.rotate(animTick * 0.08);
+            ctx.save();
+            ctx.rotate(animTick * 0.09);
             ctx.strokeStyle = (animTick % 6 < 3) ? "#ffd700" : "#ffffff";
             ctx.lineWidth = 2.4;
             ctx.setLineDash([5, 3]);
             ctx.beginPath();
-            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.arc(0, 0, 19, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.rotate(-animTick * 0.12);
+            ctx.strokeStyle = "#00f5e8";
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 12, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
           });
-        } else if (sa.mode === "sword_fire" && sa.swords) {
+        } else if (sa.mode === "pillars_warn" && sa.pillars) {
+          sa.pillars.forEach((p, idx) => {
+            const col = p.color || (idx % 2 === 0 ? "#ff2ad4" : "#00f5e8");
+            const halfW = (p.w || 26) * 0.5;
+            const pulse = 0.35 + 0.35 * Math.sin(animTick * 0.35 + idx);
+            ctx.save();
+            ctx.fillStyle = idx % 2 === 0 ? `rgba(255, 42, 212, ${(0.08 + pulse * 0.10).toFixed(2)})` : `rgba(0, 245, 232, ${(0.08 + pulse * 0.10).toFixed(2)})`;
+            ctx.fillRect(p.x - halfW, 18, p.w || 26, 595);
+
+            ctx.strokeStyle = (animTick % 6 < 3) ? col : "#e6ff00";
+            ctx.lineWidth = 1.6;
+            ctx.setLineDash([8, 6]);
+            ctx.lineDashOffset = -(animTick * 3.0);
+            ctx.beginPath();
+            ctx.moveTo(p.x - halfW, 18);
+            ctx.lineTo(p.x - halfW, 612);
+            ctx.moveTo(p.x + halfW, 18);
+            ctx.lineTo(p.x + halfW, 612);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.strokeStyle = "#e6ff00";
+            ctx.lineWidth = 2.0;
+            const dropY = 36 + ((animTick * 12 + idx * 90) % 540);
+            ctx.beginPath();
+            ctx.ellipse(p.x, dropY, halfW + 2, 5, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(p.x, 30, halfW + 4, 6, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          });
+        } else if (sa.mode === "pillars_fire" && sa.pillars) {
+          sa.pillars.forEach((p, idx) => {
+            const halfW = (p.w || 26) * 0.5;
+            const col = p.color || (idx % 2 === 0 ? "#ff2ad4" : "#00f5e8");
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            ctx.fillStyle = col;
+            ctx.fillRect(p.x - halfW - 6, 16, (p.w || 26) + 12, 600);
+
+            ctx.globalAlpha = 0.78;
+            ctx.fillRect(p.x - halfW, 16, p.w || 26, 600);
+
+            ctx.globalAlpha = 0.96;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(p.x - 4, 16, 8, 600);
+
+            ctx.strokeStyle = "#e6ff00";
+            ctx.lineWidth = 2.0;
+            const impactR = halfW + 6 + Math.sin(animTick * 0.4 + idx) * 4;
+            ctx.beginPath();
+            ctx.ellipse(p.x, 588, impactR, 7, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          });
+        }
+
+        if (sa.swords && sa.swords.length > 0) {
           const swSprite = this._srcCache && this._srcCache.swordSprite;
           sa.swords.forEach(sw => {
             if (!sw.active) return;
+
+            if (sw.stage === "lock") {
+              // Lock-On Sightline & Hovering Coiled Sword
+              ctx.save();
+              ctx.strokeStyle = ((sw.lockTimer || 0) <= 6 && animTick % 4 < 2) ? "#ff1493" : "#ffd700";
+              ctx.lineWidth = 1.7;
+              ctx.setLineDash([6, 4]);
+              ctx.lineDashOffset = -(animTick * 3.0);
+              ctx.beginPath();
+              ctx.moveTo(sw.x, sw.y);
+              ctx.lineTo(sw.targetX || sw.x, 600);
+              ctx.stroke();
+              ctx.restore();
+
+              ctx.save();
+              ctx.translate(sw.x, sw.y);
+              ctx.save();
+              ctx.rotate(animTick * 0.14);
+              ctx.strokeStyle = "#ffd700";
+              ctx.lineWidth = 1.8;
+              ctx.setLineDash([4, 3]);
+              ctx.beginPath();
+              ctx.arc(0, 0, 15, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.restore();
+
+              const tremor = Math.sin(animTick * 1.4) * 1.2;
+              ctx.rotate(sw.ang);
+              ctx.translate(0, tremor);
+              if (swSprite) {
+                ctx.drawImage(swSprite, -20, -12);
+              } else {
+                ctx.strokeStyle = "#ffd700";
+                ctx.lineWidth = 3.0;
+                ctx.beginPath();
+                ctx.moveTo(-16, 0);
+                ctx.lineTo(24, 0);
+                ctx.stroke();
+              }
+              ctx.restore();
+              return;
+            }
+
             for (let i = 0; i < sw.trail.length; i++) {
               const pt = sw.trail[i];
               ctx.save();
-              ctx.globalAlpha = ((i + 1) / sw.trail.length) * 0.45;
-              ctx.fillStyle = sw.parried ? "#e6ff00" : "#ffd700";
+              ctx.globalAlpha = ((i + 1) / sw.trail.length) * (sw.countered ? 0.62 : 0.45);
+              ctx.fillStyle = sw.countered ? "#ff1493" : (sw.parried ? "#e6ff00" : "#ffd700");
               ctx.beginPath();
-              ctx.arc(pt.x, pt.y, 4 + (i / sw.trail.length) * 4, 0, Math.PI * 2);
+              ctx.arc(pt.x, pt.y, 4 + (i / sw.trail.length) * (sw.countered ? 5.2 : 4), 0, Math.PI * 2);
               ctx.fill();
               ctx.restore();
             }
@@ -1443,19 +1911,27 @@ Object.assign(window.Stage5, {
             if (swSprite) {
               ctx.drawImage(swSprite, -20, -12);
             } else {
-              ctx.strokeStyle = sw.parried ? "#e6ff00" : "#ffd700";
+              ctx.strokeStyle = sw.countered ? "#ff1493" : (sw.parried ? "#e6ff00" : "#ffd700");
               ctx.lineWidth = 3.0;
               ctx.beginPath();
               ctx.moveTo(-16, 0);
               ctx.lineTo(24, 0);
               ctx.stroke();
             }
-            ctx.strokeStyle = sw.parried ? "#e6ff00" : "#ffffff";
-            ctx.lineWidth = 1.4;
+            ctx.strokeStyle = sw.countered ? "#ffd700" : (sw.parried ? "#e6ff00" : "#ffffff");
+            ctx.lineWidth = sw.countered ? 1.8 : 1.4;
             ctx.setLineDash([3, 3]);
             ctx.beginPath();
             ctx.arc(0, 0, sw.r, 0, Math.PI * 2);
             ctx.stroke();
+            if (sw.countered) {
+              ctx.strokeStyle = "#ff1493";
+              ctx.lineWidth = 1.7;
+              ctx.setLineDash([]);
+              ctx.beginPath();
+              ctx.arc(0, 0, sw.r + 3.5, 0, Math.PI * 2);
+              ctx.stroke();
+            }
             ctx.restore();
           });
         }
@@ -1541,33 +2017,44 @@ Object.assign(window.Stage5, {
     // 3. Judgement Halo Attack Indicators & Rings
     const ha = b.haloAttack;
     if (ha.mode === "charging") {
-      const targetX = ha.targetSide === "L" ? 142 : 254;
-      const targetY = 600;
-      const sx = 198;
-      const sy = state.phase === 3 ? 180 : 250;
-      ctx.save();
-      ctx.strokeStyle = ha.targetSide === "L" ? "#ff2ad4" : "#00f5e8";
-      ctx.lineWidth = 1.8;
-      ctx.setLineDash([6, 5]);
-      ctx.lineDashOffset = -(animTick * 2.5);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(targetX, targetY);
-      ctx.stroke();
+      const aimList = (ha.aimTargets && ha.aimTargets.length > 0)
+        ? ha.aimTargets
+        : [{
+            sx: 198,
+            sy: state.phase === 3 ? 180 : 250,
+            ax: ha.targetSide === "L" ? 142 : 254,
+            ay: 600,
+            color: ha.targetSide === "L" ? "#ff2ad4" : "#00f5e8"
+          }];
+      aimList.forEach(aim => {
+        ctx.save();
+        ctx.strokeStyle = aim.color;
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 5]);
+        ctx.lineDashOffset = -(animTick * 2.5);
+        ctx.beginPath();
+        ctx.moveTo(aim.sx, aim.sy);
+        if (aim.cx !== undefined && aim.cy !== undefined) {
+          ctx.quadraticCurveTo(aim.cx, aim.cy, aim.ax, aim.ay);
+        } else {
+          ctx.lineTo(aim.ax, aim.ay);
+        }
+        ctx.stroke();
 
-      ctx.strokeStyle = "#e6ff00";
-      ctx.beginPath();
-      ctx.arc(targetX, targetY, 20 + Math.sin(animTick * 0.2) * 5, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+        ctx.strokeStyle = "#e6ff00";
+        ctx.beginPath();
+        ctx.arc(aim.ax, aim.ay, 20 + Math.sin(animTick * 0.2) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
     }
 
     ha.rings.forEach(ring => {
-      const mainCol = ring.parried ? "#e6ff00" : ring.color;
+      const mainCol = ring.parried ? "#34ff8a" : ring.color;
       for (let i = 0; i < ring.trail.length; i++) {
         const pt = ring.trail[i];
         ctx.save();
-        ctx.globalAlpha = ((i + 1) / ring.trail.length) * 0.45;
+        ctx.globalAlpha = ((i + 1) / ring.trail.length) * (ring.parried ? 0.55 : 0.45);
         ctx.fillStyle = mainCol;
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 3.0 + (i / ring.trail.length) * 4.0, 0, Math.PI * 2);
@@ -1587,8 +2074,103 @@ Object.assign(window.Stage5, {
         ctx.arc(0, 0, ring.r, 0, Math.PI * 2);
         ctx.stroke();
       }
+      if (ring.parried) {
+        ctx.strokeStyle = "#34ff8a";
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, ring.r + 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
     });
+
+    // 4. Stasis Visuals on Frozen Balls (Magnetic Pillars Brackets & Star-Orbit Tether + Rotated Vector)
+    if (state.balls && state.balls.length > 0) {
+      state.balls.forEach(ball => {
+        const st = ball && ball._seraphStasis;
+        if (!st || st.grazeDelay > 0) return;
+        ctx.save();
+        if (st.mode === "pillar") {
+          const pulse = 1 + Math.sin(animTick * 0.4) * 1.6;
+          const rBox = ball.r + 6 + pulse;
+          ctx.strokeStyle = (animTick % 6 < 3) ? "#00f5e8" : "#ff2ad4";
+          ctx.lineWidth = 1.8;
+          // Left bracket [
+          ctx.beginPath();
+          ctx.moveTo(ball.x - rBox + 4, ball.y - rBox);
+          ctx.lineTo(ball.x - rBox, ball.y - rBox);
+          ctx.lineTo(ball.x - rBox, ball.y + rBox);
+          ctx.lineTo(ball.x - rBox + 4, ball.y + rBox);
+          // Right bracket ]
+          ctx.moveTo(ball.x + rBox - 4, ball.y - rBox);
+          ctx.lineTo(ball.x + rBox, ball.y - rBox);
+          ctx.lineTo(ball.x + rBox, ball.y + rBox);
+          ctx.lineTo(ball.x + rBox - 4, ball.y + rBox);
+          ctx.stroke();
+
+          ctx.translate(ball.x, ball.y);
+          ctx.rotate(animTick * 0.08);
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          const dR = ball.r + 3;
+          ctx.moveTo(0, -dR);
+          ctx.lineTo(dR, 0);
+          ctx.lineTo(0, dR);
+          ctx.lineTo(-dR, 0);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (st.mode === "cross") {
+          // Orbital tether from star center (198, 224)
+          ctx.strokeStyle = "rgba(0, 245, 232, 0.55)";
+          ctx.lineWidth = 1.4;
+          ctx.setLineDash([4, 4]);
+          ctx.lineDashOffset = -(animTick * 2.0);
+          ctx.beginPath();
+          ctx.moveTo(st.originX, st.originY);
+          ctx.lineTo(ball.x, ball.y);
+          ctx.stroke();
+
+          // Rotating stasis ring around ball
+          ctx.save();
+          ctx.translate(ball.x, ball.y);
+          ctx.rotate(animTick * 0.12);
+          ctx.strokeStyle = "#ffd700";
+          ctx.lineWidth = 1.8;
+          ctx.setLineDash([5, 3]);
+          ctx.beginPath();
+          ctx.arc(0, 0, ball.r + 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // Rotated release momentum vector preview arrow
+          const cosR = Math.cos(st.totalRot);
+          const sinR = Math.sin(st.totalRot);
+          const rvX = st.savedVx * cosR - st.savedVy * sinR;
+          const rvY = st.savedVx * sinR + st.savedVy * cosR;
+          const rMag = Math.hypot(rvX, rvY);
+          if (rMag > 0.25) {
+            const ux = rvX / rMag;
+            const uy = rvY / rMag;
+            const aLen = Math.min(28, 12 + rMag * 1.4);
+            const ex = ball.x + ux * (ball.r + 4 + aLen);
+            const ey = ball.y + uy * (ball.r + 4 + aLen);
+            ctx.setLineDash([]);
+            ctx.strokeStyle = "#e6ff00";
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(ball.x + ux * (ball.r + 3), ball.y + uy * (ball.r + 3));
+            ctx.lineTo(ex, ey);
+            ctx.lineTo(ex - ux * 5 + uy * 3.5, ey - uy * 5 - ux * 3.5);
+            ctx.moveTo(ex, ey);
+            ctx.lineTo(ex - ux * 5 - uy * 3.5, ey - uy * 5 + ux * 3.5);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      });
+    }
   },
 
   renderWireRampRails(ctx, state, b, upperPass) {
@@ -1639,34 +2221,16 @@ Object.assign(window.Stage5, {
       }
     });
 
-    // 4. Phase 3 中段ウイングパドル・サイドポッド＆誘導レール＋統一パドル拘束UI（拘束リング／光剣）
+    // 4. Phase 3 中段反転ウイングパドル・サイドポッド＆下向き叩き付け指標＋統一パドル拘束UI
     if ((b.subFlipperDeploy || 0) > 0.05) {
       const dep = Math.min(1, b.subFlipperDeploy || 0);
       ctx.save();
       ctx.globalAlpha = dep;
       [
-        { rx1: 16, ry1: 356, px: 25,  py: 392, col: "#ff2ad4", dir: 1 },
-        { rx1: 380, ry1: 356, px: 371, py: 392, col: "#00f5e8", dir: -1 }
+        { px: 22,  py: 324, col: "#ff2ad4", dir: 1 },
+        { px: 374, py: 324, col: "#00f5e8", dir: -1 }
       ].forEach(pod => {
-        // 誘導レール（チェイサー発光）
-        ctx.strokeStyle = pod.col;
-        ctx.lineWidth = 3.2;
-        ctx.beginPath();
-        ctx.moveTo(pod.rx1, pod.ry1);
-        ctx.lineTo(pod.px, pod.py);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#e6ff00";
-        ctx.lineWidth = 1.6;
-        ctx.setLineDash([5, 5]);
-        ctx.lineDashOffset = -(b.animTick * 1.8);
-        ctx.beginPath();
-        ctx.moveTo(pod.rx1, pod.ry1);
-        ctx.lineTo(pod.px, pod.py);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // サイド展開ポッド基部＆ウイングオーラ
+        // サイド展開ポッド基部＆反転叩き付けウイングオーラ
         ctx.fillStyle = "#160738";
         ctx.strokeStyle = "#e6ff00";
         ctx.lineWidth = 2.0;
@@ -1680,7 +2244,18 @@ Object.assign(window.Stage5, {
         ctx.globalAlpha = dep * wingPulse;
         ctx.lineWidth = 1.8;
         ctx.beginPath();
-        ctx.arc(pod.px, pod.py, 13 + Math.sin(b.animTick * 0.15) * 2, pod.dir > 0 ? -1.1 : Math.PI - 0.8, pod.dir > 0 ? 0.8 : Math.PI + 1.1);
+        ctx.arc(pod.px, pod.py, 13 + Math.sin(b.animTick * 0.15) * 2, pod.dir > 0 ? -0.8 : Math.PI - 1.1, pod.dir > 0 ? 1.1 : Math.PI + 0.8);
+        ctx.stroke();
+
+        // 下向き叩き付け方向を示すシェブロン矢印
+        const chevX = pod.px + pod.dir * 16;
+        const chevY = pod.py + 12;
+        ctx.strokeStyle = "#e6ff00";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(chevX - 3.5, chevY - 3);
+        ctx.lineTo(chevX, chevY + 2);
+        ctx.lineTo(chevX + 3.5, chevY - 3);
         ctx.stroke();
         ctx.globalAlpha = dep;
       });

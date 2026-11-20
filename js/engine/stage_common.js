@@ -690,6 +690,9 @@ window.StageCommon = {
         ball.vx = rampDef.exitVx;
         ball.vy = rampDef.exitVy;
         Particles.addPopup(state, ball.x, ball.y - 12, "⚡SKYWAY DROP!", rampDef.color, 1.05);
+        if (typeof opts.onExit === "function") {
+          opts.onExit(ball, rs, state);
+        }
       }
       return true;
     }

@@ -132,8 +132,8 @@ window.Physics = {
   flipperState: [
     { angle: 0.44, prevAngle: 0.44 },
     { angle: Math.PI - 0.44, prevAngle: Math.PI - 0.44 },
-    { angle: 0.40, prevAngle: 0.40 },
-    { angle: Math.PI - 0.40, prevAngle: Math.PI - 0.40 }
+    { angle: -0.32, prevAngle: -0.32 },
+    { angle: Math.PI + 0.32, prevAngle: Math.PI + 0.32 }
   ],
 
   _flippersCache: [
@@ -143,8 +143,8 @@ window.Physics = {
   _flippersWithSubCache: [
     { px: 110, py: 602, len: 56, restAngle: 0.44, activeAngle: -0.44, isLeft: true, isSubFlipper: false },
     { px: 286, py: 602, len: 56, restAngle: Math.PI - 0.44, activeAngle: Math.PI + 0.44, isLeft: false, isSubFlipper: false },
-    { px: 25,  py: 392, len: 50, restAngle: 0.40, activeAngle: -0.46, isLeft: true, isSubFlipper: true },
-    { px: 371, py: 392, len: 50, restAngle: Math.PI - 0.40, activeAngle: Math.PI + 0.46, isLeft: false, isSubFlipper: true }
+    { px: 22,  py: 324, len: 44, restAngle: -0.32, activeAngle: 0.58, isLeft: true, isSubFlipper: true, isInverted: true },
+    { px: 374, py: 324, len: 44, restAngle: Math.PI + 0.32, activeAngle: Math.PI - 0.58, isLeft: false, isSubFlipper: true, isInverted: true }
   ],
   _cpWall: { x: 0, y: 0, t: 0 },
   _cpFlipper: { x: 0, y: 0, t: 0 },
@@ -177,8 +177,8 @@ window.Physics = {
     const ext = (state && state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 10 : 0;
     const deploy = (state && state.stageIndex === 5 && state.boss && state.boss.subFlipperDeploy) || 0;
     if (deploy > 0.05) {
-      const subExt = (state && state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 6 : 0;
-      const subLen = Math.max(8, (50 + subExt) * Math.min(1, deploy));
+      const subExt = (state && state.perm && state.perm.wideFlipper) ? state.perm.wideFlipper * 4 : 0;
+      const subLen = Math.max(8, (44 + subExt) * Math.min(1, deploy));
       this._flippersWithSubCache[0].len = 56 + ext;
       this._flippersWithSubCache[1].len = 56 + ext;
       this._flippersWithSubCache[2].len = subLen;

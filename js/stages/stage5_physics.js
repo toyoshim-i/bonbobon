@@ -29,6 +29,7 @@ Object.assign(window.Stage5, {
     }
     if (b.coreGraceTimer > 0) b.coreGraceTimer--;
     if (b.fusionFlashTimer > 0) b.fusionFlashTimer--;
+    if (b.crescendoFlash > 0) b.crescendoFlash--;
     if (b.elle.blushTimer > 0) b.elle.blushTimer--;
     if (b.noel.blushTimer > 0) b.noel.blushTimer--;
     if (b.navelBeam.pluckAmp > 0.05) {
@@ -79,6 +80,13 @@ Object.assign(window.Stage5, {
         b.elleSpring.y = b.prismL.homeY + b.elle.dy;
         b.noelSpring.x = b.prismR.homeX + b.noel.dx;
         b.noelSpring.y = b.prismR.homeY + b.noel.dy;
+        [b.noelAntR, b.noelAntL].forEach(ant => {
+          if (!ant) return;
+          ant.pivotX = ant.homePivotX + b.noel.dx;
+          ant.pivotY = ant.homePivotY + b.noel.dy;
+          ant.restTipX = ant.homeTipX + b.noel.dx;
+          ant.restTipY = ant.homeTipY + b.noel.dy;
+        });
 
         b.animTick += 4; // Scroll 3D wireframe grid 5x faster!
         fs.whiteout = fs.frame < 38 ? 0 : Math.min(1.0, (fs.frame - 38) / 31);
@@ -113,10 +121,10 @@ Object.assign(window.Stage5, {
           if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
           state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 75, speed: 4.5, color: "#ff2ad4", lineWidth: 3.5, alpha: 1.0 });
           state.shockwaves.push({ x: 198, y: 210, r: 8, maxR: 92, speed: 5.0, color: "#00f5e8", lineWidth: 3.5, alpha: 1.0 });
-          state.shockwaves.push({ x: 25,  y: 392, r: 6, maxR: 54, speed: 4.0, color: "#e6ff00", lineWidth: 3.2, alpha: 1.0 });
-          state.shockwaves.push({ x: 371, y: 392, r: 6, maxR: 54, speed: 4.0, color: "#00f5e8", lineWidth: 3.2, alpha: 1.0 });
-          Particles.add(state, 25,  392, "#e6ff00", 24, 5.5);
-          Particles.add(state, 371, 392, "#00f5e8", 24, 5.5);
+          state.shockwaves.push({ x: 22,  y: 324, r: 6, maxR: 54, speed: 4.0, color: "#e6ff00", lineWidth: 3.2, alpha: 1.0 });
+          state.shockwaves.push({ x: 374, y: 324, r: 6, maxR: 54, speed: 4.0, color: "#00f5e8", lineWidth: 3.2, alpha: 1.0 });
+          Particles.add(state, 22,  324, "#e6ff00", 24, 5.5);
+          Particles.add(state, 374, 324, "#00f5e8", 24, 5.5);
           UI.showCutin(t("stage5.cutin.wingPaddles"), 210);
         }
         b.subFlipperDeploy = Math.min(1.0, (b.subFlipperDeploy || 0) + 1 / 34);
@@ -193,6 +201,18 @@ Object.assign(window.Stage5, {
       b.prismR.y = b.prismR.homeY + b.noel.dy;
       b.charmR.x = b.charmR.homeX + b.noel.dx;
       b.charmR.y = b.charmR.homeY + b.noel.dy;
+      [b.noelAntR, b.noelAntL].forEach(ant => {
+        if (!ant) return;
+        ant.pivotX = ant.homePivotX + b.noel.dx;
+        ant.pivotY = ant.homePivotY + b.noel.dy;
+        ant.restTipX = ant.homeTipX + b.noel.dx;
+        ant.restTipY = ant.homeTipY + b.noel.dy;
+        ant.angleVel = (ant.angleVel - 0.19 * ant.angle) * 0.87;
+        ant.angle += ant.angleVel;
+        if (ant.angle > 0.44) { ant.angle = 0.44; ant.angleVel *= -0.5; }
+        if (ant.angle < -0.44) { ant.angle = -0.44; ant.angleVel *= -0.5; }
+        if (ant.flash > 0) ant.flash--;
+      });
 
       b.synchroSpark.x = 198.5 + (b.elle.dx + b.noel.dx) * 0.5;
       b.synchroSpark.y = 278.0 + (b.elle.dy + b.noel.dy) * 0.5;
@@ -234,7 +254,7 @@ Object.assign(window.Stage5, {
         nb.timer--;
         if (nb.timer <= 0) {
           nb.mode = "active";
-          nb.timer = state.phase === 1 ? 105 : 130;
+          nb.timer = state.phase === 1 ? 125 : 150;
           nb.pluckAmp = 6;
           if (window.sfx && window.sfx.navelBeamPluck) window.sfx.navelBeamPluck();
         }
@@ -242,7 +262,7 @@ Object.assign(window.Stage5, {
         nb.timer--;
         if (nb.timer <= 0) {
           nb.mode = "idle";
-          nb.timer = state.phase === 1 ? 145 : 110;
+          nb.timer = state.phase === 1 ? 110 : 80;
         }
       }
     } else {
@@ -257,18 +277,27 @@ Object.assign(window.Stage5, {
         if (b.cherubOrbs.every(o => !o.active) && b.core.hp > 0) {
           b.orbCooldown--;
           if (b.orbCooldown <= 0) {
-            b.cherubOrbs.forEach(o => { o.active = true; o.hp = o.maxHP; o.flash = 20; });
-            b.orbCooldown = 480;
+            b.cherubOrbs.forEach((o, idx) => {
+              o.active = true;
+              o.hp = o.maxHP;
+              o.flash = 20;
+              o.shotTimer = idx === 0 ? 95 : 155;
+              o.chargeTimer = 0;
+            });
+            b.orbCooldown = 330;
             if (window.sfx && window.sfx.bunshinSummon) window.sfx.bunshinSummon();
             Particles.addPopup(state, 198, 205, t("stage5.popup.orbRespawn"), "#00f5e8", 1.1);
           }
         }
-        // Rotate active orbs
-        const oAngle = b.animTick * 0.035;
-        b.cherubOrbs[0].x = 198 + Math.cos(oAngle) * 96;
-        b.cherubOrbs[0].y = 205 + Math.sin(oAngle) * 35;
-        b.cherubOrbs[1].x = 198 + Math.cos(oAngle + Math.PI) * 96;
-        b.cherubOrbs[1].y = 205 + Math.sin(oAngle + Math.PI) * 35;
+        // Rotate active orbs & trigger aim/fire cycle
+        const oAngle = b.animTick * (b.finalCrescendo ? 0.068 : 0.052);
+        b.cherubOrbs[0].x = 198 + Math.cos(oAngle) * 104;
+        b.cherubOrbs[0].y = 205 + Math.sin(oAngle) * 40;
+        b.cherubOrbs[1].x = 198 + Math.cos(oAngle + Math.PI) * 104;
+        b.cherubOrbs[1].y = 205 + Math.sin(oAngle + Math.PI) * 40;
+        if (typeof this.stepOrbAttack === "function") {
+          this.stepOrbAttack(state, b, activePlayBalls);
+        }
       } else {
         StageCommon.stepSoftSpring(b.bustL, 0.19, 0.88, 6.5);
         StageCommon.stepSoftSpring(b.bustR, 0.19, 0.88, 6.5);
@@ -330,7 +359,7 @@ Object.assign(window.Stage5, {
         if (nt.capturedBall && !state.balls.includes(nt.capturedBall)) {
           nt.capturedBall = null;
           nt.mode = "idle";
-          nt.timer = 145;
+          nt.timer = 115;
         }
 
         if (nt.mode === "idle") {
@@ -345,7 +374,7 @@ Object.assign(window.Stage5, {
           nt.timer--;
           if (nt.timer <= 0) {
             nt.mode = "idle";
-            nt.timer = 145;
+            nt.timer = b.chestArmorBroken ? 95 : 115;
           }
         } else if (nt.mode === "digesting") {
           nt.timer--;
@@ -371,7 +400,7 @@ Object.assign(window.Stage5, {
               cb.x = 198.0;
               cb.y = 350.0;
               cb.vx = 0.0;
-              cb.vy = 9.6;
+              cb.vy = 10.6;
             }
             nt.mode = "spit_cool";
             nt.timer = 36;
@@ -386,7 +415,7 @@ Object.assign(window.Stage5, {
           nt.gateOpen = Math.max(0, nt.timer / 36);
           if (nt.timer <= 0) {
             nt.mode = "idle";
-            nt.timer = 145;
+            nt.timer = b.chestArmorBroken ? 95 : 115;
           }
         }
       }
@@ -410,71 +439,198 @@ Object.assign(window.Stage5, {
         b.subFlipperDeploy = Math.min(1.0, (b.subFlipperDeploy || 0) + 1 / 30);
       }
 
-      // Grand Phase 3 Boss Attack: Rotating Cross-Seraphim Laser & Light-Sword Volley
+      // Grand Phase 3 Boss Attack: Rotating Star Laser, Staggered Feint Light-Swords & Converging Pillars
       const sa = b.seraphAttack;
+      const isCresc = !!b.finalCrescendo;
+      const idleRecovery = isCresc ? 42 : (b.chestArmorBroken ? 68 : 88);
       if (sa && (!b.fusionSeq || !b.fusionSeq.active)) {
         if (sa.mode === "idle") {
           sa.timer--;
           if (sa.timer <= 0 && activePlayBalls.length > 0) {
             if (sa.nextType === "cross") {
               sa.mode = "cross_warn";
-              sa.timer = 45;
+              sa.timer = isCresc ? 28 : 34;
               sa.baseAngle = Math.random() * Math.PI;
+              sa.armCount = b.chestArmorBroken ? 6 : 4;
+              sa.rotDir = Math.random() < 0.5 ? 1 : -1;
               sa.nextType = "sword";
               if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
-            } else {
+            } else if (sa.nextType === "sword") {
               sa.mode = "sword_warn";
-              sa.timer = 40;
-              sa.nextType = "cross";
+              sa.timer = isCresc ? 26 : 32;
+              sa.nextType = "pillars";
+              const portals = isCresc
+                ? [
+                    { x: 56,  y: 146, targetX: 256, delay: 0 },
+                    { x: 96,  y: 114, targetX: 136, delay: 10 },
+                    { x: 142, y: 92,  targetX: 262, delay: 16 },
+                    { x: 184, y: 80,  targetX: 146, delay: 28 },
+                    { x: 212, y: 80,  targetX: 250, delay: 34 },
+                    { x: 254, y: 92,  targetX: 134, delay: 40 },
+                    { x: 300, y: 114, targetX: 260, delay: 50 },
+                    { x: 340, y: 146, targetX: 140, delay: 56 }
+                  ]
+                : (b.chestArmorBroken
+                    ? [
+                        { x: 74,  y: 130, targetX: 130, delay: 0 },
+                        { x: 132, y: 102, targetX: 260, delay: 12 },
+                        { x: 186, y: 86,  targetX: 146, delay: 18 },
+                        { x: 210, y: 86,  targetX: 248, delay: 32 },
+                        { x: 264, y: 102, targetX: 134, delay: 38 },
+                        { x: 322, y: 130, targetX: 264, delay: 44 }
+                      ]
+                    : [
+                        { x: 86,  y: 126, targetX: 132, delay: 0 },
+                        { x: 158, y: 98,  targetX: 248, delay: 14 },
+                        { x: 238, y: 98,  targetX: 148, delay: 22 },
+                        { x: 310, y: 126, targetX: 264, delay: 28 }
+                      ]);
+              sa.portals = portals;
               if (window.sfx && window.sfx.shurikenThrow) window.sfx.shurikenThrow();
+            } else {
+              sa.mode = "pillars_warn";
+              sa.timer = isCresc ? 34 : 42;
+              sa.nextType = "cross";
+              const bases = b.chestArmorBroken ? [74, 156, 240, 322] : [88, 198, 308];
+              const jitter = b.chestArmorBroken ? 10 : 14;
+              const convergeVels = isCresc ? [0.42, 0.26, -0.26, -0.42] : [0, 0, 0, 0];
+              sa.pillars = bases.map((bx, idx) => ({
+                x: bx + (Math.random() - 0.5) * jitter * 2,
+                vx: convergeVels[idx] || 0,
+                w: 26,
+                color: idx % 2 === 0 ? "#ff2ad4" : "#00f5e8"
+              }));
+              if (!b.faceAnim.sequence) {
+                b.expression = "shout";
+                b.expressionTimer = 46;
+              }
+              if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
             }
           }
         } else if (sa.mode === "cross_warn") {
           sa.timer--;
           if (sa.timer <= 0) {
             sa.mode = "cross_fire";
-            sa.timer = 80;
+            sa.timer = 115;
             if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
-            Particles.addPopup(state, 198, 224, "⚔️CROSS SERAPHIM LASER!", "#ff2ad4", 1.2);
+            Particles.addPopup(state, 198, 224, t("stage5.popup.starStasis"), "#ff2ad4", 1.2);
+            if (typeof this.captureSeraphStasis === "function") {
+              this.captureSeraphStasis(state, b, "cross");
+            }
           }
         } else if (sa.mode === "cross_fire") {
           sa.timer--;
-          sa.baseAngle += 0.007; // smooth sweeping cross laser
+          if (b.chestArmorBroken && sa.timer === 58) {
+            sa.rotDir = -(sa.rotDir || 1);
+            state.shockwaves.push({ x: 198, y: 224, r: 10, maxR: 78, speed: 5.2, color: "#ffd700", lineWidth: 3.2, alpha: 1.0 });
+            Particles.addPopup(state, 198, 200, "⚡REVERSE STAR LASER!!", "#ffd700", 1.15);
+            if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
+          }
+          // Composite Final Crescendo: fire flank feint swords while star laser sweeps!
+          if (isCresc && (sa.timer === 92 || sa.timer === 44)) {
+            this.spawnFeintSword(sa, 72, 118, 256, 0, isCresc, b.chestArmorBroken);
+            this.spawnFeintSword(sa, 324, 118, 140, 10, isCresc, b.chestArmorBroken);
+            if (window.sfx && window.sfx.shurikenThrow) window.sfx.shurikenThrow();
+          }
+          const rotBase = isCresc ? 0.022 : (b.chestArmorBroken ? 0.019 : 0.014);
+          const rotScale = (b.chestArmorBroken && sa.timer > 58 && sa.timer <= 66) ? 0.2 : 1.0;
+          const dAng = (sa.rotDir || 1) * rotBase * rotScale;
+          sa.baseAngle += dAng;
+          if (typeof this.stepSeraphStasis === "function") {
+            this.stepSeraphStasis(state, b, "cross", dAng);
+          }
           if (sa.timer <= 0) {
+            if (typeof this.releaseSeraphStasis === "function") {
+              this.releaseSeraphStasis(state, "end");
+            }
             sa.mode = "idle";
-            sa.timer = 150;
+            sa.timer = idleRecovery;
           }
         } else if (sa.mode === "sword_warn") {
           sa.timer--;
           if (sa.timer <= 0) {
             sa.mode = "sword_fire";
-            sa.timer = 130;
-            sa.swords = [];
-            const portalSpawns = [
-              { x: 110, y: 120, targetX: 142, delay: 0 },
-              { x: 198, y: 96,  targetX: 198, delay: 12 },
-              { x: 286, y: 120, targetX: 254, delay: 24 }
-            ];
+            sa.timer = isCresc ? 86 : 115;
+            const portalSpawns = (sa.portals && sa.portals.length > 0)
+              ? sa.portals
+              : [
+                  { x: 86,  y: 126, targetX: 132, delay: 0 },
+                  { x: 158, y: 98,  targetX: 248, delay: 14 },
+                  { x: 238, y: 98,  targetX: 148, delay: 22 },
+                  { x: 310, y: 126, targetX: 264, delay: 28 }
+                ];
             portalSpawns.forEach((p, idx) => {
-              const ang = Math.atan2(600 - p.y, p.targetX - p.x);
-              sa.swords.push({
-                id: idx,
-                x: p.x,
-                y: p.y,
-                vx: Math.cos(ang) * 5.6,
-                vy: Math.sin(ang) * 5.6,
-                ang,
-                r: 13,
-                delay: p.delay,
-                active: false,
-                parried: false,
-                trail: []
-              });
+              this.spawnFeintSword(sa, p.x, p.y, p.targetX, p.delay, isCresc, b.chestArmorBroken, idx);
             });
-            Particles.addPopup(state, 198, 120, "⚔️LIGHT-SWORD VOLLEY!", "#ffd700", 1.2);
+            sa.portals = [];
+            Particles.addPopup(state, 198, 120, isCresc ? "⚔️SERAPHIC SWORD BARRAGE!!" : "⚔️LIGHT-SWORD VOLLEY!", "#ffd700", 1.2);
           }
         } else if (sa.mode === "sword_fire") {
           sa.timer--;
+          if ((!sa.swords || sa.swords.length === 0) && sa.timer <= 0) {
+            sa.mode = "idle";
+            sa.timer = idleRecovery;
+          }
+        } else if (sa.mode === "pillars_warn") {
+          sa.timer--;
+          if (sa.timer <= 0) {
+            sa.mode = "pillars_fire";
+            sa.timer = 70;
+            if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
+            Particles.addPopup(state, 198, 150, t("stage5.popup.magStasis"), "#e6ff00", 1.18);
+            (sa.pillars || []).forEach(p => {
+              state.shockwaves.push({ x: p.x, y: 585, r: 8, maxR: 52, speed: 4.5, color: p.color || "#ffd700", lineWidth: 3.0, alpha: 1.0 });
+            });
+            if (typeof this.captureSeraphStasis === "function") {
+              this.captureSeraphStasis(state, b, "pillar");
+            }
+          }
+        } else if (sa.mode === "pillars_fire") {
+          sa.timer--;
+          if (isCresc && sa.pillars && sa.pillars.length === 4) {
+            const bounds = [
+              { max: 136 },
+              { max: 166 },
+              { min: 230 },
+              { min: 260 }
+            ];
+            sa.pillars.forEach((p, idx) => {
+              if (!p.vx) return;
+              p.x += p.vx;
+              if (bounds[idx].max !== undefined) p.x = Math.min(bounds[idx].max, p.x);
+              if (bounds[idx].min !== undefined) p.x = Math.max(bounds[idx].min, p.x);
+            });
+          }
+          if (typeof this.stepSeraphStasis === "function") {
+            this.stepSeraphStasis(state, b, "pillar", 0);
+          }
+          if (isCresc && sa.timer === 52 && sa.pillars && sa.pillars.length >= 2) {
+            this.spawnFeintSword(sa, sa.pillars[0].x, 110, 256, 0, true, true, 100);
+            this.spawnFeintSword(sa, 198, 96, 142, 10, true, true, 101);
+            this.spawnFeintSword(sa, sa.pillars[sa.pillars.length - 1].x, 110, 140, 20, true, true, 102);
+            if (window.sfx && window.sfx.shurikenThrow) window.sfx.shurikenThrow();
+          } else if (!isCresc && b.chestArmorBroken && sa.timer === 48 && sa.pillars && sa.pillars.length >= 2) {
+            this.spawnFeintSword(sa, sa.pillars[0].x, 110, 136, 0, false, true, 100);
+            this.spawnFeintSword(sa, sa.pillars[sa.pillars.length - 1].x, 110, 260, 0, false, true, 101);
+            if (window.sfx && window.sfx.shurikenThrow) window.sfx.shurikenThrow();
+          }
+          if (sa.timer <= 0) {
+            if (typeof this.releaseSeraphStasis === "function") {
+              this.releaseSeraphStasis(state, "end");
+            }
+            sa.mode = "idle";
+            sa.timer = idleRecovery;
+          }
+        }
+
+        if (sa.mode !== "cross_fire" && sa.mode !== "pillars_fire" && typeof this.releaseSeraphStasis === "function") {
+          if (state.balls && state.balls.some(ball => ball._seraphStasis)) {
+            this.releaseSeraphStasis(state, "end");
+          }
+        }
+
+        // Active Light-Sword update (runs across modes so composite & pillar swords keep flying!)
+        if (sa.swords && sa.swords.length > 0) {
           const flippers = Physics.getFlippers(state);
           for (let si = sa.swords.length - 1; si >= 0; si--) {
             const sw = sa.swords[si];
@@ -488,8 +644,47 @@ Object.assign(window.Stage5, {
             }
             if (!sw.active) continue;
 
+            if (sw.stage === "lock") {
+              sw.lockTimer--;
+              let earlyClash = false;
+              const clashPad = state.overdriveActive ? 17 : 3;
+              for (const ball of state.balls) {
+                if (ball.inShooterLane || ball._onWireRamp) continue;
+                if (Math.hypot(ball.x - sw.x, ball.y - sw.y) < ball.r + sw.r + clashPad) {
+                  earlyClash = true;
+                  if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+                  Particles.add(state, sw.x, sw.y, state.overdriveActive ? "#e6ff00" : "#ffd700", state.overdriveActive ? 20 : 16, 4.4);
+                  if (state.overdriveActive) {
+                    Systems.addScore(state, ScoreTable.common.VOLT_SHATTER, sw.x, sw.y, "⚡VOLT SHATTER!", { fromDeckEffect: true });
+                    if ((state.overdriveRank || 0) >= 2 && typeof this.applyDeckBonusDamage === "function") {
+                      this.applyDeckBonusDamage(state, 1, sw.x, sw.y, "⚡VOLT COUNTER!", "#e6ff00", { source: "volt" });
+                    }
+                  } else {
+                    Systems.addScore(state, ScoreTable.stage5.SWORD_CLASH, sw.x, sw.y, "⚔️CLASH!");
+                  }
+                  sa.swords.splice(si, 1);
+                  break;
+                }
+              }
+              if (earlyClash) continue;
+              if (sw.lockTimer <= 0) {
+                sw.stage = "fly";
+                sw.vx = Math.cos(sw.ang) * (sw.spd || 2.6);
+                sw.vy = Math.sin(sw.ang) * (sw.spd || 2.6);
+                Particles.add(state, sw.x, sw.y, "#ffd700", 6, 3.0);
+                if (window.sfx && window.sfx.laserPew) window.sfx.laserPew();
+              }
+              continue;
+            }
+
             sw.trail.push({ x: sw.x, y: sw.y });
             if (sw.trail.length > 7) sw.trail.shift();
+
+            if (!sw.parried && sw.accel) {
+              sw.spd = Math.min(sw.maxSpd || 8.0, (sw.spd || 2.6) + sw.accel);
+              sw.vx = Math.cos(sw.ang) * sw.spd;
+              sw.vy = Math.sin(sw.ang) * sw.spd;
+            }
 
             sw.x += sw.vx;
             sw.y += sw.vy;
@@ -500,24 +695,42 @@ Object.assign(window.Stage5, {
               const dx = tgt.x - sw.x;
               const dy = tgt.y - sw.y;
               const dist = Math.hypot(dx, dy) || 1;
-              sw.vx = (dx / dist) * 12.0;
-              sw.vy = (dy / dist) * 12.0;
+              const hSpd = (sw.rally || 1) >= 2 ? 14.0 : 12.0;
+              sw.vx = (dx / dist) * hSpd;
+              sw.vy = (dy / dist) * hSpd;
               if (dist < 26) {
-                this.damageActiveBoss(state, 2, tgt.x, tgt.y, "⚔️SWORD PARRY!! -2HP");
+                if (typeof this.tryBossCounterParry === "function" && this.tryBossCounterParry(state, b, sw, tgt, "sword")) {
+                  continue;
+                }
+                const rally = sw.rally || 1;
+                const dmgLabel = rally >= 2 ? `🔥RALLY x${rally} BREAK!!` : "⚔️SWORD PARRY!";
+                this.damageActiveBoss(state, 1, tgt.x, tgt.y, dmgLabel, { source: "parry", rally });
                 if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
                 sa.swords.splice(si, 1);
                 continue;
               }
             } else {
+              if (sw.y > 440 && window.Systems && Systems.tryNoaBitIntercept(state, sw.x, sw.y)) {
+                sa.swords.splice(si, 1);
+                continue;
+              }
               // Ball clash
               let clashed = false;
+              const clashPad = state.overdriveActive ? 17 : 3;
               for (const ball of state.balls) {
                 if (ball.inShooterLane || ball._onWireRamp) continue;
-                if (Math.hypot(ball.x - sw.x, ball.y - sw.y) < ball.r + sw.r + 3) {
+                if (Math.hypot(ball.x - sw.x, ball.y - sw.y) < ball.r + sw.r + clashPad) {
                   clashed = true;
                   if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-                  Particles.add(state, sw.x, sw.y, "#ffd700", 16, 4.2);
-                  Systems.addScore(state, ScoreTable.stage5.SWORD_CLASH, sw.x, sw.y, "⚔️CLASH!");
+                  Particles.add(state, sw.x, sw.y, state.overdriveActive ? "#e6ff00" : "#ffd700", state.overdriveActive ? 20 : 16, 4.4);
+                  if (state.overdriveActive) {
+                    Systems.addScore(state, ScoreTable.common.VOLT_SHATTER, sw.x, sw.y, "⚡VOLT SHATTER!", { fromDeckEffect: true });
+                    if ((state.overdriveRank || 0) >= 2 && typeof this.applyDeckBonusDamage === "function") {
+                      this.applyDeckBonusDamage(state, 1, sw.x, sw.y, "⚡VOLT COUNTER!", "#e6ff00", { source: "volt" });
+                    }
+                  } else {
+                    Systems.addScore(state, ScoreTable.stage5.SWORD_CLASH, sw.x, sw.y, "⚔️CLASH!");
+                  }
                   sa.swords.splice(si, 1);
                   break;
                 }
@@ -548,13 +761,7 @@ Object.assign(window.Stage5, {
               }
 
               if (parriedNow) {
-                sw.parried = true;
-                if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
-                state.shockwaves.push({ x: sw.x, y: sw.y, r: 8, maxR: 50, speed: 4.5, color: "#ffd700", lineWidth: 3.0, alpha: 1.0 });
-                Particles.add(state, sw.x, sw.y, "#ffd700", 20, 5.5);
-                Particles.addPopup(state, sw.x, sw.y - 14, "⚔️SWORD PARRY!!", "#ffd700", 1.2);
-                Systems.addScore(state, ScoreTable.stage5.SWORD_PARRY, sw.x, sw.y, "⚔️PARRY!");
-                Systems.addFever(state, 8);
+                this.handlePlayerParryReturn(state, sw, ScoreTable.stage5.SWORD_PARRY, "⚔️SWORD PARRY!!", "#ffd700", 8);
                 continue;
               } else if (hitFlipper) {
                 const pinKey = hitFlipIsLeft ? "flipperPinL" : "flipperPinR";
@@ -579,11 +786,6 @@ Object.assign(window.Stage5, {
               sa.swords.splice(si, 1);
             }
           }
-
-          if (sa.swords.length === 0 && sa.timer <= 0) {
-            sa.mode = "idle";
-            sa.timer = 150;
-          }
         }
       }
     }
@@ -598,6 +800,8 @@ Object.assign(window.Stage5, {
     ].forEach(tObj => {
       if (tObj && tObj.flash > 0) tObj.flash--;
     });
+    if (b.haloL && b.haloL.passFlashTimer > 0) b.haloL.passFlashTimer--;
+    if (b.haloR && b.haloR.passFlashTimer > 0) b.haloR.passFlashTimer--;
 
     // Cosmic Star Anomalies state machine
     const cm = b.cosmic;
@@ -609,12 +813,12 @@ Object.assign(window.Stage5, {
           cm.y = 148 + Math.random() * 210;
           if (cm.nextType === "gamma") {
             cm.mode = "gamma_warn";
-            cm.timer = 65;
+            cm.timer = 50;
             cm.angle = (Math.random() < 0.5 ? 1 : -1) * (0.45 + Math.random() * 0.45);
             cm.nextType = "blackhole";
           } else {
             cm.mode = "bh_warn";
-            cm.timer = 60;
+            cm.timer = 48;
             cm.nextType = "gamma";
           }
         }
@@ -623,7 +827,7 @@ Object.assign(window.Stage5, {
       cm.timer--;
       if (cm.timer <= 0) {
         cm.mode = "gamma_fire";
-        cm.timer = 95;
+        cm.timer = 105;
         if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
         Particles.addPopup(state, cm.x, cm.y - 20, "💥GAMMA BURST!!", "#e6ff00", 1.15);
       }
@@ -631,13 +835,13 @@ Object.assign(window.Stage5, {
       cm.timer--;
       if (cm.timer <= 0) {
         cm.mode = "idle";
-        cm.timer = 240;
+        cm.timer = state.phase === 3 ? 145 : 170;
       }
     } else if (cm.mode === "bh_warn") {
       cm.timer--;
       if (cm.timer <= 0) {
         cm.mode = "bh_active";
-        cm.timer = 185;
+        cm.timer = 195;
         if (window.sfx && window.sfx.blackHolePulse) window.sfx.blackHolePulse();
         Particles.addPopup(state, cm.x, cm.y - 20, "🕳️SINGULARITY!!", "#b84dff", 1.15);
       }
@@ -649,8 +853,8 @@ Object.assign(window.Stage5, {
         const dx = cm.x - ball.x;
         const dy = cm.y - ball.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 98 && dist > 1) {
-          const pull = 0.28 * (1 - dist / 98) + 9.5 / Math.max(20, dist);
+        if (dist < 106 && dist > 1) {
+          const pull = 0.36 * (1 - dist / 106) + 11.5 / Math.max(20, dist);
           ball.vx += (dx / dist) * pull;
           ball.vy += (dy / dist) * pull;
 
@@ -658,8 +862,8 @@ Object.assign(window.Stage5, {
             ball.hitCooldowns.bhSling = 55;
             if (window.sfx && window.sfx.blackHolePulse) window.sfx.blackHolePulse();
             const ang = (Math.random() < 0.5 ? 0.38 : Math.PI - 0.38) + (Math.random() - 0.5) * 0.28;
-            ball.vx = Math.cos(ang) * 10.4;
-            ball.vy = Math.sin(ang) * 10.4;
+            ball.vx = Math.cos(ang) * 11.4;
+            ball.vy = Math.sin(ang) * 11.4;
             Systems.addScore(state, ScoreTable.stage5.SINGULARITY_SLING, cm.x, cm.y, "🕳️SINGULARITY SLING!");
             Particles.add(state, cm.x, cm.y, "#b84dff", 18, 5.0);
             state.shockwaves.push({ x: cm.x, y: cm.y, r: 8, maxR: 55, speed: 4.2, color: "#b84dff", lineWidth: 3.0, alpha: 1.0 });
@@ -668,45 +872,110 @@ Object.assign(window.Stage5, {
       }
       if (cm.timer <= 0) {
         cm.mode = "idle";
-        cm.timer = 240;
+        cm.timer = state.phase === 3 ? 145 : 170;
       }
     }
 
-    // Judgement Halo Attack state machine
+    // Judgement Halo Attack state machine (straight Phase 1 -> Twins Cross-Curve Phase 2 -> Wing-Arc Curve Phase 3)
     const ha = b.haloAttack;
     if (ha.mode === "idle") {
       ha.timer--;
       if (ha.timer <= 0 && activePlayBalls.length > 0) {
         ha.mode = "charging";
-        ha.chargeTimer = 38;
+        ha.chargeTimer = 34;
         ha.targetSide = Math.random() < 0.5 ? "L" : "R";
-        ha.timer = 230;
+        ha.timer = state.phase === 1
+          ? 175
+          : (state.phase === 2 ? 140 : (b.finalCrescendo ? 88 : (b.chestArmorBroken ? 115 : 135)));
+        const isDual = (state.phase === 1 && (b.elleBroken || b.noelBroken))
+          || state.phase === 2
+          || (state.phase === 3 && (b.chestArmorBroken || Math.random() < 0.5));
+        if (isDual) {
+          if (state.phase < 3) {
+            // Twins Cross-Curve: Elle curves left->right flipper, Noel curves right->left flipper
+            ha.aimTargets = [
+              { sx: b.prismL.x, sy: b.prismL.y, cx: Math.max(20, Math.min(82, b.prismL.x - 125)), cy: 515, ax: 256, ay: 600, color: "#ff2ad4" },
+              { sx: b.prismR.x, sy: b.prismR.y, cx: Math.min(380, Math.max(316, b.prismR.x + 115)), cy: 445, ax: 140, ay: 600, color: "#00f5e8" }
+            ];
+          } else {
+            // Seraphia Wing-Arc Curve + optional center orb ring
+            ha.aimTargets = [
+              { sx: 152, sy: 184, cx: 56,  cy: 395, ax: 140, ay: 600, color: "#ff2ad4" },
+              { sx: 244, sy: 184, cx: 340, cy: 395, ax: 256, ay: 600, color: "#00f5e8" }
+            ];
+            if (b.chestArmorBroken && (b.cherubOrbs.some(o => o.active) || b.finalCrescendo)) {
+              const centerSideL = Math.random() < 0.5;
+              ha.aimTargets.push({
+                sx: 198,
+                sy: 176,
+                ax: centerSideL ? 132 : 264,
+                ay: 600,
+                color: centerSideL ? "#ff2ad4" : "#00f5e8"
+              });
+            }
+          }
+        } else {
+          ha.aimTargets = [{
+            sx: 198,
+            sy: state.phase === 3 ? 180 : 250,
+            ax: ha.targetSide === "L" ? 142 : 254,
+            ay: 600,
+            color: ha.targetSide === "L" ? "#ff2ad4" : "#00f5e8"
+          }];
+        }
         if (!b.faceAnim.sequence && state.phase === 3) {
           b.expression = "shout";
-          b.expressionTimer = 38;
+          b.expressionTimer = 34;
         }
       }
     } else if (ha.mode === "charging") {
       ha.chargeTimer--;
       if (ha.chargeTimer <= 0) {
         ha.mode = "idle";
-        const targetX = ha.targetSide === "L" ? 142 : 254;
-        const targetY = 600;
-        const sx = 198;
-        const sy = state.phase === 3 ? 180 : 250;
-        const ang = Math.atan2(targetY - sy, targetX - sx);
-        const spd = 5.0;
-        ha.rings.push({
-          x: sx,
-          y: sy,
-          vx: Math.cos(ang) * spd,
-          vy: Math.sin(ang) * spd,
-          r: 14,
-          rot: 0,
-          parried: false,
-          color: ha.targetSide === "L" ? "#ff2ad4" : "#00f5e8",
-          trail: []
+        const spd = state.phase === 1
+          ? 5.6
+          : (state.phase === 2 ? 6.3 : (b.finalCrescendo ? 7.8 : (b.chestArmorBroken ? 7.2 : 6.4)));
+        const aims = (ha.aimTargets && ha.aimTargets.length > 0)
+          ? ha.aimTargets
+          : [{
+              sx: 198,
+              sy: state.phase === 3 ? 180 : 250,
+              ax: ha.targetSide === "L" ? 142 : 254,
+              ay: 600,
+              color: ha.targetSide === "L" ? "#ff2ad4" : "#00f5e8"
+            }];
+        aims.forEach(aim => {
+          const isCurved = aim.cx !== undefined && aim.cy !== undefined;
+          const ang = Math.atan2(aim.ay - aim.sy, aim.ax - aim.sx);
+          const chord = Math.hypot(aim.ax - aim.sx, aim.ay - aim.sy);
+          const poly = Math.hypot(aim.cx - aim.sx, aim.cy - aim.sy) + Math.hypot(aim.ax - aim.cx, aim.ay - aim.cy);
+          const arcLen = isCurved ? 0.5 * (chord + poly) : chord;
+          const initVx = isCurved ? (aim.cx - aim.sx) : Math.cos(ang);
+          const initVy = isCurved ? (aim.cy - aim.sy) : Math.sin(ang);
+          const initNorm = Math.hypot(initVx, initVy) || 1;
+          ha.rings.push({
+            x: aim.sx,
+            y: aim.sy,
+            vx: (initVx / initNorm) * spd,
+            vy: (initVy / initNorm) * spd,
+            spd,
+            curved: isCurved,
+            p0x: aim.sx,
+            p0y: aim.sy,
+            cx: aim.cx,
+            cy: aim.cy,
+            p2x: aim.ax,
+            p2y: aim.ay,
+            u: 0,
+            du: spd / Math.max(120, arcLen),
+            r: 14,
+            rot: 0,
+            parried: false,
+            color: aim.color,
+            trail: []
+          });
         });
+        ha.aimTargets = [];
         if (window.sfx && window.sfx.shurikenThrow) window.sfx.shurikenThrow();
       }
     }
@@ -717,8 +986,32 @@ Object.assign(window.Stage5, {
       const ring = ha.rings[i];
       ring.trail.push({ x: ring.x, y: ring.y });
       if (ring.trail.length > 8) ring.trail.shift();
-      ring.x += ring.vx;
-      ring.y += ring.vy;
+      if (!ring.parried && ring.curved && ring.u < 1) {
+        ring.u += ring.du;
+        if (ring.u <= 1) {
+          const u = ring.u;
+          const omt = 1 - u;
+          const nx = omt * omt * ring.p0x + 2 * omt * u * ring.cx + u * u * ring.p2x;
+          const ny = omt * omt * ring.p0y + 2 * omt * u * ring.cy + u * u * ring.p2y;
+          ring.vx = nx - ring.x;
+          ring.vy = ny - ring.y;
+          ring.x = nx;
+          ring.y = ny;
+        } else {
+          const tx = 2 * (ring.p2x - ring.cx);
+          const ty = 2 * (ring.p2y - ring.cy);
+          const tLen = Math.hypot(tx, ty) || 1;
+          const exitSpd = ring.spd || 6.4;
+          ring.vx = (tx / tLen) * exitSpd;
+          ring.vy = (ty / tLen) * exitSpd;
+          ring.curved = false;
+          ring.x += ring.vx;
+          ring.y += ring.vy;
+        }
+      } else {
+        ring.x += ring.vx;
+        ring.y += ring.vy;
+      }
       ring.rot += ring.parried ? 0.45 : 0.25;
 
       if (ring.parried) {
@@ -729,20 +1022,32 @@ Object.assign(window.Stage5, {
         ring.vx = (dx / dist) * 12.0;
         ring.vy = (dy / dist) * 12.0;
         if (dist < 22) {
-          this.damageActiveBoss(state, 2, tgt.x, tgt.y, "⚡HALO PARRY!! -2HP");
+          this.healActiveBoss(state, state.phase === 3 ? 2 : 1, tgt.x, tgt.y);
           ha.rings.splice(i, 1);
           continue;
         }
       } else {
+        if (ring.y > 440 && window.Systems && Systems.tryNoaBitIntercept(state, ring.x, ring.y)) {
+          ha.rings.splice(i, 1);
+          continue;
+        }
         let clashedBall = false;
+        const clashPad = state.overdriveActive ? 17 : 3;
         for (const ball of state.balls) {
           if (ball.inShooterLane || ball._onWireRamp) continue;
           const d = Math.hypot(ball.x - ring.x, ball.y - ring.y);
-          if (d < ball.r + ring.r + 3) {
+          if (d < ball.r + ring.r + clashPad) {
             clashedBall = true;
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-            Particles.add(state, ring.x, ring.y, "#00f5e8", 14, 4.0);
-            Systems.addScore(state, ScoreTable.stage5.HALO_RING_CLASH, ring.x, ring.y, "⚔️CLASH!");
+            Particles.add(state, ring.x, ring.y, state.overdriveActive ? "#e6ff00" : "#00f5e8", state.overdriveActive ? 18 : 14, 4.2);
+            if (state.overdriveActive) {
+              Systems.addScore(state, ScoreTable.common.VOLT_SHATTER, ring.x, ring.y, "⚡VOLT SHATTER!", { fromDeckEffect: true });
+              if ((state.overdriveRank || 0) >= 2 && typeof this.applyDeckBonusDamage === "function") {
+                this.applyDeckBonusDamage(state, 1, ring.x, ring.y, "⚡VOLT COUNTER!", "#e6ff00", { source: "volt" });
+              }
+            } else {
+              Systems.addScore(state, ScoreTable.stage5.HALO_RING_CLASH, ring.x, ring.y, "⚔️CLASH!");
+            }
             ha.rings.splice(i, 1);
             break;
           }
@@ -817,7 +1122,7 @@ Object.assign(window.Stage5, {
 
   checkCollisions(ball, state, engine, substep = 0) {
     const b = state.boss;
-    if (!b || ball.inShooterLane || ball._inNavelTrap || ball._fusionStasis) return;
+    if (!b || ball.inShooterLane || ball._inNavelTrap || ball._fusionStasis || (ball._seraphStasis && ball._seraphStasis.grazeDelay <= 0)) return;
 
     const SUBSTEPS = (window.Physics && Physics.BALANCE.SUBSTEPS) || 8;
 
@@ -827,30 +1132,16 @@ Object.assign(window.Stage5, {
       minVy: -2.6,
       minSpeed: 9.5,
       maxSpeed: 14.8,
-      entryScore: ScoreTable.stage5.RAMP_ENTRY
+      entryScore: ScoreTable.stage5.RAMP_ENTRY,
+      onExit: (exitBall, rs) => {
+        exitBall._rampDropHalo = {
+          targetKey: rs.rampId === "left" ? "haloR" : "haloL",
+          timer: 46,
+          passed: false
+        };
+      }
     })) {
       return;
-    }
-
-    // C. Phase 3 中段ウイングパドル用サイドフィードレール（壁沿いに落ちてくる球を中段パドル根本へ滑らかに誘導）
-    if ((b.subFlipperDeploy || 0) > 0.3) {
-      const feedRails = [
-        { x1: 16,  y1: 356, x2: 25,  y2: 392 },
-        { x1: 380, y1: 356, x2: 371, y2: 392 }
-      ];
-      for (let ri = 0; ri < feedRails.length; ri++) {
-        const rl = feedRails[ri];
-        const hit = Physics.checkCapsuleHit(ball, rl.x1, rl.y1, rl.x2, rl.y2, 3.0);
-        if (hit) {
-          ball.x = hit.qx + hit.nx * (hit.minDist + 0.5);
-          ball.y = hit.qy + hit.ny * (hit.minDist + 0.5);
-          const vn = ball.vx * hit.nx + ball.vy * hit.ny;
-          if (vn < 0) {
-            ball.vx -= 1.15 * vn * hit.nx;
-            ball.vy -= 1.15 * vn * hit.ny;
-          }
-        }
-      }
     }
 
     if (substep !== 0) return;
@@ -858,6 +1149,10 @@ Object.assign(window.Stage5, {
     if (!ball.hitCooldowns) ball.hitCooldowns = {};
     for (const k in ball.hitCooldowns) {
       if (ball.hitCooldowns[k] > 0) ball.hitCooldowns[k]--;
+    }
+    if (ball._rampDropHalo) {
+      ball._rampDropHalo.timer--;
+      if (ball._rampDropHalo.timer <= 0) ball._rampDropHalo = null;
     }
 
     const hitCircle = (key, target, bounceSpd, cooldown, onHit) => {
@@ -925,8 +1220,8 @@ Object.assign(window.Stage5, {
       if (perpDist < ball.r + 9 && (ball.hitCooldowns.gamma || 0) <= 0) {
         ball.hitCooldowns.gamma = 20;
         const sign = ((ball.x - b.cosmic.x) * nx + (ball.y - b.cosmic.y) * ny) >= 0 ? 1 : -1;
-        ball.vx = nx * sign * 7.8;
-        ball.vy = ny * sign * 7.8;
+        ball.vx = nx * sign * 8.8;
+        ball.vy = ny * sign * 8.8;
         if (b.lastFlipActiveTimer <= 0) {
           ball.vy = Math.max(ball.vy, 1.8);
         }
@@ -1047,7 +1342,7 @@ Object.assign(window.Stage5, {
 
       const bothIntact = !b.elleBroken && !b.noelBroken;
 
-      const onTwinPartHit = (obj, spring, twin) => {
+      const onTwinPartHit = (obj, spring, twin, opts = null) => {
         const isAlternating = bothIntact && b.lastTwinHitSide && b.lastTwinHitSide !== obj.side;
         const dmg = isAlternating ? 2 : 1;
         b.lastTwinHitSide = obj.side;
@@ -1069,32 +1364,153 @@ Object.assign(window.Stage5, {
           if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
           this.checkIndividualTwinBreaks(state);
         } else {
-          if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+          if (!(opts && opts.softSfx) && window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
         }
         UI.updateHUD(state);
       };
 
-      // 1. Rotated Elliptical Halos
-      if (!b.haloL.broken) {
+      // 0. Ramp-Drop Halo Ring Pass-Through Bonus (Option 1: milk while unbroken with 0 damage to halo!)
+      if (ball._rampDropHalo && ball._rampDropHalo.timer > 0 && !ball._rampDropHalo.passed && ball.vy > 0) {
+        const haloCandidates = [
+          { key: "haloL", h: b.haloL, spring: b.elleSpring, twin: b.elle },
+          { key: "haloR", h: b.haloR, spring: b.noelSpring, twin: b.noel }
+        ];
+        for (let hi = 0; hi < haloCandidates.length; hi++) {
+          const { key, h, spring, twin } = haloCandidates[hi];
+          if (!h || h.broken) continue;
+          const dx = ball.x - h.x;
+          const dy = ball.y - h.y;
+          const cosT = Math.cos(-h.tilt);
+          const sinT = Math.sin(-h.tilt);
+          const lx = dx * cosT - dy * sinT;
+          const ly = dx * sinT + dy * cosT;
+          const ex = h.rx + ball.r * 1.0;
+          const ey = h.ry + ball.r * 1.35;
+          const normDistSq = (lx * lx) / (ex * ex) + (ly * ly) / (ey * ey);
+          if (normDistSq <= 1.0) {
+            ball._rampDropHalo.passed = true;
+            ball.hitCooldowns[key] = 20;
+            h.passFlashTimer = 46;
+            h.flash = 28;
+            if (twin) twin.blushTimer = 18;
+            if (spring) spring.vy -= 2.0;
+            if (state.shockwaves) {
+              state.shockwaves.push({ x: h.x, y: h.y, r: 8, maxR: 52, speed: 3.6, color: "#ffd700", lineWidth: 3.0, alpha: 1.0 });
+              state.shockwaves.push({ x: h.x, y: h.y, r: 6, maxR: 40, speed: 3.0, color: h.color, lineWidth: 2.4, alpha: 0.95 });
+            }
+            Particles.add(state, h.x, h.y, "#ffd700", 16, 4.4);
+            Particles.add(state, h.x, h.y, h.color, 12, 3.8);
+            if (window.sfx) {
+              if (window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+              if (window.sfx.exSpark) window.sfx.exSpark();
+            }
+            Systems.addScore(state, ScoreTable.stage5.HALO_PASS_BONUS, h.x, h.y - 16, "✨HALO RING PASS!!");
+            Systems.addFever(state, 8);
+            UI.updateHUD(state);
+            break;
+          }
+        }
+      }
+
+      // 1. Rotated Elliptical Halos (skip solid bounce while dropping through on a wire ramp pass)
+      const isRampHaloDrop = !!(ball._rampDropHalo && ball._rampDropHalo.timer > 0 && !ball._rampDropHalo.passed && ball.vy > 0);
+      if (!b.haloL.broken && !isRampHaloDrop) {
         hitRotatedEllipse("haloL", b.haloL, 9.2, 14, () => onTwinPartHit(b.haloL, b.elleSpring, b.elle));
       }
-      if (!b.haloR.broken) {
+      if (!b.haloR.broken && !isRampHaloDrop) {
         hitRotatedEllipse("haloR", b.haloR, 9.2, 14, () => onTwinPartHit(b.haloR, b.noelSpring, b.noel));
       }
 
-      // 2. Hair Ornament Targets (plays earBoing)
-      if (!b.odangoL.broken) {
-        hitCircle("odangoL", b.odangoL, 8.8, 14, () => {
+      // 2. Hair Ornament Targets (Elle odango: soft cushion dampened bounce; Noel headset: wobbles antennas)
+      if (!b.odangoL.broken && (ball.hitCooldowns.odangoL || 0) <= 0) {
+        const od = b.odangoL;
+        const dx = ball.x - od.x;
+        const dy = ball.y - od.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = ball.r + od.r;
+        if (dist < minDist && dist > 0.0001) {
+          ball.hitCooldowns.odangoL = 14;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          ball.x = od.x + nx * (minDist + 1.5);
+          ball.y = od.y + ny * (minDist + 1.5);
+
+          const vn = ball.vx * nx + ball.vy * ny;
+          const tx = -ny;
+          const ty = nx;
+          const vt = ball.vx * tx + ball.vy * ty;
+          const outVn = vn < 0 ? Math.min(5.2, Math.max(2.4, -vn * 0.44)) : Math.max(2.4, vn * 0.65);
+          const outVt = vt * 0.72;
+          ball.vx = nx * outVn + tx * outVt;
+          ball.vy = ny * outVn + ty * outVt;
+          const sp = Math.hypot(ball.vx, ball.vy);
+          if (sp > 6.2) {
+            ball.vx *= 6.2 / sp;
+            ball.vy *= 6.2 / sp;
+          }
+
           if (window.sfx && window.sfx.earBoing) window.sfx.earBoing();
-          onTwinPartHit(b.odangoL, b.elleSpring, b.elle);
-        });
+          if (window.sfx && window.sfx.softPuru) window.sfx.softPuru();
+          onTwinPartHit(od, b.elleSpring, b.elle, { softSfx: true });
+        }
       }
       if (!b.antennaR.broken) {
         hitCircle("antennaR", b.antennaR, 8.8, 14, () => {
+          const dir = ball.vx >= 0 ? 1 : -1;
+          if (b.noelAntR) b.noelAntR.angleVel += dir * 0.18;
+          if (b.noelAntL) b.noelAntL.angleVel += dir * 0.14;
           if (window.sfx && window.sfx.earBoing) window.sfx.earBoing();
           onTwinPartHit(b.antennaR, b.noelSpring, b.noel);
         });
       }
+
+      // 2B. Noel's Elastic Wobbling Headset Antennas
+      const antCfg = this.NOEL_ANTENNA_BOUNCE || { restitution: 0.72, kick: 2.5, maxSpeed: 12.8 };
+      [
+        { key: "noelAntR", ant: b.noelAntR, skipRootOverlap: true },
+        { key: "noelAntL", ant: b.noelAntL, skipRootOverlap: false }
+      ].forEach(({ key, ant, skipRootOverlap }) => {
+        if (!ant || (ball.hitCooldowns[key] || 0) > 0) return;
+        if (skipRootOverlap && (ball.hitCooldowns.antennaR || 0) >= 12) return;
+        const ep = this.getNoelAntennaEndpoints(ant);
+        const hit = Physics.checkCapsuleHit(ball, ep.ax, ep.ay, ep.bx, ep.by, ant.r);
+        if (!hit) return;
+
+        ball.hitCooldowns[key] = 10;
+        ball.x = hit.qx + hit.nx * (hit.minDist + 1.6);
+        ball.y = hit.qy + hit.ny * (hit.minDist + 1.6);
+
+        const vn = ball.vx * hit.nx + ball.vy * hit.ny;
+        if (vn < 0) {
+          ball.vx -= (1 + antCfg.restitution) * vn * hit.nx;
+          ball.vy -= (1 + antCfg.restitution) * vn * hit.ny;
+        }
+        ball.vx += hit.nx * antCfg.kick;
+        ball.vy += hit.ny * antCfg.kick;
+        const sp = Math.hypot(ball.vx, ball.vy);
+        if (sp > antCfg.maxSpeed) {
+          ball.vx *= antCfg.maxSpeed / sp;
+          ball.vy *= antCfg.maxSpeed / sp;
+        }
+
+        const rx = hit.qx - ep.ax;
+        const ry = hit.qy - ep.ay;
+        const torque = (rx * (-hit.ny) - ry * (-hit.nx)) * 0.0045;
+        ant.angleVel += Math.max(-0.26, Math.min(0.26, torque || ((ball.vx > 0 ? 1 : -1) * 0.16)));
+        ant.flash = 20;
+        if (b.noel) b.noel.blushTimer = 20;
+        if (b.noelSpring) b.noelSpring.vy -= 2.0;
+
+        if (window.sfx && window.sfx.earBoing) window.sfx.earBoing();
+        Particles.add(state, hit.qx, hit.qy, "#00f5e8", 12, 4.2);
+        Particles.add(state, hit.qx, hit.qy, "#ffffff", 6, 3.0);
+        if (!(ball._bumperGrace > 0)) {
+          ball._bumperGrace = 14;
+          Systems.addScore(state, ScoreTable.stage5.ANTENNA_BOUNCE, hit.qx, hit.qy - 12, "📡ANTENNA BOING!");
+        }
+        Systems.addFever(state, 3);
+        UI.updateHUD(state);
+      });
 
       // 3. Knee Ring Targets
       if (!b.kneeL.broken) {
@@ -1200,40 +1616,14 @@ Object.assign(window.Stage5, {
             Systems.addScore(state, ScoreTable.stage5.HARMONY_JACKPOT, 198, 120, "✨SERAPHIC HARMONY JACKPOT!!");
             Particles.addPopup(state, 198, 120, "✨HARMONY JACKPOT!!", "#e6ff00", 1.25);
             if (window.sfx && window.sfx.exSpark) window.sfx.exSpark();
-            this.damageActiveBoss(state, 3, 198, 205, "🎹HARMONY LASER -3HP!!");
+            this.damageActiveBoss(state, 3, 198, 205, "🎹HARMONY LASER!!", { source: "harmony" });
           }
           UI.updateHUD(state);
         });
       });
     }
 
-    // Rotating Cross-Seraphim Laser Collision (Phase 3)
-    if (state.phase === 3 && b.seraphAttack && b.seraphAttack.mode === "cross_fire") {
-      const cx = 198, cy = 224;
-      const bAng = b.seraphAttack.baseAngle;
-      for (let arm = 0; arm < 4; arm++) {
-        const ang = bAng + (arm * Math.PI) / 2;
-        const nx = -Math.sin(ang);
-        const ny = Math.cos(ang);
-        const perpDist = Math.abs((ball.x - cx) * nx + (ball.y - cy) * ny);
-        const alongDist = (ball.x - cx) * Math.cos(ang) + (ball.y - cy) * Math.sin(ang);
-        if (alongDist > 0 && perpDist < ball.r + 9 && (ball.hitCooldowns.crossLaser || 0) <= 0) {
-          ball.hitCooldowns.crossLaser = 16;
-          const sign = ((ball.x - cx) * nx + (ball.y - cy) * ny) >= 0 ? 1 : -1;
-          ball.vx = nx * sign * 8.2;
-          ball.vy = ny * sign * 8.2;
-          if (b.lastFlipActiveTimer <= 0) {
-            ball.vy = Math.max(ball.vy, 1.5);
-          }
-          if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-          Particles.add(state, ball.x, ball.y, arm % 2 === 0 ? "#ff2ad4" : "#00f5e8", 16, 4.5);
-          Systems.addScore(state, ScoreTable.stage5.CROSS_LASER_DEFLECT, ball.x, ball.y, "⚔️CROSS DEFLECTION!");
-          break;
-        }
-      }
-    }
-
-    // G. Phase 3 Collision Checks (Seraphia)
+    // G. Phase 3 Collision Checks (Seraphia) — Star & Pillar lasers freeze/graze balls via _seraphStasis in update()
     if (state.phase === 3) {
       // 0. Seraphia Navel Gravity Vortex (per-substep suction, drag & capture!)
       if (b.navelTrap && b.navelTrap.mode === "vortex" && !b.navelTrap.capturedBall) {
@@ -1324,13 +1714,14 @@ Object.assign(window.Stage5, {
             Particles.add(state, orb.x, orb.y, orb.color, 16, 4.8);
             if (orb.hp <= 0) {
               orb.active = false;
+              orb.chargeTimer = 0;
               if (window.sfx && window.sfx.armorBreak) window.sfx.armorBreak();
               state.shockwaves.push({ x: orb.x, y: orb.y, r: 8, maxR: 55, speed: 4.2, color: orb.color, lineWidth: 3.0, alpha: 1.0 });
               Particles.add(state, orb.x, orb.y, "#e6ff00", 20, 5.5);
               Systems.addScore(state, ScoreTable.stage5.ORB_SHATTER, orb.x, orb.y - 10, `💥${orb.label} SHATTER!!`);
               Systems.addFever(state, 8);
               if (b.cherubOrbs.every(o => !o.active)) {
-                b.orbCooldown = 480;
+                b.orbCooldown = 330;
                 Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage5.popup.coreOpen"), "#e6ff00", 1.15);
               }
             } else {
@@ -1359,6 +1750,8 @@ Object.assign(window.Stage5, {
             Systems.addFever(state, 8);
             if (b.core.hp <= 0) {
               this.triggerStageClear(state);
+            } else {
+              this.checkFinalCrescendo(state);
             }
           }
           UI.updateHUD(state);
@@ -1445,5 +1838,390 @@ Object.assign(window.Stage5, {
         }
       }
     }
+  },
+
+  spawnFeintSword(sa, x, y, targetX, delay, isCresc, isBroken, id = Math.random()) {
+    if (!sa) return;
+    if (!sa.swords) sa.swords = [];
+    const ang = Math.atan2(600 - y, targetX - x);
+    sa.swords.push({
+      id,
+      x,
+      y,
+      targetX,
+      vx: 0,
+      vy: 0,
+      spd: 2.6,
+      maxSpd: isCresc ? 9.6 : (isBroken ? 8.8 : 8.0),
+      accel: isCresc ? 0.38 : 0.32,
+      ang,
+      r: 13,
+      delay,
+      stage: "lock",
+      lockTimer: isCresc ? 14 : 18,
+      active: delay <= 0,
+      parried: false,
+      trail: []
+    });
+  },
+
+  stepOrbAttack(state, b, activePlayBalls) {
+    if (!b || state.stageCleared) return;
+    if (!b.orbAttack) b.orbAttack = { bolts: [] };
+    const bolts = b.orbAttack.bolts;
+    const isCresc = !!b.finalCrescendo;
+
+    if (b.cherubOrbs && (!b.fusionSeq || !b.fusionSeq.active)) {
+      b.cherubOrbs.forEach((orb, oi) => {
+        if (!orb.active || activePlayBalls.length === 0) return;
+        if ((orb.chargeTimer || 0) > 0) {
+          orb.chargeTimer--;
+          if (orb.chargeTimer === 0) {
+            orb.shotTimer = isCresc ? 105 : 145;
+            const baseAng = Math.atan2((orb.aimY || 600) - orb.y, (orb.aimX || 198) - orb.x);
+            const offsets = isCresc ? [-0.09, 0.09] : [0];
+            const bSpd = isCresc ? 6.4 : 5.4;
+            offsets.forEach(off => {
+              const a = baseAng + off;
+              bolts.push({
+                x: orb.x,
+                y: orb.y,
+                vx: Math.cos(a) * bSpd,
+                vy: Math.sin(a) * bSpd,
+                r: 9.5,
+                color: orb.color,
+                parried: false,
+                trail: []
+              });
+            });
+            if (window.sfx) {
+              if (window.sfx.laserPew) window.sfx.laserPew();
+              else if (window.sfx.shurikenThrow) window.sfx.shurikenThrow();
+            }
+          }
+        } else {
+          orb.shotTimer = (orb.shotTimer !== undefined ? orb.shotTimer : 120) - 1;
+          if (orb.shotTimer <= 0) {
+            orb.chargeTimer = isCresc ? 24 : 30;
+            orb.aimX = (oi === 0 ? 250 : 146) + (Math.random() - 0.5) * 32;
+            orb.aimY = 600;
+          }
+        }
+      });
+    }
+
+    if (bolts.length === 0) return;
+    const flippers = Physics.getFlippers(state);
+    for (let bi = bolts.length - 1; bi >= 0; bi--) {
+      const bolt = bolts[bi];
+      bolt.trail.push({ x: bolt.x, y: bolt.y });
+      if (bolt.trail.length > 6) bolt.trail.shift();
+      bolt.x += bolt.vx;
+      bolt.y += bolt.vy;
+
+      if (bolt.parried) {
+        const tgt = this.getActiveBossTarget(state);
+        const dx = tgt.x - bolt.x;
+        const dy = tgt.y - bolt.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const hSpd = (bolt.rally || 1) >= 2 ? 14.0 : 12.5;
+        bolt.vx = (dx / dist) * hSpd;
+        bolt.vy = (dy / dist) * hSpd;
+        if (dist < 24) {
+          if (typeof this.tryBossCounterParry === "function" && this.tryBossCounterParry(state, b, bolt, tgt, "bolt")) {
+            continue;
+          }
+          const rally = bolt.rally || 1;
+          const dmgLabel = rally >= 2 ? `🔥RALLY x${rally} BREAK!!` : "⚡ORB COUNTER!";
+          this.damageActiveBoss(state, 1, tgt.x, tgt.y, dmgLabel, { source: "parry", rally });
+          if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
+          bolts.splice(bi, 1);
+          continue;
+        }
+      } else {
+        if (bolt.y > 440 && window.Systems && Systems.tryNoaBitIntercept(state, bolt.x, bolt.y)) {
+          bolts.splice(bi, 1);
+          continue;
+        }
+        let clashed = false;
+        const clashPad = state.overdriveActive ? 16 : 3;
+        for (const ball of state.balls) {
+          if (ball.inShooterLane || ball._onWireRamp) continue;
+          if (Math.hypot(ball.x - bolt.x, ball.y - bolt.y) < ball.r + bolt.r + clashPad) {
+            clashed = true;
+            if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+            Particles.add(state, bolt.x, bolt.y, state.overdriveActive ? "#e6ff00" : bolt.color, state.overdriveActive ? 18 : 12, 4.0);
+            if (state.overdriveActive) {
+              Systems.addScore(state, ScoreTable.common.VOLT_SHATTER, bolt.x, bolt.y, "⚡VOLT SHATTER!", { fromDeckEffect: true });
+              if ((state.overdriveRank || 0) >= 2 && typeof this.applyDeckBonusDamage === "function") {
+                this.applyDeckBonusDamage(state, 1, bolt.x, bolt.y, "⚡VOLT COUNTER!", "#e6ff00", { source: "volt" });
+              }
+            } else {
+              Systems.addScore(state, ScoreTable.stage5.ORB_BOLT_CLASH, bolt.x, bolt.y, "✨BOLT CLASH!");
+            }
+            bolts.splice(bi, 1);
+            break;
+          }
+        }
+        if (clashed) continue;
+
+        let parriedNow = false;
+        let hitFlipper = false;
+        let hitFlipIsLeft = true;
+        for (let fi = 0; fi < flippers.length; fi++) {
+          const f = flippers[fi];
+          const fst = Physics.flipperState[fi];
+          const tipX = f.px + Math.cos(fst.angle) * f.len;
+          const tipY = f.py + Math.sin(fst.angle) * f.len;
+          const cp = Physics.closestPointOnSeg(bolt.x, bolt.y, f.px, f.py, tipX, tipY);
+          if (Math.hypot(bolt.x - cp.x, bolt.y - cp.y) < bolt.r + 6.5) {
+            hitFlipper = true;
+            hitFlipIsLeft = !!f.isLeft;
+            fst.swingHit = true;
+            Physics.flipperState[f.isLeft ? 0 : 1].swingHit = true;
+            const omega = Math.abs(fst.angle - fst.prevAngle) * 60;
+            if (omega > 0.12 || (fst.justPressedTimer || 0) > 0) {
+              parriedNow = true;
+            }
+            break;
+          }
+        }
+
+        if (parriedNow) {
+          this.handlePlayerParryReturn(state, bolt, ScoreTable.stage5.ORB_BOLT_PARRY, "⚡PARRY!", "#e6ff00", 5);
+          continue;
+        } else if (hitFlipper) {
+          const pinKey = hitFlipIsLeft ? "flipperPinL" : "flipperPinR";
+          state[pinKey] = Math.max(state[pinKey] || 0, 3);
+          b[hitFlipIsLeft ? "pinStyleL" : "pinStyleR"] = "halo";
+          if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
+          Particles.add(state, bolt.x, bolt.y, bolt.color, 14, 3.8);
+          Particles.addPopup(state, bolt.x, bolt.y - 14, t("stage5.popup.orbBoltPin"), bolt.color, 1.04);
+          bolts.splice(bi, 1);
+          continue;
+        }
+      }
+
+      if (bolt.y > 670 || bolt.y < -30 || bolt.x < -30 || bolt.x > 450) {
+        bolts.splice(bi, 1);
+      }
+    }
+  },
+
+  handlePlayerParryReturn(state, proj, baseScore, defaultLabel, color, feverGain) {
+    proj.rally = (proj.rally || 0) + 1;
+    proj.parried = true;
+    if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
+    state.shockwaves.push({ x: proj.x, y: proj.y, r: 8, maxR: 48, speed: 4.5, color: proj.countered ? "#ff1493" : color, lineWidth: 3.0, alpha: 1.0 });
+    Particles.add(state, proj.x, proj.y, proj.countered ? "#ff1493" : color, 20, 5.2);
+    if (proj.countered) {
+      proj.countered = false;
+      const rallyTxt = t("stage5.popup.rallyReturn", { rally: proj.rally });
+      Particles.addPopup(state, proj.x, proj.y - 16, rallyTxt, "#ff1493", 1.24);
+      Systems.addScore(state, ScoreTable.stage5.PARRY_RALLY_BONUS * proj.rally, proj.x, proj.y, rallyTxt);
+      Systems.addFever(state, 10);
+    } else {
+      Particles.addPopup(state, proj.x, proj.y - 14, defaultLabel, color, 1.2);
+      Systems.addScore(state, baseScore, proj.x, proj.y, "⚔️PARRY!");
+      Systems.addFever(state, feverGain);
+    }
+  },
+
+  tryBossCounterParry(state, b, proj, tgt, kind) {
+    if (!b || state.phase !== 3 || !b.chestArmorBroken || state.stageCleared) return false;
+    const rally = proj.rally || 1;
+    if (rally >= 3) return false;
+    let doCounter = false;
+    if (b._forceCounterParry === true) doCounter = true;
+    else if (b._forceCounterParry === false) doCounter = false;
+    else {
+      const chance = rally === 1 ? (b.finalCrescendo ? 0.65 : 0.45) : (b.finalCrescendo ? 0.40 : 0.25);
+      doCounter = Math.random() < chance;
+    }
+    if (!doCounter) return false;
+
+    proj.parried = false;
+    proj.countered = true;
+    proj.trail = [];
+    const tx = Math.random() < 0.5 ? 140 : 256;
+    const ty = 600;
+    const returnSpd = Math.min(10.8, 8.4 + rally * 1.1);
+    const a = Math.atan2(ty - proj.y, tx - proj.x);
+    proj.vx = Math.cos(a) * returnSpd;
+    proj.vy = Math.sin(a) * returnSpd;
+    if (kind === "sword") {
+      proj.stage = "fly";
+      proj.accel = 0;
+      proj.spd = returnSpd;
+      proj.ang = a;
+    }
+    state.hitStopTimer = Math.max(state.hitStopTimer || 0, 3);
+    b.expression = "wink";
+    b.expressionTimer = 28;
+    const fxX = (tgt && tgt.x) || proj.x;
+    const fxY = (tgt && tgt.y) || proj.y;
+    state.shockwaves.push({ x: fxX, y: fxY, r: 8, maxR: 56, speed: 4.8, color: "#ff1493", lineWidth: 3.2, alpha: 1.0 });
+    state.shockwaves.push({ x: fxX, y: fxY, r: 6, maxR: 42, speed: 4.2, color: "#ffd700", lineWidth: 2.4, alpha: 0.95 });
+    Particles.add(state, fxX, fxY, "#ff1493", 22, 5.4);
+    if (window.sfx) {
+      if (window.sfx.metalBumper) window.sfx.metalBumper();
+      if (window.sfx.shurikenParry) window.sfx.shurikenParry();
+    }
+    Particles.addPopup(state, fxX, fxY - 16, t("stage5.popup.counterParry", { rally: rally + 1 }), "#ff1493", 1.18);
+    return true;
+  },
+
+  isBallGrazingCross(ball, cx, cy, bAng, armCount) {
+    for (let arm = 0; arm < armCount; arm++) {
+      const ang = bAng + (arm * Math.PI * 2) / armCount;
+      const nx = -Math.sin(ang);
+      const ny = Math.cos(ang);
+      const perpSigned = (ball.x - cx) * nx + (ball.y - cy) * ny;
+      const perpDist = Math.abs(perpSigned);
+      const alongDist = (ball.x - cx) * Math.cos(ang) + (ball.y - cy) * Math.sin(ang);
+      if (alongDist > 0 && perpDist < ball.r + 19) {
+        return { hit: true, nx, ny, sign: perpSigned >= 0 ? 1 : -1 };
+      }
+    }
+    return null;
+  },
+
+  isBallGrazingPillars(ball, pillars) {
+    if (!pillars || ball.y <= 16 || ball.y >= 615) return null;
+    for (let pi = 0; pi < pillars.length; pi++) {
+      const p = pillars[pi];
+      const halfW = (p.w || 26) * 0.52;
+      if (Math.abs(ball.x - p.x) < ball.r + halfW + 10) {
+        return { hit: true, dir: ball.x >= p.x ? 1 : -1, p };
+      }
+    }
+    return null;
+  },
+
+  applyLaserGrazeKnockback(state, ball, mode, hit) {
+    Systems.addScore(state, ScoreTable.stage5.LASER_GRAZE_BONUS, ball.x, ball.y - 12, t("stage5.popup.laserGraze"));
+    state.shockwaves.push({ x: ball.x, y: ball.y, r: 6, maxR: 44, speed: 4.2, color: "#ffd700", lineWidth: 2.8, alpha: 0.95 });
+    Particles.add(state, ball.x, ball.y, "#e6ff00", 18, 4.8);
+    if (window.sfx && window.sfx.gammaBurst) window.sfx.gammaBurst();
+    if (mode === "pillar") {
+      ball.vx = hit.dir * 8.2;
+      ball.vy = -4.2;
+    } else {
+      ball.vx = hit.nx * hit.sign * 9.0;
+      ball.vy = hit.ny * hit.sign * 9.0;
+    }
+    ball._seraphStasis = {
+      mode,
+      savedVx: 0,
+      savedVy: 0,
+      grazeDelay: 9,
+      grazed: true,
+      originX: 198,
+      originY: 224,
+      totalRot: 0
+    };
+  },
+
+  captureSeraphStasis(state, b, mode) {
+    if (!state || !state.balls || !b) return;
+    const sa = b.seraphAttack || {};
+    state.balls.forEach(ball => {
+      if (!ball || ball.inShooterLane || ball._onWireRamp || ball._inNavelTrap || ball._fusionStasis || ball.y >= 605) return;
+      if (ball._seraphStasis) return;
+      ball._magnetHeld = 0;
+      const grazeHit = mode === "pillar"
+        ? this.isBallGrazingPillars(ball, sa.pillars)
+        : this.isBallGrazingCross(ball, 198, 224, sa.baseAngle || 0, sa.armCount || 4);
+      if (grazeHit) {
+        this.applyLaserGrazeKnockback(state, ball, mode, grazeHit);
+      } else {
+        const savedVx = ball.vx;
+        const savedVy = ball.vy;
+        ball.vx = 0;
+        ball.vy = 0;
+        ball._seraphStasis = {
+          mode,
+          savedVx,
+          savedVy,
+          grazeDelay: 0,
+          grazed: false,
+          originX: 198,
+          originY: 224,
+          totalRot: 0
+        };
+      }
+    });
+  },
+
+  stepSeraphStasis(state, b, mode, dAng = 0) {
+    if (!state || !state.balls || !b) return;
+    this.captureSeraphStasis(state, b, mode);
+    const sa = b.seraphAttack || {};
+    state.balls.forEach(ball => {
+      const st = ball && ball._seraphStasis;
+      if (!st) return;
+      if (st.grazeDelay > 0) {
+        st.grazeDelay--;
+        if (st.grazeDelay <= 0) {
+          st.savedVx = ball.vx;
+          st.savedVy = ball.vy;
+          ball.vx = 0;
+          ball.vy = 0;
+        }
+        return;
+      }
+      ball.vx = 0;
+      ball.vy = 0;
+      if (mode === "pillar" && !st.grazed && sa.pillars) {
+        const sweepHit = this.isBallGrazingPillars(ball, sa.pillars);
+        if (sweepHit) {
+          this.applyLaserGrazeKnockback(state, ball, mode, sweepHit);
+          return;
+        }
+      }
+      if (mode === "cross" && dAng !== 0) {
+        const cx = st.originX;
+        const cy = st.originY;
+        const rx = ball.x - cx;
+        const ry = ball.y - cy;
+        let r = Math.hypot(rx, ry);
+        const theta = Math.atan2(ry, rx) + dAng;
+        const R_SAFE = 144;
+        if (r > R_SAFE) {
+          r = Math.max(R_SAFE, r - Math.max(2.2, (r - R_SAFE) * 0.08));
+        }
+        ball.x = Math.max(38, Math.min(358, cx + Math.cos(theta) * r));
+        ball.y = Math.max(48, Math.min(540, cy + Math.sin(theta) * r));
+        st.totalRot += dAng;
+      }
+    });
+  },
+
+  releaseSeraphStasis(state, reason = "end") {
+    if (!state || !state.balls) return;
+    state.balls.forEach(ball => {
+      const st = ball && ball._seraphStasis;
+      if (!st) return;
+      ball._seraphStasis = null;
+      if (reason === "clear") {
+        ball.vx = 0;
+        ball.vy = 0;
+        return;
+      }
+      if (st.grazeDelay > 0) {
+        return;
+      }
+      if (st.mode === "pillar") {
+        ball.vx = 0;
+        ball.vy = 0;
+        Particles.add(state, ball.x, ball.y, "#00f5e8", 10, 3.2);
+      } else if (st.mode === "cross") {
+        const cosR = Math.cos(st.totalRot);
+        const sinR = Math.sin(st.totalRot);
+        ball.vx = st.savedVx * cosR - st.savedVy * sinR;
+        ball.vy = st.savedVx * sinR + st.savedVy * cosR;
+        Particles.add(state, ball.x, ball.y, "#ffd700", 12, 3.8);
+      }
+    });
   }
 });

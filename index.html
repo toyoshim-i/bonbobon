@@ -316,10 +316,15 @@
                       <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage4Name">電脳夜桜カスミ</span>
                       <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage4Desc">立体レール・手裏剣</span>
                     </button>
-                    <button id="btnSelectStage5" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
-                      <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">FINAL STAGE</span>
-                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage5Name">双子電脳天使 エル＆ノエル</span>
-                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage5Desc">へそシンクロ光線・クロスランプ・ツインビット</span>
+                    <button id="btnSelectStage5" type="button" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#00f5d4] group-hover:text-white">STAGE 5-A</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage5Name">5面(前半) 双子天使</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage5Desc">エル＆ノエル・光輪・ランプ</span>
+                    </button>
+                    <button id="btnSelectStage5B" type="button" class="p-1.5 rounded-xl bg-[#281058]/80 hover:bg-[#ff1493]/20 border-2 border-[#ff1493] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group">
+                      <span class="text-[9.5px] font-black text-[#ff1493] group-hover:text-white">STAGE 5-B</span>
+                      <span class="text-[9px] font-bold text-white leading-tight" data-i18n="menu.stage5BName">5面(後半) 熾天使</span>
+                      <span class="text-[7px] text-gray-400 leading-tight" data-i18n="menu.stage5BDesc">セラフィア・反転翼・終末楽章</span>
                     </button>
                     <button id="btnSelectEnding" class="p-1.5 rounded-xl bg-[#041f12]/90 hover:bg-[#34ff8a]/20 border-2 border-[#34ff8a] flex flex-col items-center gap-0.5 transition cursor-pointer text-center group col-span-2">
                       <span class="text-[9.5px] font-black text-[#34ff8a] group-hover:text-white">ENDING (DIRECT)</span>
@@ -837,38 +842,38 @@
 
 </div><!-- END DESKTOP RESPONSIVE WRAPPER -->
 
-  <script src="./js/i18n/i18n.js?v=211"></script>
-  <script src="./js/i18n/ja.js?v=211"></script>
-  <script src="./js/i18n/en.js?v=211"></script>
+  <script src="./js/i18n/i18n.js?v=212"></script>
+  <script src="./js/i18n/ja.js?v=226"></script>
+  <script src="./js/i18n/en.js?v=226"></script>
   <script src="./js/stage1_assets.js?v=198"></script>
   <script src="./js/stage2_assets.js?v=198"></script>
   <script src="./js/stage3_assets.js?v=198"></script>
   <script src="./js/stage4_assets.js?v=198"></script>
   <script src="./js/stage5_assets.js?v=198"></script>
   <script src="./js/audio.js?v=211"></script>
-  <script src="./js/engine/score_table.js?v=211"></script>
-  <script src="./js/engine/particles.js?v=211"></script>
-  <script src="./js/engine/physics.js?v=211"></script>
-  <script src="./js/engine/systems.js?v=211"></script>
-  <script src="./js/engine/stage_common.js?v=211"></script>
-  <script src="./js/engine/ui.js?v=211"></script>
+  <script src="./js/engine/score_table.js?v=226"></script>
+  <script src="./js/engine/particles.js?v=213"></script>
+  <script src="./js/engine/physics.js?v=226"></script>
+  <script src="./js/engine/systems.js?v=226"></script>
+  <script src="./js/engine/stage_common.js?v=219"></script>
+  <script src="./js/engine/ui.js?v=226"></script>
   <script src="./js/stages/stage1.js?v=211"></script>
-  <script src="./js/stages/stage1_physics.js?v=211"></script>
+  <script src="./js/stages/stage1_physics.js?v=212"></script>
   <script src="./js/stages/stage1_render.js?v=211"></script>
   <script src="./js/stages/stage2.js?v=211"></script>
-  <script src="./js/stages/stage2_physics.js?v=211"></script>
+  <script src="./js/stages/stage2_physics.js?v=212"></script>
   <script src="./js/stages/stage2_render.js?v=211"></script>
   <script src="./js/stages/stage3.js?v=211"></script>
-  <script src="./js/stages/stage3_physics.js?v=211"></script>
+  <script src="./js/stages/stage3_physics.js?v=212"></script>
   <script src="./js/stages/stage3_render.js?v=211"></script>
-  <script src="./js/stages/stage4.js?v=211"></script>
-  <script src="./js/stages/stage4_physics.js?v=211"></script>
-  <script src="./js/stages/stage4_render.js?v=211"></script>
-  <script src="./js/stages/stage5.js?v=211"></script>
-  <script src="./js/stages/stage5_physics.js?v=211"></script>
-  <script src="./js/stages/stage5_render.js?v=211"></script>
-  <script src="./js/engine/game_engine.js?v=211"></script>
-  <script src="./js/game_flow.js?v=211"></script>
+  <script src="./js/stages/stage4.js?v=221"></script>
+  <script src="./js/stages/stage4_physics.js?v=213"></script>
+  <script src="./js/stages/stage4_render.js?v=221"></script>
+  <script src="./js/stages/stage5.js?v=227"></script>
+  <script src="./js/stages/stage5_physics.js?v=226"></script>
+  <script src="./js/stages/stage5_render.js?v=226"></script>
+  <script src="./js/engine/game_engine.js?v=226"></script>
+  <script src="./js/game_flow.js?v=212"></script>
   <script src="./js/main.js?v=211"></script>
 </body>
 </html>

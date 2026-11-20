@@ -266,7 +266,7 @@ window.GameEngine = {
     UI.showCutin(this.getStageWarningCutin(1), 220);
   },
 
-  startPracticeStage(stageNum) {
+  startPracticeStage(stageNum, opts = null) {
     if (window.GameFlow) {
       if (GameFlow.stopAttractDemo) GameFlow.stopAttractDemo();
       if (GameFlow.hideAllModals) GameFlow.hideAllModals();
@@ -284,8 +284,15 @@ window.GameEngine = {
     this.state.inEnding = false;
     this.state.gameOver = false;
     this.loadStage(targetStage);
-    UI.updateHUD(this.state);
-    UI.showCutin(this.getStageWarningCutin(stageNum), 220);
+    if (opts && opts.startPhase === 3 && targetStage && typeof targetStage.enterPhase3Direct === "function") {
+      targetStage.enterPhase3Direct(this.state);
+      if (typeof targetStage.updateStatusMonitor === "function") targetStage.updateStatusMonitor(this.state);
+      UI.updateHUD(this.state);
+      UI.showCutin(t("stage5.cutin.wingPaddles"), 220);
+    } else {
+      UI.updateHUD(this.state);
+      UI.showCutin(this.getStageWarningCutin(stageNum), 220);
+    }
   },
 
   advanceToNextStage(chosenRelic) {

@@ -427,7 +427,7 @@ Object.assign(window.Stage4, {
           Systems.addFever(state, 10);
           if (state.phase === 3 && b.ninjutsu.clones.every(c => !c.active)) {
             b.ninjutsu.cloneCooldown = 480;
-            Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
+            Particles.addPopup(state, b.core.x, b.core.y + 24, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
           }
           if (b.lastFlipActiveTimer > 0) {
             b.ninjutsu.thrownShurikens.push({
@@ -623,7 +623,7 @@ Object.assign(window.Stage4, {
         if (window.sfx) window.sfx.exSpark();
         state.shockwaves.push({ x: b.core.x, y: b.core.y, r: 6, maxR: 50, speed: 4.2, color: "#00f5d4", lineWidth: 2.8, alpha: 1.0 });
         Particles.add(state, b.core.x, b.core.y, "#00f5d4", 20, 5.4);
-        Systems.addScore(state, ScoreTable.stage4.CORE_HIT, b.core.x, b.core.y - 14, `💎CORE HP:${b.core.hp}`);
+        Systems.addScore(state, ScoreTable.stage4.CORE_HIT, b.core.x, b.core.y + 24, `💎CORE HP:${b.core.hp}`);
         Systems.addFever(state, 8);
         if (b.core.hp <= 0) {
           this.triggerStageClear(state);
@@ -631,7 +631,7 @@ Object.assign(window.Stage4, {
       } else {
         if (window.sfx) window.sfx.slingshot();
         const msg = state.phase >= 3 ? t("stage4.popup.cloneBarrier") : "🔒CHAKRA BARRIER";
-        Systems.addScore(state, ScoreTable.stage4.CORE_BARRIER, b.core.x, b.core.y - 12, msg);
+        Systems.addScore(state, ScoreTable.stage4.CORE_BARRIER, b.core.x, b.core.y + 24, msg);
       }
       UI.updateHUD(state);
     });

@@ -260,7 +260,7 @@ window.Particles = {
     return { curHP, maxHP };
   },
 
-  // opts: { innerColor?: string, isLocked?: boolean, isCritical?: boolean, isAttack?: boolean }
+  // opts: { innerColor?: string, isLocked?: boolean, isCritical?: boolean, isAttack?: boolean, labelBelow?: boolean }
   drawCyberTargetGuide(ctx, animTick, x, y, r, color, flash, rot, label, subInfo, opts = null) {
     ctx.save();
     ctx.translate(x, y);
@@ -270,6 +270,7 @@ window.Particles = {
     const isCritical = !!(opts && opts.isCritical);
     const isAttack = !isLocked && (!!(opts && opts.isAttack) || isCritical || color === this.TARGET_COLORS.ATTACK);
     const innerColor = opts && opts.innerColor ? opts.innerColor : null;
+    const labelBelow = !!(opts && opts.labelBelow);
     const effectiveRot = isLocked ? 0 : (rot || 0);
 
     const parsedHP = this._parseSubHP(subInfo);
@@ -400,24 +401,26 @@ window.Particles = {
 
     // 5. Small Cyber Label & HP/Status HUD
     if (label && !isHit) {
+      const labelY = labelBelow ? (rMain + 10) : (-rMain - 4);
       ctx.font = "bold 8px monospace";
       ctx.textAlign = "center";
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 2.5;
-      ctx.strokeText(label, 0, -rMain - 4);
+      ctx.strokeText(label, 0, labelY);
       ctx.fillStyle = color;
       ctx.globalAlpha = isLocked ? 0.8 : 0.95;
-      ctx.fillText(label, 0, -rMain - 4);
+      ctx.fillText(label, 0, labelY);
     }
     if (subInfo && !isHit) {
+      const subY = (labelBelow && label) ? (rMain + 19) : (rMain + 10);
       ctx.font = "bold 7px monospace";
       ctx.textAlign = "center";
       ctx.strokeStyle = "#000000";
       ctx.lineWidth = 2.0;
-      ctx.strokeText(subInfo, 0, rMain + 10);
+      ctx.strokeText(subInfo, 0, subY);
       ctx.fillStyle = "#ffffff";
       ctx.globalAlpha = isLocked ? 0.8 : 0.95;
-      ctx.fillText(subInfo, 0, rMain + 10);
+      ctx.fillText(subInfo, 0, subY);
 
       // HP セグメントバー（subInfo が "HP:x" または "HP:x/y" の場合、視覚的なHPブロックを描画）
       if (parsedHP) {
@@ -425,7 +428,7 @@ window.Particles = {
         const barW = Math.max(20, r * 1.2);
         const barH = 3;
         const startX = -barW / 2;
-        const startY = rMain + 13;
+        const startY = subY + 3;
 
         ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
         ctx.fillRect(startX - 1, startY - 1, barW + 2, barH + 2);

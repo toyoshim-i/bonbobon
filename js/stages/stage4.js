@@ -29,8 +29,8 @@ window.Stage4 = {
     this.assets.charSealBrokenImg.src = "./assets/stage4/char_seal_broken.png" + v;
     this.assets.charSuitBrokenImg.src = "./assets/stage4/char_suit_broken.png" + v;
     this.assets.greavesBrokenImg.src = "./assets/stage4/greaves_broken.png" + v;
-    this.assets.stoleBackImg.src = "./assets/stage4/stole_back.png" + v;
-    this.assets.stoleFrontImg.src = "./assets/stage4/stole_front.png" + v;
+    this.assets.stoleBackImg.src = "./assets/stage4/stole_back.png?v=221";
+    this.assets.stoleFrontImg.src = "./assets/stage4/stole_front.png?v=221";
     this.assets.defeatCgImg.src = "./assets/stage4/defeat_cg.jpg" + v;
     this.assets.facePatchImgs = Systems.loadFacePatches(
       "stage4",
@@ -541,7 +541,7 @@ window.Stage4 = {
           if (window.sfx) window.sfx.armorBreak();
           if (b.ninjutsu.clones.every(c => !c.active)) {
             b.ninjutsu.cloneCooldown = 480;
-            Particles.addPopup(state, b.core.x, b.core.y - 16, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
+            Particles.addPopup(state, b.core.x, b.core.y + 24, t("stage4.popup.coreOpen"), "#e6ff00", 1.15);
           }
         }
       } else if (b.coreGraceTimer <= 0) {
@@ -550,7 +550,7 @@ window.Stage4 = {
         b.core.flash = 24;
         state.shockwaves.push({ x: b.core.x, y: b.core.y, r: 8, maxR: 64, speed: 4.6, color: "#00f5d4", lineWidth: 3.2, alpha: 1.0 });
         Particles.add(state, b.core.x, b.core.y, "#00f5d4", 24, 6.0);
-        Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P3_CORE, b.core.x, b.core.y - 12, label);
+        Systems.addScore(state, ScoreTable.stage4.SKILL_DMG_P3_CORE, b.core.x, b.core.y + 24, label);
         if (window.sfx) window.sfx.exSpark();
         if (b.core.hp <= 0) {
           this.triggerStageClear(state);

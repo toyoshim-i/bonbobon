@@ -207,8 +207,8 @@ Object.assign(window.Stage4, {
     const charSuitBroken = makeScaled(this.assets.charSuitBrokenImg);
     const stoleBackScaled = makeScaled(this.assets.stoleBackImg);
     const stoleFrontScaled = makeScaled(this.assets.stoleFrontImg);
-    stoleBackScaled.bounds = computeOpaqueBounds(stoleBackScaled, 164, 466);
-    stoleFrontScaled.bounds = computeOpaqueBounds(stoleFrontScaled, 214, 436);
+    stoleBackScaled.bounds = computeOpaqueBounds(stoleBackScaled, 0, H);
+    stoleFrontScaled.bounds = computeOpaqueBounds(stoleFrontScaled, 0, H);
 
     // マトリックス 0/1 グリフの事前ベイク（fillText 200回/フレームの負荷を排除）
     const makeGlyph = (ch, color) => {
@@ -307,13 +307,14 @@ Object.assign(window.Stage4, {
     const baseAmp = 3.6 + wind * 3.8;
     const speed = 0.08 + wind * 0.048;
 
-    const yStart = bounds ? bounds.y0 : (isFront ? 214 : 164);
-    const yEnd = Math.min(H, bounds ? bounds.y1 : (isFront ? 436 : 466));
-    const stripH = 12;
+    const yStart = bounds ? bounds.y0 : 0;
+    const yEnd = Math.min(H, bounds ? bounds.y1 : H);
+    const stripH = 3;
+    const alignedStart = Math.floor(yStart / stripH) * stripH;
 
     ctx.save();
-    ctx.globalAlpha = isFront ? 0.92 : 0.96;
-    for (let sy = yStart; sy < yEnd; sy += stripH) {
+    ctx.globalAlpha = 0.94;
+    for (let sy = alignedStart; sy < yEnd; sy += stripH) {
       const sh = Math.min(stripH, yEnd - sy);
       let anchorWeight = 1.0;
       if (sy < 236) {
@@ -653,9 +654,9 @@ Object.assign(window.Stage4, {
     // 6. Phase 3: 首元の羽衣チャクラ核 ＆ 頭頂水引クリティカルサブコア
     if (state.phase >= 3 && b.core.unlocked) {
       if (this.isCoreShieldedByBunshin(state)) {
-        drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "CHAKRA CORE", t("stage4.render.barrier"), { isLocked: true });
+        drawGuide(b.core.x, b.core.y, b.core.r, TC.LOCKED, b.core.flash, 0, "CHAKRA CORE", t("stage4.render.barrier"), { isLocked: true, labelBelow: true });
       } else {
-        drawGuide(b.core.x, b.core.y, b.core.r, TC.ATTACK, b.core.flash, animTick * 0.045, "★CHAKRA CORE★", `HP:${b.core.hp}/${b.core.maxHP}`, { isCritical: true, innerColor: TC.SCORE });
+        drawGuide(b.core.x, b.core.y, b.core.r, TC.ATTACK, b.core.flash, animTick * 0.045, "★CHAKRA CORE★", `HP:${b.core.hp}/${b.core.maxHP}`, { isCritical: true, innerColor: TC.SCORE, labelBelow: true });
         drawGuide(b.hairpinCore.x, b.hairpinCore.y, b.hairpinCore.r, TC.ATTACK, b.hairpinCore.flash, -animTick * 0.045, "KAMI-KAZARI", "CRIT ×2!", { isCritical: true, innerColor: TC.SCORE });
       }
     }

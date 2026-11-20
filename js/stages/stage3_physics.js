@@ -1416,5 +1416,114 @@ Object.assign(window.Stage3, {
 
   triggerStageClear(state, engine) {
     this.triggerClear(state, engine);
+  },
+
+  applyDeckBonusDamage(state, dmg, srcX, srcY, fxLabel = "⚡CHAIN!", fxColor = "#e6ff00", opts = null) {
+    const b = state && state.boss;
+    if (!b || state.stageCleared) return [];
+    const chainCount = (opts && opts.chainCount) || 1;
+    const candidates = [];
+
+    if (state.phase === 1 && b.kneePad && !b.kneePad.broken && b.kneePad.hp > 0) {
+      candidates.push({
+        x: b.kneePad.x, y: b.kneePad.y,
+        apply: (d) => {
+          b.kneePad.flash = 20;
+          b.kneePad.hp = Math.max(0, b.kneePad.hp - d);
+          if (b.kneePad.hp === 0) {
+            b.kneePad.broken = true;
+            Particles.triggerArmorBreakEffect(state, "knee_armor", b.kneePad.x, b.kneePad.y);
+            Systems.addScore(state, ScoreTable.stage3.KNEE_PAD_PURGE, b.kneePad.x, b.kneePad.y, "★KNEE PAD PURGED!★", { fromDeckEffect: true });
+            UI.showCutin(t("stage3.cutin.kneeBreak"), 190);
+            Systems.dropReward(state, "major", { x: b.kneePad.x, y: b.kneePad.y });
+            this.checkPhase1Clear(state);
+          }
+        }
+      });
+    } else if (state.phase === 2 && !b.chestArmorBroken && b.chestArmorHP > 0) {
+      candidates.push({
+        x: b.bustL.x, y: b.bustL.y,
+        apply: (d) => {
+          b.bustL.flash = 20;
+          b.bustR.flash = 20;
+          b.chestArmorHP = Math.max(0, b.chestArmorHP - d);
+          if (b.chestArmorHP === 0) {
+            this.triggerChestPurge(state);
+          }
+        }
+      });
+    } else if (state.phase === 3 && b.core && b.core.unlocked && b.core.hp > 0) {
+      candidates.push({
+        x: b.core.x, y: b.core.y,
+        apply: (d) => {
+          b.core.flash = 22;
+          b.core.hp = Math.max(0, b.core.hp - d);
+          if (b.core.hp === 0) {
+            this.triggerClear(state, window.GameEngine);
+          }
+        }
+      });
+    }
+
+    this.getAllBits(b).forEach(bit => {
+      if (bit && !bit.broken && bit.hp > 0) {
+        const bx = bit.x;
+        const by = bit.y + (bit.bobY || 0);
+        candidates.push({
+          x: bx, y: by,
+          apply: (d) => {
+            bit.flash = 20;
+            bit.hp = Math.max(0, bit.hp - d);
+            if (bit.hp === 0) {
+              bit.broken = true;
+              Particles.triggerArmorBreakEffect(state, "bit_unit", bx, by);
+              Systems.addScore(state, ScoreTable.stage3.BIT_DESTROY, bx, by, `💥${bit.label} DESTROYED!`, { fromDeckEffect: true });
+              const remBits = this.getAllBits(b).filter(x => !x.broken).length;
+              if (b.bitLasers) {
+                b.bitLasers.triMode = "cooldown";
+                b.bitLasers.deltaBitIds = [];
+                if (remBits === 3) b.bitLasers.triTimer = 70;
+                else if (remBits >= 1) this.resetSnipeState(b.bitLasers, 72);
+              }
+              Systems.dropReward(state, "major", { x: bx, y: by });
+              this.checkPhase1Clear(state);
+            }
+          }
+        });
+      }
+    });
+
+    if (b.hipPort && !b.hipPort.broken && b.hipPort.hp > 0) {
+      candidates.push({
+        x: b.hipPort.x, y: b.hipPort.y,
+        apply: (d) => {
+          b.hipPort.flash = 20;
+          b.hipPort.hp = Math.max(0, b.hipPort.hp - d);
+          if (b.hipPort.hp === 0) {
+            b.hipPort.broken = true;
+            state.baseMultiplier += ScoreTable.stage3.BASE_MULT_HIP_PORT;
+            Particles.triggerArmorBreakEffect(state, "hip_port", b.hipPort.x, b.hipPort.y);
+            Systems.addScore(state, ScoreTable.stage3.HIP_PORT_OVERLOAD, b.hipPort.x, b.hipPort.y, "💥HIP LOCK OVERLOAD!!", { fromDeckEffect: true });
+            UI.showCutin(t("stage3.cutin.hipOverload"), 190);
+            Systems.dropReward(state, "major", 3);
+          }
+        }
+      });
+    }
+
+    if (candidates.length === 0) return [];
+    candidates.sort((a, c) =>
+      Math.hypot(c.x - srcX, c.y - srcY) - Math.hypot(a.x - srcX, a.y - srcY)
+    );
+    const chosen = candidates.slice(0, chainCount);
+    const hits = [];
+    chosen.forEach(tObj => {
+      if (state.stageCleared) return;
+      tObj.apply(dmg);
+      Particles.add(state, tObj.x, tObj.y, fxColor, 14, 4.4);
+      Particles.addPopup(state, tObj.x, tObj.y - 12, fxLabel, fxColor, 1.0);
+      hits.push({ x: tObj.x, y: tObj.y });
+    });
+    return hits;
   }
 });

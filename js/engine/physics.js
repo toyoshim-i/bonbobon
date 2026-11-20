@@ -7,7 +7,7 @@ window.Physics = {
   BALANCE: {
     TIME_SCALE: 0.75,
     // ステージ進行ごとの速度スケール（Stage 1 ➔ Stage 5 で段階的に加速、軌道形状や到達高度は不変）
-    STAGE_TIME_SCALES: [0.75, 0.81, 0.87, 0.94, 1.02],
+    STAGE_TIME_SCALES: [0.75, 0.83, 0.91, 1.00, 1.10],
     GRAVITY: 0.118,
     SUBSTEPS: 8,
     MAX_BALL_SPEED: 13.2,
@@ -23,9 +23,33 @@ window.Physics = {
   },
 
   getTimeScale(state) {
-    const idx = Math.max(1, Math.min(5, (state && state.stageIndex) || 1));
+    let idx = (state && state.stageIndex) || 0;
+    if ((!idx || (window.GameEngine && GameEngine.state === state)) && window.GameEngine && window.currentStage && window.currentStage.id && GameEngine.getStageMeta) {
+      const meta = GameEngine.getStageMeta(window.currentStage.id);
+      if (meta && meta.index) idx = meta.index;
+    }
+    idx = Math.max(1, Math.min(5, idx || 1));
     const scales = this.BALANCE.STAGE_TIME_SCALES;
     return (scales && scales[idx - 1]) || this.BALANCE.TIME_SCALE;
+  },
+
+  getMaxBallSpeed(state) {
+    const springLv = (state && state.relics && state.relics.spring) || 0;
+    return this.BALANCE.MAX_BALL_SPEED * (1 + springLv * 0.08);
+  },
+
+  getPinMobility(state, isLeft) {
+    const pinKey = isLeft ? "flipperPinL" : "flipperPinR";
+    const maxKey = isLeft ? "flipperPinMaxL" : "flipperPinMaxR";
+    const count = (state && state[pinKey]) || 0;
+    if (count <= 0) {
+      if (state && state[maxKey]) state[maxKey] = 0;
+      return 1.0;
+    }
+    const maxPin = Math.max((state && state[maxKey]) || 0, count);
+    if (state) state[maxKey] = maxPin;
+    const progress = (maxPin - count) / Math.max(1, maxPin);
+    return Math.min(0.63, 0.08 + 0.55 * progress);
   },
 
   TABLE_GEOM: {
@@ -41,12 +65,12 @@ window.Physics = {
 
   TABLE_WALLS: [
     // Outer perimeter walls (Arc roof + straight sides)
-    { x1: 16,  y1: 635, x2: 16,  y2: 95 },
-    { x1: 16,  y1: 95,  x2: 65,  y2: 32 },
-    { x1: 65,  y1: 32,  x2: 210, y2: 16 },
-    { x1: 210, y1: 16,  x2: 355, y2: 32 },
-    { x1: 355, y1: 32,  x2: 404, y2: 95 },
-    { x1: 404, y1: 95,  x2: 404, y2: 635 },
+    { x1: 16,  y1: 635, x2: 16,  y2: 95,  isOuterHull: true },
+    { x1: 16,  y1: 95,  x2: 65,  y2: 32,  isOuterHull: true, isUpperArch: true },
+    { x1: 65,  y1: 32,  x2: 210, y2: 16,  isOuterHull: true, isUpperArch: true },
+    { x1: 210, y1: 16,  x2: 355, y2: 32,  isOuterHull: true, isUpperArch: true },
+    { x1: 355, y1: 32,  x2: 404, y2: 95,  isOuterHull: true, isUpperArch: true },
+    { x1: 404, y1: 95,  x2: 404, y2: 635, isOuterHull: true },
 
     // Shooter lane inner wall (right side) & bottom wall
     { x1: 380, y1: 175, x2: 380, y2: 635, isLane: true },
@@ -75,6 +99,16 @@ window.Physics = {
     // Outlane Drain Slopes
     { x1: 16,  y1: 590, x2: 86,  y2: 648, isRamp: true },
     { x1: 380, y1: 590, x2: 310, y2: 648, isRamp: true }
+  ],
+
+  // Strict inward half-spaces of the convex outer perimeter (prevents upper-diagonal corner tunneling)
+  OUTER_HULL_PLANES: [
+    { x1: 16,  y1: 635, nx: 1, ny: 0, isUpperArch: false },
+    { x1: 16,  y1: 95,  nx: 63 / Math.hypot(49, 63), ny: 49 / Math.hypot(49, 63), isUpperArch: true },
+    { x1: 65,  y1: 32,  nx: 16 / Math.hypot(145, 16), ny: 145 / Math.hypot(145, 16), isUpperArch: true },
+    { x1: 210, y1: 16,  nx: -16 / Math.hypot(145, 16), ny: 145 / Math.hypot(145, 16), isUpperArch: true },
+    { x1: 355, y1: 32,  nx: -63 / Math.hypot(49, 63), ny: 49 / Math.hypot(49, 63), isUpperArch: true },
+    { x1: 404, y1: 95,  nx: -1, ny: 0, isUpperArch: false }
   ],
 
   // Solid Slingshot Triangles (each edge has outward unit normal nx, ny)
@@ -189,7 +223,7 @@ window.Physics = {
       const pinKey = f.isLeft ? "flipperPinL" : "flipperPinR";
       const isPinnedNow = (state[pinKey] || 0) > 0;
       if (pressed && !wasPressed) {
-        st.justPressedTimer = 12;
+        st.justPressedTimer = (state.relics && state.relics.kasumi_chakra > 0) ? 20 : 12;
         if (isPinnedNow) {
           st.swingActive = false;
           if (!f.isSubFlipper) {
@@ -198,6 +232,7 @@ window.Physics = {
             const mx = f.px + Math.cos(st.angle) * (f.len * 0.55);
             const my = f.py + Math.sin(st.angle) * (f.len * 0.55);
             if (state[pinKey] === 0) {
+              state[f.isLeft ? "flipperPinMaxL" : "flipperPinMaxR"] = 0;
               if (window.sfx && window.sfx.shurikenParry) window.sfx.shurikenParry();
               if (window.Particles) {
                 Particles.add(state, mx, my, "#e6ff00", 16, 4.8);
@@ -234,10 +269,10 @@ window.Physics = {
       }
       if ((st.pinShake || 0) > 0) st.pinShake--;
 
-      // 拘束中は全ステージ共通で可動域を8%（わずかにピクつく程度）まで強く制限する
-      const pinnedCount = f.isLeft ? (state.flipperPinL || 0) : (state.flipperPinR || 0);
-      const effectiveActive = pinnedCount > 0
-        ? (f.restAngle + (f.activeAngle - f.restAngle) * 0.08)
+      // 連打に応じて段階的に拘束が緩む（8% ➔ ~56% ➔ 解除時100%）
+      const mobility = this.getPinMobility(state, f.isLeft);
+      const effectiveActive = mobility < 1.0
+        ? (f.restAngle + (f.activeAngle - f.restAngle) * mobility)
         : f.activeAngle;
 
       const target = pressed ? effectiveActive : f.restAngle;
@@ -261,7 +296,7 @@ window.Physics = {
     state.nudgeOffset.y = (ny * 20 + (Math.random() - 0.5) * 6) * intensity;
 
     state.balls.forEach(b => {
-      if (b._onWireRamp) return;
+      if (b._onWireRamp || b._inNavelTrap || b._fusionStasis || (b._seraphStasis && b._seraphStasis.grazeDelay <= 0)) return;
       if (b.inShooterLane && b.y > 535 && Math.abs(b.vy) < 1.5) return;
       b.vx += nx * this.BALANCE.NUDGE_IMPULSE * intensity;
       b.vy += ny * this.BALANCE.NUDGE_IMPULSE * intensity;
@@ -299,7 +334,7 @@ window.Physics = {
     Particles.addPopup(state, 210, 530, `${dirLabel} NUDGE!`, "#e6ff00", 1.15);
     Particles.add(state, 210, 530, "#e6ff00", 14, 4.2);
     if (window.Systems && Systems.deductScore) {
-      Systems.deductScore(state, ScoreTable.bonus.NUDGE_PENALTY, 210, 555, "NUDGE");
+      Systems.deductScore(state, ScoreTable.bonus.NUDGE_PENALTY, 210, 555, "NUDGE", { allowPreLaunch: true });
     }
   },
 
@@ -500,10 +535,65 @@ window.Physics = {
     }
   },
 
+  // Enforce thick inward containment against the 6 convex outer perimeter planes
+  enforceOuterBounds(state, ball, stepMoveOverride = null) {
+    if (!ball || ball._onWireRamp || ball._inNavelTrap || ball._fusionStasis || (ball._seraphStasis && ball._seraphStasis.grazeDelay <= 0)) return;
+    const stepMove = stepMoveOverride != null
+      ? stepMoveOverride
+      : (Math.hypot(ball.vx, ball.vy) * this.getTimeScale(state)) / this.BALANCE.SUBSTEPS;
+    const archPad = ball.inShooterLane
+      ? (2.6 + Math.min(0.9, stepMove * 0.25))
+      : (3.8 + Math.min(3.2, stepMove * 0.60));
+    const sidePad = ball.inShooterLane
+      ? (2.5 + Math.min(0.5, stepMove * 0.15))
+      : (2.8 + Math.min(2.2, stepMove * 0.45));
+
+    const planes = this.OUTER_HULL_PLANES;
+    let clampedAny = false;
+    for (let pass = 0; pass < 3; pass++) {
+      let anyHit = false;
+      for (let pi = 0; pi < planes.length; pi++) {
+        const p = planes[pi];
+        const minDist = ball.r + (p.isUpperArch ? archPad : sidePad);
+        const signedDist = (ball.x - p.x1) * p.nx + (ball.y - p.y1) * p.ny;
+        if (signedDist < minDist) {
+          anyHit = true;
+          clampedAny = true;
+          ball._crotchSpitActive = false;
+          const push = minDist - signedDist;
+          ball.x += p.nx * push;
+          ball.y += p.ny * push;
+
+          const vn = ball.vx * p.nx + ball.vy * p.ny;
+          if (vn < 0) {
+            const tx = -p.ny;
+            const ty = p.nx;
+            const vt = ball.vx * tx + ball.vy * ty;
+            const isLowerOuterLane = (!p.isUpperArch && !ball.inShooterLane && ball.y > 415 && (ball.x < 55 || ball.x > 342));
+            const restN = isLowerOuterLane ? 0.14 : 0.72;
+            const tangFric = isLowerOuterLane ? 0.988 : 0.97;
+            ball.vx = p.nx * (-vn * restN) + tx * (vt * tangFric);
+            ball.vy = p.ny * (-vn * restN) + ty * (vt * tangFric);
+          }
+        }
+      }
+      if (!anyHit) break;
+    }
+
+    if (clampedAny) {
+      const spd = Math.hypot(ball.vx, ball.vy);
+      const maxSpd = this.getMaxBallSpeed(state);
+      if (spd > maxSpd) {
+        ball.vx = (ball.vx / spd) * maxSpd;
+        ball.vy = (ball.vy / spd) * maxSpd;
+      }
+    }
+  },
+
   // Substep ball physics iteration
   stepBallPhysics(state, ball, gravity, SUBSTEPS, s) {
     // Elevated 3D wireform ramp bypasses ground-level walls & flippers
-    if (ball._onWireRamp || ball._inNavelTrap || ball._fusionStasis) return;
+    if (ball._onWireRamp || ball._inNavelTrap || ball._fusionStasis || (ball._seraphStasis && ball._seraphStasis.grazeDelay <= 0)) return;
 
     if (ball._crotchSpitActive && ball.y < 340) {
       ball._crotchSpitActive = false;
@@ -574,7 +664,10 @@ window.Physics = {
         }
 
         if (state.boss) state.boss.winkTimer = 35;
-        if (pRatio >= pb.SKILL_SHOT_MIN_RATIO && pRatio <= pb.SKILL_SHOT_MAX_RATIO) {
+        const radarLv = (state.relics && state.relics.radar) || 0;
+        const minSkill = Math.max(0.55, pb.SKILL_SHOT_MIN_RATIO - radarLv * 0.05);
+        const maxSkill = Math.min(0.95, pb.SKILL_SHOT_MAX_RATIO + radarLv * 0.05);
+        if (pRatio >= minSkill && pRatio <= maxSkill) {
           state.skillShotEligible = true;
         }
 
@@ -616,7 +709,7 @@ window.Physics = {
     const walls = this.TABLE_WALLS;
     for (let wi = 0; wi < walls.length; wi++) {
       const w = walls[wi];
-      if (w.isTriangleEdge) continue;
+      if (w.isTriangleEdge || w.isOuterHull) continue;
       const cp = this.closestPointOnSeg(ball.x, ball.y, w.x1, w.y1, w.x2, w.y2, cpWall);
       const dx = ball.x - cp.x;
       const dy = ball.y - cp.y;
@@ -642,7 +735,10 @@ window.Physics = {
       this._resolveSolidTriangle(state, ball, triangles[ti], prevX, prevY, effMinDist);
     }
 
-    // Flippers collision (interpolated per substep with anti-tunneling sweep on upward swing)
+    // Outer perimeter thick half-space containment
+    this.enforceOuterBounds(state, ball, stepMove);
+
+    // Flippers collision (interpolated per substep with anti-tunneling sweep on active stroke)
     const flippers = this.getFlippers(state);
     const cpFlip = this._cpFlipper;
     const subT0 = s / SUBSTEPS;
@@ -651,7 +747,8 @@ window.Physics = {
       const f = flippers[idx];
       const st = this.flipperState[idx];
       const omega = (st.angle - st.prevAngle) * 60;
-      const isSwingingUp = f.isLeft ? (omega < -0.15) : (omega > 0.15);
+      const strikeSign = f.isInverted ? -1 : 1;
+      const isActiveStroke = f.isLeft ? (omega * strikeSign < -0.15) : (omega * strikeSign > 0.15);
 
       const subPrevAngle = st.prevAngle + (st.angle - st.prevAngle) * subT0;
       const subCurAngle = st.prevAngle + (st.angle - st.prevAngle) * subT1;
@@ -663,21 +760,24 @@ window.Physics = {
       const dist = Math.hypot(dx, dy);
       const minDist = ball.r + 5.0;
 
-      // Upper-face unit normal of the flipper at subCurAngle
+      // Upper-face & strike-face unit normals at subCurAngle
       const upNx = f.isLeft ? Math.sin(subCurAngle) : -Math.sin(subCurAngle);
       const upNy = f.isLeft ? -Math.cos(subCurAngle) : Math.cos(subCurAngle);
+      const strikeNx = upNx * strikeSign;
+      const strikeNy = upNy * strikeSign;
 
-      // Swept crossing check: if the upward-swinging flipper swept past a ball that was on/above
-      // the upper face at subPrevAngle, force-resolve it to the upper face to prevent tunneling.
+      // Swept crossing check on active stroke (prevents tunneling on fast snap)
       let sweptHit = false;
-      if (isSwingingUp) {
+      if (isActiveStroke) {
         const prevUpNx = f.isLeft ? Math.sin(subPrevAngle) : -Math.sin(subPrevAngle);
         const prevUpNy = f.isLeft ? -Math.cos(subPrevAngle) : Math.cos(subPrevAngle);
+        const prevStrikeNx = prevUpNx * strikeSign;
+        const prevStrikeNy = prevUpNy * strikeSign;
         const prevTipX = f.px + Math.cos(subPrevAngle) * f.len;
         const prevTipY = f.py + Math.sin(subPrevAngle) * f.len;
         const prevCp = this.closestPointOnSeg(ball.x, ball.y, f.px, f.py, prevTipX, prevTipY);
-        const prevSignedDist = (ball.x - prevCp.x) * prevUpNx + (ball.y - prevCp.y) * prevUpNy;
-        const curSignedDist = dx * upNx + dy * upNy;
+        const prevSignedDist = (ball.x - prevCp.x) * prevStrikeNx + (ball.y - prevCp.y) * prevStrikeNy;
+        const curSignedDist = dx * strikeNx + dy * strikeNy;
         const along = (ball.x - f.px) * Math.cos(subCurAngle) + (ball.y - f.py) * Math.sin(subCurAngle);
         if (along >= -ball.r * 0.5 && along <= f.len + ball.r * 0.6 &&
             prevSignedDist >= -minDist * 0.45 && curSignedDist < minDist) {
@@ -690,9 +790,9 @@ window.Physics = {
         this.flipperState[f.isLeft ? 0 : 1].swingHit = true;
         ball._crotchSpitActive = false;
         let nx, ny;
-        if (sweptHit && (dx * upNx + dy * upNy < 0 || dist >= minDist)) {
-          nx = upNx;
-          ny = upNy;
+        if (sweptHit && (dx * strikeNx + dy * strikeNy < 0 || dist >= minDist)) {
+          nx = strikeNx;
+          ny = strikeNy;
         } else {
           nx = dx / dist;
           ny = dy / dist;
@@ -709,35 +809,83 @@ window.Physics = {
         const dot = vRelX * nx + vRelY * ny;
 
         if (dot < 0 || sweptHit) {
-          if (Math.abs(omega) > 0.15) {
-            const effDot = Math.min(dot, -2.0);
-            const rest = 0.65;
+          if (isActiveStroke) {
+            const powerScale = this.getPinMobility(state, f.isLeft);
+            const effDot = Math.min(dot, -2.0 * powerScale);
+            const rest = 0.25 + 0.40 * powerScale;
             ball.vx = (vRelX - (1 + rest) * effDot * nx) + vxSurface;
             ball.vy = (vRelY - (1 + rest) * effDot * ny) + vySurface;
             const springStep = (window.ScoreTable && ScoreTable.multiplier.SPRING_ADD_POWER) || 0.15;
             const springMult = (1 + ((state.relics && state.relics.spring) || 0) * springStep);
-            const flipBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult);
-            ball.vy = -Math.abs(ball.vy) * 0.45 - flipBoost;
-            ball.vx += nx * 4.2 * springMult;
+            const magnetReleaseBoost = (state.magnetActive && (ball._magnetHeld || 0) > 0) ? 1.10 : 1.0;
+            ball._magnetHeld = 0;
+
+            if (f.isInverted) {
+              if ((nx * strikeNx + ny * strikeNy) > 0.25 || sweptHit) {
+                const slamBoost = Math.min(13.5, (5.8 + Math.abs(omega) * 0.14 + (rArm / f.len) * 5.2) * springMult) * powerScale;
+                ball.vy = Math.abs(ball.vy) * (0.15 + 0.25 * powerScale) + slamBoost;
+                ball.vx += nx * 3.8 * springMult * powerScale;
+              }
+            } else {
+              const rawBoost = Math.min(18.5, (7.5 + Math.abs(omega) * 0.18 + (rArm / f.len) * 7.0) * springMult * magnetReleaseBoost);
+              const flipBoost = rawBoost * powerScale;
+              ball.vy = -Math.abs(ball.vy) * (0.15 + 0.30 * powerScale) - flipBoost;
+              ball.vx += nx * 4.2 * springMult * magnetReleaseBoost * powerScale;
+            }
+
+            if (state.relics && state.relics.kasumi_chakra > 0 && powerScale >= 0.5) {
+              ball._chakraTimer = 150;
+            }
             if (!(ball._flipHitGrace > 0)) {
               ball._flipHitGrace = 16;
+              if (state.relics && state.relics.kasumi_chakra > 0 && powerScale >= 0.5 && window.Particles) {
+                Particles.add(state, cp.x, cp.y, "#ff66cc", 6, 3.2);
+              }
+              if (state.relics && state.relics.celty_fission > 0 && powerScale >= 0.5 && (rArm / f.len) > 0.72) {
+                state._fissionHitCount = (state._fissionHitCount || 0) + 3;
+              }
               if (window.sfx) window.sfx.flip();
-              Particles.add(state, cp.x, cp.y, f.isSubFlipper ? "#e6ff00" : "#ff1493", f.isSubFlipper ? 14 : 10, f.isSubFlipper ? 5.2 : 4.5);
-              if (f.isSubFlipper && state.shockwaves) {
+              const fxColor = f.isSubFlipper ? "#e6ff00" : "#ff1493";
+              const fxLabel = f.isSubFlipper ? (f.isInverted ? "WING SLAM!" : "WING FLIP") : "FLIP";
+              Particles.add(state, cp.x, cp.y, fxColor, f.isSubFlipper ? 14 : 10, (f.isSubFlipper ? 5.2 : 4.5) * Math.max(0.45, powerScale));
+              if (f.isSubFlipper && powerScale >= 0.5 && state.shockwaves) {
                 state.shockwaves.push({ x: cp.x, y: cp.y, r: 5, maxR: 28, speed: 3.4, color: "#00f5e8", lineWidth: 2.2, alpha: 0.9 });
               }
-              if (window.Systems) window.Systems.addScore(state, ScoreTable.common.FLIPPER_HIT, cp.x, cp.y, f.isSubFlipper ? "WING FLIP" : "FLIP");
+              if (window.Systems) window.Systems.addScore(state, ScoreTable.common.FLIPPER_HIT, cp.x, cp.y, fxLabel, { fromDeckEffect: true });
             }
           } else {
-            // 静止中のパドル：通路から流れてきた球が跳ねずにピタッと乗って転がるよう法線反発を抑え、接線転がりを維持
-            const tx = -ny;
-            const ty = nx;
-            const vt = vRelX * tx + vRelY * ty;
-            const restPassive = Math.abs(dot) < 4.5 ? 0.08 : 0.26;
-            const newVn = -dot * restPassive;
-            const newVt = vt * 0.988;
-            ball.vx = nx * newVn + tx * newVt + vxSurface;
-            ball.vy = ny * newVn + ty * newVt + vySurface;
+            const rev = (state.flipperReverseTimer || 0) > 0;
+            const heldUp = rev
+              ? (f.isLeft ? state.rightFlipperDown : state.leftFlipperDown)
+              : (f.isLeft ? state.leftFlipperDown : state.rightFlipperDown);
+            const isPinnedSide = ((f.isLeft ? state.flipperPinL : state.flipperPinR) || 0) > 0;
+            if (state.magnetActive && heldUp && !f.isSubFlipper && !isPinnedSide) {
+              // Magnet Catch: 磁力でフリッパー上に吸着保持し精密狙い撃ちを可能にする
+              const mRank = state.magnetRank || 1;
+              const tx = -ny;
+              const ty = nx;
+              const vt = vRelX * tx + vRelY * ty;
+              const dampTang = mRank >= 2 ? 0.55 : 0.78;
+              const dirX = Math.cos(subCurAngle);
+              const dirY = Math.sin(subCurAngle);
+              const cradlePull = (0.55 - cp.t) * (mRank >= 2 ? 0.55 : 0.32);
+              ball.vx = tx * (vt * dampTang) + vxSurface + dirX * cradlePull;
+              ball.vy = ty * (vt * dampTang) + vySurface + dirY * cradlePull;
+              ball._magnetHeld = 6;
+            } else {
+              // 静止中・戻し中のパドル（反転パドルは上向き傾きのためやや強めに弾いて角詰まりを防ぐ）
+              const tx = -ny;
+              const ty = nx;
+              const vt = vRelX * tx + vRelY * ty;
+              const restPassive = f.isInverted ? 0.52 : (Math.abs(dot) < 4.5 ? 0.08 : 0.26);
+              const newVn = -dot * restPassive;
+              const newVt = vt * 0.988;
+              ball.vx = nx * newVn + tx * newVt + vxSurface;
+              ball.vy = ny * newVn + ty * newVt + vySurface;
+              if (f.isInverted && cp.t < 0.28 && Math.abs(ball.vx) < 1.5 && ny < 0) {
+                ball.vx += (f.isLeft ? 2.4 : -2.4);
+              }
+            }
           }
         }
       }
@@ -797,17 +945,71 @@ window.Physics = {
           if (window.sfx) window.sfx.burstTrigger();
           Particles.add(state, kb.fxX, 560, "#00f5d4", 18, 5.0);
           Particles.add(state, kb.fxX, 560, "#e6ff00", 12, 4.0);
-          if (window.Systems) window.Systems.addScore(state, ScoreTable.common.KICKBACK_SAVE, kb.fxX, 540, kb.label);
-          if (window.UI) window.UI.showCutin(t(kb.cutinKey), 90);
+          if (window.Systems) window.Systems.addScore(state, ScoreTable.common.KICKBACK_SAVE, kb.fxX, 540, kb.label, { fromDeckEffect: true });
+          if (window.UI) UI.showCutin(t(kb.cutinKey), 90);
+        }
+      }
+
+      if (!ball.inShooterLane) {
+        // Magnet Drain Magnetic Assist (Rank 2+)
+        if (state.magnetActive && (state.magnetRank || 0) >= 2 && ball.vy > 0 &&
+            ball.y > 545 && ball.y < 632 && Math.abs(ball.x - 198) < (42 + state.magnetRank * 14)) {
+          ball.vy -= 0.14 * state.magnetRank;
+          ball.vx += (ball.x < 198 ? -0.18 : 0.18);
+        }
+
+        // Lilith Signature Relic: Inverted Gravity Cushion (beginner clear-focused drain brake; never bounces upward on its own)
+        if (state.relics && state.relics.lilith_gravity > 0 && ball.vy > 0) {
+          const dxG = ball.x - 198;
+          const dGrav = Math.hypot(dxG, ball.y - 610);
+          if (dGrav < 46) {
+            const falloff = 0.35 + 0.65 * (1 - dGrav / 46);
+            const floorVy = Math.min(ball.vy, 1.15);
+            ball.vy = Math.max(floorVy, ball.vy * (1 - 0.045 * falloff) - 0.14 * falloff);
+            if (Math.abs(dxG) > 3) {
+              ball.vx += (dxG < 0 ? -1 : 1) * (0.11 * falloff);
+            }
+            if (Math.random() < 0.16 && window.Particles) {
+              Particles.add(state, ball.x, ball.y, Math.random() < 0.5 ? "#ff1493" : "#00f5d4", 1, 1.4);
+            }
+          }
+        }
+
+        // Noa Signature Relic: 1x/stage Emergency Outlane Warp Save
+        if (state.relics && state.relics.noa_bit > 0 && (state._noaBitWarpCharges || 0) > 0 &&
+            ball.vy > 0 && ball.y >= 585 && ball.y <= 638 && (ball.x < 68 || ball.x > 330)) {
+          state._noaBitWarpCharges = 0;
+          if (state.shockwaves) {
+            state.shockwaves.push({ x: ball.x, y: ball.y, r: 6, maxR: 40, speed: 4.0, color: "#00f5d4", lineWidth: 2.6, alpha: 0.95 });
+          }
+          Particles.add(state, ball.x, ball.y, "#00f5d4", 18, 4.5);
+          ball.x = 198;
+          ball.y = 175;
+          ball.vx = (Math.random() - 0.5) * 4;
+          ball.vy = -4.5;
+          if (ball.trail) ball.trail = [];
+          if (state.shockwaves) {
+            state.shockwaves.push({ x: 198, y: 175, r: 8, maxR: 48, speed: 4.5, color: "#e6ff00", lineWidth: 2.8, alpha: 0.95 });
+          }
+          Particles.add(state, 198, 175, "#e6ff00", 16, 4.5);
+          if (window.sfx && window.sfx.burstTrigger) window.sfx.burstTrigger();
+          if (window.Systems) {
+            Systems.addScore(state, ScoreTable.common.AEGIS_WARP_SAVE, 198, 175, "🛡️AEGIS WARP!", { fromDeckEffect: true });
+          }
+          if (window.UI) UI.showCutin(t("physics.aegisWarpCutin"), 110);
         }
       }
     }
 
+    // Final outer containment after flippers, center post, and lane assists
+    this.enforceOuterBounds(state, ball, stepMove);
+
     // Velocity clamp
     const spd = Math.hypot(ball.vx, ball.vy);
-    if (spd > this.BALANCE.MAX_BALL_SPEED) {
-      ball.vx = (ball.vx / spd) * this.BALANCE.MAX_BALL_SPEED;
-      ball.vy = (ball.vy / spd) * this.BALANCE.MAX_BALL_SPEED;
+    const maxSpd = this.getMaxBallSpeed(state);
+    if (spd > maxSpd) {
+      ball.vx = (ball.vx / spd) * maxSpd;
+      ball.vy = (ball.vy / spd) * maxSpd;
     }
   }
 };

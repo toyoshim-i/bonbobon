@@ -634,5 +634,30 @@ window.Stage4 = {
     Systems.addScore(state, ScoreTable.stage4.STAGE_CLEAR, 198, 225, "🌸STAGE 4 CLEAR!!🌸", { exemptDecay: true });
     UI.showCutin(t("stage4.cutin.criticalKO"), 260);
     UI.updateHUD(state);
+  },
+
+  applyDeckBonusDamage(state, dmg, srcX, srcY, fxLabel = "⚡CHAIN!", fxColor = "#e6ff00", opts = null) {
+    const b = state && state.boss;
+    if (!b || state.stageCleared) return [];
+    const chainCount = (opts && opts.chainCount) || 1;
+    const hits = [];
+    const prevFlag = !!state._inDeckBonusDamage;
+    state._inDeckBonusDamage = true;
+    try {
+      for (let i = 0; i < chainCount; i++) {
+        if (state.stageCleared) break;
+        const tgt = this.getActiveBossTarget(state);
+        if (!tgt) break;
+        if (state.phase === 3 && b.coreGraceTimer > 0 && b.ninjutsu.clones.every(c => !c.active)) {
+          break;
+        }
+        this.damageActiveArmor(state, dmg, tgt.x, tgt.y, fxLabel);
+        Particles.add(state, tgt.x, tgt.y, fxColor, 12, 4.0);
+        hits.push({ x: tgt.x, y: tgt.y });
+      }
+    } finally {
+      state._inDeckBonusDamage = prevFlag;
+    }
+    return hits;
   }
 };

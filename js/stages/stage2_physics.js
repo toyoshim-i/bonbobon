@@ -1016,5 +1016,157 @@ Object.assign(window.Stage2, {
   },
 
   // 猫耳三角バウンスの反発パラメータ（restitution: 反発係数, kick: 法線方向の弾き出し, maxSpeed: 上限）
-  CAT_EAR_BOUNCE: { restitution: 0.6, kick: 2.0, maxSpeed: 14.0 }
+  CAT_EAR_BOUNCE: { restitution: 0.6, kick: 2.0, maxSpeed: 14.0 },
+
+  applyDeckBonusDamage(state, dmg, srcX, srcY, fxLabel = "⚡CHAIN!", fxColor = "#e6ff00", opts = null) {
+    const b = state && state.boss;
+    if (!b || state.stageCleared) return [];
+    const chainCount = (opts && opts.chainCount) || 1;
+    const candidates = [];
+
+    if (state.phase === 1) {
+      if (b.antenna && !b.antenna.broken && b.antenna.hp > 0) {
+        candidates.push({
+          x: b.antenna.x, y: b.antenna.y,
+          apply: (d) => {
+            b.antenna.flash = 20;
+            b.antenna.hp = Math.max(0, b.antenna.hp - d);
+            if (b.antenna.hp === 0) {
+              b.antenna.broken = true;
+              b.antenna.isActive = false;
+              b.antenna.isWarning = false;
+              Particles.triggerArmorBreakEffect(state, "antenna", b.antenna.x, b.antenna.y);
+              UI.showCutin(t("stage2.cutin.antennaBreak"), 200);
+              Systems.addScore(state, ScoreTable.stage2.ANTENNA_DESTROY, b.antenna.x, b.antenna.y, "★ANTENNA DESTROYED!★", { fromDeckEffect: true });
+              Systems.dropReward(state, "major", { x: b.antenna.x, y: b.antenna.y });
+              this.checkPhase1Clear(state);
+            }
+          }
+        });
+      }
+      if (b.shoulderL && !b.shoulderL.broken && b.shoulderL.hp > 0) {
+        candidates.push({
+          x: b.shoulderL.x, y: b.shoulderL.y,
+          apply: (d) => {
+            b.shoulderL.flash = 20;
+            b.shoulderL.hp = Math.max(0, b.shoulderL.hp - d);
+            if (b.shoulderL.hp === 0) {
+              b.shoulderL.broken = true;
+              Particles.triggerArmorBreakEffect(state, "l_shoulder", b.shoulderL.x, b.shoulderL.y);
+              UI.showCutin(t("stage2.cutin.shoulderBreak", { side: "L" }), 200);
+              Systems.addScore(state, ScoreTable.stage2.SHOULDER_PURGE, b.shoulderL.x, b.shoulderL.y, "★L SHOULDER PURGED!★", { fromDeckEffect: true });
+              Systems.dropReward(state, "major", { x: b.shoulderL.x, y: b.shoulderL.y });
+              this.checkPhase1Clear(state);
+            }
+          }
+        });
+      }
+      [{ elb: b.elbowL, side: "L" }, { elb: b.elbowR, side: "R" }].forEach(({ elb, side }) => {
+        if (elb && !elb.broken && elb.hp > 0) {
+          candidates.push({
+            x: elb.x, y: elb.y,
+            apply: (d) => {
+              elb.flash = 20;
+              elb.hp = Math.max(0, elb.hp - d);
+              if (elb.hp === 0) {
+                elb.broken = true;
+                Particles.triggerArmorBreakEffect(state, `${side.toLowerCase()}_arm`, elb.x, elb.y);
+                UI.showCutin(t("stage2.cutin.armBreak", { side }), 200);
+                Systems.addScore(state, ScoreTable.stage2.ARM_DESTROY, elb.x, elb.y, `★${side} ARM DESTROYED!★`, { fromDeckEffect: true });
+                Systems.dropReward(state, "major", { x: elb.x, y: elb.y });
+                this.checkPhase1Clear(state);
+              }
+            }
+          });
+        }
+      });
+    } else if (state.phase === 2) {
+      [{ noz: b.nozzleL, side: "L" }, { noz: b.nozzleR, side: "R" }].forEach(({ noz, side }) => {
+        if (noz && !noz.broken && noz.hp > 0) {
+          candidates.push({
+            x: noz.x, y: noz.y,
+            apply: (d) => {
+              noz.flash = 20;
+              noz.hp = Math.max(0, noz.hp - d);
+              if (noz.hp === 0) {
+                noz.broken = true;
+                Particles.triggerArmorBreakEffect(state, `nozzle_${side.toLowerCase()}`, noz.x, noz.y);
+                UI.showCutin(t("stage2.cutin.nozzleBreak", { side }), 200);
+                Systems.addScore(state, ScoreTable.stage2.NOZZLE_DESTROY, noz.x, noz.y, `★NOZZLE-${side} DESTROYED!★`, { fromDeckEffect: true });
+                Systems.dropReward(state, "major", { x: noz.x, y: noz.y });
+                if (b.nozzleL.broken && b.nozzleR.broken) {
+                  if (b.jet) { b.jet.timer = 0; b.jet.active = false; }
+                  UI.showCutin(t("stage2.cutin.allNozzleBreak"), 220);
+                  Systems.addScore(state, ScoreTable.stage2.ALL_THRUSTERS_DOWN, noz.x, noz.y, "★ALL THRUSTERS DOWN!★", { fromDeckEffect: true });
+                }
+                this.checkPhase2Clear(state);
+              }
+            }
+          });
+        }
+      });
+      if (b.hologram && !b.hologram.broken && !b.hologram.isShielded && b.hologram.hp > 0) {
+        candidates.push({
+          x: b.hologram.x, y: b.hologram.y,
+          apply: (d) => {
+            b.hologram.flash = 20;
+            b.hologram.hp = Math.max(0, b.hologram.hp - d);
+            if (b.hologram.hp === 0) {
+              b.hologram.broken = true;
+              b.hologram.laserState = "idle";
+              b.hologram.laserTimer = 0;
+              Particles.triggerArmorBreakEffect(state, "hologram_cannon", b.hologram.x, b.hologram.y);
+              UI.showCutin(t("stage2.cutin.holoBreak"), 220);
+              Systems.addScore(state, ScoreTable.stage2.HOLO_DESTROY, b.hologram.x, b.hologram.y, "★HOLO CANNON DESTROYED!★", { fromDeckEffect: true });
+              Systems.dropReward(state, "major", { x: b.hologram.x, y: b.hologram.y });
+              this.checkPhase2Clear(state);
+            }
+          }
+        });
+      }
+      if (b.tipBust && !b.tipBust.broken && b.tipBust.hp > 0) {
+        candidates.push({
+          x: b.tipBust.x, y: b.tipBust.y,
+          apply: (d) => {
+            b.tipBust.flash = 20;
+            b.tipBust.hp = Math.max(0, b.tipBust.hp - d);
+            if (b.tipBust.hp === 0) {
+              b.tipBust.broken = true;
+              Particles.triggerArmorBreakEffect(state, "bust_armor", b.tipBust.x, b.tipBust.y);
+              UI.showCutin(t("stage2.cutin.bustPurge"), 200);
+              Systems.addScore(state, ScoreTable.stage2.BUST_ARMOR_PURGE, b.tipBust.x, b.tipBust.y, "★BUST ARMOR PURGED!★", { fromDeckEffect: true });
+              Systems.dropReward(state, "major", { x: b.tipBust.x, y: b.tipBust.y });
+              this.checkPhase2Clear(state);
+            }
+          }
+        });
+      }
+    } else if (state.phase === 3 && b.core && b.core.unlocked && b.core.hp > 0) {
+      candidates.push({
+        x: b.core.x, y: b.core.y,
+        apply: (d) => {
+          b.core.flash = 22;
+          b.core.hp = Math.max(0, b.core.hp - d);
+          if (b.core.hp === 0) {
+            this.triggerClear(state, window.GameEngine);
+          }
+        }
+      });
+    }
+
+    if (candidates.length === 0) return [];
+    candidates.sort((a, c) =>
+      Math.hypot(c.x - srcX, c.y - srcY) - Math.hypot(a.x - srcX, a.y - srcY)
+    );
+    const chosen = candidates.slice(0, chainCount);
+    const hits = [];
+    chosen.forEach(tObj => {
+      if (state.stageCleared) return;
+      tObj.apply(dmg);
+      Particles.add(state, tObj.x, tObj.y, fxColor, 14, 4.4);
+      Particles.addPopup(state, tObj.x, tObj.y - 12, fxLabel, fxColor, 1.0);
+      hits.push({ x: tObj.x, y: tObj.y });
+    });
+    return hits;
+  }
 });

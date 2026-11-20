@@ -23,11 +23,17 @@ window.ScoreTable = {
     { rank: "B",   min: 12000000 }
   ],
 
-  // BURST解放の倍率計算パラメータ（加算＋複数枠シナジー、上限10.0倍）
+  // BURST解放の倍率計算パラメータ（加算＋複数枠シナジー＋手札役ボーナス、上限10.0倍）
   burst: {
     TIER_STEP: 0.75,                   // Tier係数 = 1 + (tier - 1) * 0.75 (T1=1.0, T2=1.75, T3=2.5)
     SLOT_SYNERGY_STEP: 0.20,           // 枠シナジー = 1 + 0.20 * (枠数 - 1)
-    MAX_MULT: 10.0                     // BURST倍率の上限
+    MAX_MULT: 10.0,                    // BURST倍率の上限
+    HAND_TRINITY: 1.15,                // 役ボーナス：3種揃い
+    HAND_OVERCLOCK: 1.25,              // 役ボーナス：重複スロットまたは★3+複数枠
+    HAND_FULL_DRIVE: 1.35,             // 役ボーナス：全4種コンプリート
+    FULL_DRIVE_EXTRA_SEC: 4,           // FULL DRIVE時のBURST時間延長（秒）
+    BURST_CORE_ADD_MULT: 0.6,          // レリック「バースト・リアクター」1個あたり倍率加算
+    BURST_CORE_EXTRA_SEC: 4            // レリック「バースト・リアクター」1個あたり時間延長（秒）
   },
 
   // ステージ制限時間（5分カウントダウン ➔ 残り1秒につき素点+1%［最大×2.00］／0:00超過で毎フレーム減点）
@@ -61,10 +67,13 @@ window.ScoreTable = {
     NUDGE_PENALTY: 5000                // 台揺らし
   },
 
-  // レリック強化値
+  // レリック強化値・トレードオフ補正
   multiplier: {
-    RADAR_ADD_MULT: 0.25,              // レリック「ウサミミ・レーダー」1個あたりの恒久倍率加算
-    SPRING_ADD_POWER: 0.15             // レリック「電磁スプリング」1個あたりの打撃力加算（+15%）
+    RADAR_ADD_MULT: 0.30,              // レリック「ウサミミ・レーダー」1個あたりの恒久倍率加算
+    HIGH_RISK_ADD_MULT: 0.5963,        // デッキ「ハイリスク増幅器」の恒久倍率加算（東亜プランの王道ボーナス数 5963）
+    SPRING_ADD_POWER: 0.15,            // レリック「電磁スプリング」1個あたりの打撃力加算（+15%）
+    LILITH_GRAVITY_SCORE_MULT: 0.70,   // レリック「反転グラビティ・コア」所持時の獲得スコア補正（-30%）
+    LILITH_GRAVITY_FEVER_MULT: 0.75    // レリック「反転グラビティ・コア」所持時のFEVER蓄積補正（-25%）
   },
 
   // 全ステージ共通のテーブル要素（基礎点・倍率適用）
@@ -74,7 +83,13 @@ window.ScoreTable = {
     KICKBACK_SAVE: 3000,
     COUNTER_SHOT: 3000,                // 落下球をプランジャーで打ち返し
     PERM_MAX_REPAIR: 3500,             // 永続強化カプセル（最大Lv時）
-    WIRE_RAMP_ENTRY_DEFAULT: 5500      // ワイヤーランプ進入（ステージ側で未指定時）
+    WIRE_RAMP_ENTRY_DEFAULT: 5500,     // ワイヤーランプ進入（ステージ側で未指定時）
+    VOLT_CHAIN: 1500,                  // BURST電撃貫通チェイン追撃
+    VOLT_SHATTER: 1500,                // BURST電撃貫通による妨害弾粉砕
+    CHAKRA_SLASH: 2000,                // 夜桜・風魔チャクラ追撃刃
+    FISSION_SPLIT: 2500,               // 紫電分裂プリズム核分裂マルチボール
+    AEGIS_INTERCEPT: 3000,             // イージス迎撃ビット妨害弾迎撃
+    AEGIS_WARP_SAVE: 3000              // イージス迎撃ビット緊急ワープ救出
   },
 
   // Stage 1: 桃色装甲リリス

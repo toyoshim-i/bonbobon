@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>桃色装甲ボンぼや〜ジュッ！ - MOMOIRO SOUKOU BON-VOYAGE!</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <link rel="stylesheet" href="./css/style.css?v=18" />
+  <link rel="stylesheet" href="./css/style.css?v=20" />
   <link rel="icon" href="data:," />
 </head>
 <body class="bg-[#070214] text-[#f4ecff] antialiased font-mono w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex items-center justify-center select-none p-1 sm:p-3 box-border">
@@ -194,7 +194,7 @@
               </div>
               <div class="grid grid-cols-3 gap-1" id="relicOptions">
                 <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="radar">
-                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicRadarName">ウサミミ・レーダー</div>
+                  <div class="font-bold text-[10px] text-[#e6ff00] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicRadarName">ウサ耳レーダー</div>
                   <div class="text-[8px] text-[#d6c4ff] leading-tight mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" data-i18n="clear.relicRadarDesc">恒久スコア倍率 +0.25</div>
                 </button>
                 <button class="relic-btn p-1 rounded bg-[#16063b]/45 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between" data-relic="spring">
@@ -388,6 +388,34 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- PRE-SORTIE LOADOUT DECK MODAL (COST CAP 3) -->
+        <div id="deckModal" role="dialog" aria-modal="true" aria-labelledby="deckModalTitle" tabindex="-1" class="absolute inset-0 z-50 hidden items-center justify-center p-2.5 bg-black/85 backdrop-blur-md pointer-events-auto transition-opacity duration-200 opacity-0">
+          <div class="relative bg-[#11052c] cyber-border rounded-2xl max-w-sm w-full max-h-[92dvh] p-3 text-left shadow-2xl flex flex-col gap-2 overflow-hidden">
+            <div class="flex items-center justify-between border-b border-[#00f5d4]/30 pb-1.5 shrink-0 gap-1">
+              <h2 id="deckModalTitle" class="text-xs font-black text-[#e6ff00] tracking-wider flex items-center gap-1 m-0" data-i18n="deck.title">
+                🃏 出撃ロードアウト編成 (LOADOUT DECK)
+              </h2>
+              <button id="btnDeckResetDefault" type="button" class="px-2 py-0.5 rounded bg-black/50 hover:bg-[#ff1493]/30 border border-[#00f5d4]/50 text-[#00f5d4] text-[9px] font-bold cursor-pointer transition shrink-0" data-i18n="deck.resetDefault">
+                初期編成に戻す
+              </button>
+            </div>
+            <div class="flex items-center justify-between bg-[#180838] border border-[#ff1493]/40 rounded-lg px-2.5 py-1.5 shrink-0">
+              <div class="min-w-0 pr-2">
+                <div class="text-[9.5px] font-bold text-white leading-tight" data-i18n="deck.subtitle">コスト上限 3 以内で初期装備・手札デッキを編成</div>
+                <div id="deckStatusHint" role="status" aria-live="polite" class="text-[8px] text-[#ff66b2] leading-tight mt-0.5 min-h-[20px]"></div>
+              </div>
+              <div class="flex flex-col items-end shrink-0">
+                <span class="text-[8px] font-mono text-[#00f5d4]" data-i18n="deck.costLabel">使用コスト</span>
+                <div class="flex items-center gap-1 mt-0.5">
+                  <div id="deckCostPips" class="flex items-center gap-0.5"></div>
+                  <span id="deckCostText" class="text-[11px] font-mono font-black text-[#e6ff00] tabular-nums">3/3</span>
+                </div>
+              </div>
+            </div>
+            <div id="deckModuleList" class="overflow-y-auto space-y-1.5 pr-1 flex-1 min-h-0"></div>
           </div>
         </div>
 
@@ -614,28 +642,36 @@
       </div>
     </div>
 
-    <!-- STOCKED BUFF SLOTS & BURST TRIGGER BUTTON (HIDDEN IN TITLE / ATTRACT MODE) -->
-    <div id="inGameBuffBar" class="hidden w-full mt-0.5 bg-[#150734] border border-[#ff1493]/60 rounded-lg px-1.5 py-1 shrink-0 flex items-center gap-1.5 overflow-hidden">
-      <span id="hudComboPreview" class="hidden"></span>
-      <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
-      <button id="btnBurst" class="h-7 px-2.5 rounded-md font-extrabold text-[10px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border border-[#e6ff00] neon-glow active:scale-95 transition cursor-pointer shrink-0 flex items-center justify-center">
-        BURST
-      </button>
+    <!-- STOCKED BUFF SLOTS, RELIC BADGES & BURST TRIGGER BUTTON (HIDDEN IN TITLE / ATTRACT MODE) -->
+    <div id="inGameBuffBar" class="hidden w-full mt-0.5 bg-[#150734] border border-[#ff1493]/60 rounded-lg px-1.5 py-1 shrink-0 flex flex-col gap-0.5 overflow-hidden">
+      <div id="hudRelicBar" class="hidden w-full items-center gap-1 overflow-x-auto pb-0.5 border-b border-[#00f5d4]/20"></div>
+      <div class="w-full flex items-center gap-1.5">
+        <span id="hudComboPreview" class="hidden"></span>
+        <div id="buffSlots" class="grid grid-cols-4 gap-1 flex-1"></div>
+        <button id="btnBurst" class="min-h-7 px-2 py-0.5 rounded-md font-extrabold text-[10px] bg-gradient-to-r from-[#ff1493] to-[#b800ff] text-white border border-[#e6ff00] neon-glow active:scale-95 transition cursor-pointer shrink-0 flex flex-col items-center justify-center leading-none">
+          <span id="btnBurstMain">BURST</span>
+          <span id="btnBurstPreview" class="text-[8px] font-mono text-[#e6ff00] font-black leading-none mt-0.5">×2.0</span>
+        </button>
+      </div>
     </div>
 
     <!-- TITLE CONTROLS DECK (SHOWN WHEN state.inTitle === true) -->
     <div id="titleControlsBar" class="w-full grid grid-cols-4 gap-1 mt-1 shrink-0">
       <button id="btnTitleSettings" class="h-12 col-span-1 rounded-lg bg-[#1b0b42] hover:bg-[#281161] active:bg-[#00f5d4] active:text-[#09031c] text-[#00f5d4] border-2 border-[#00f5d4]/70 transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-xs font-bold leading-tight" data-i18n="controls.settings">⚙️ 設定</span>
-        <span class="text-[8.5px] text-[#00f5d4]/70 leading-none mt-0.5">SETTINGS</span>
+        <span class="text-[11px] font-bold leading-tight" data-i18n="controls.settings">⚙️ 設定</span>
+        <span class="text-[8px] text-[#00f5d4]/70 leading-none mt-0.5">SETTINGS</span>
       </button>
-      <button id="btnTitleStart" class="h-12 col-span-2 rounded-lg bg-gradient-to-r from-[#ff1493] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
-        <span class="text-sm font-black leading-tight tracking-wider">⚡ START</span>
-        <span class="text-[8.5px] text-black/80 font-bold leading-none mt-0.5">1-LOOP ATTACK</span>
+      <button id="btnTitleDeck" class="h-12 col-span-1 rounded-lg bg-[#19093d] hover:bg-[#2a1163] active:bg-[#ff66cc] active:text-black text-[#ff66cc] border-2 border-[#ff66cc]/75 transition cursor-pointer select-none flex flex-col items-center justify-center">
+        <span class="text-[11px] font-bold leading-tight" data-i18n="controls.deck">🃏 デッキ</span>
+        <span id="titleDeckCostBadge" class="text-[8px] font-mono font-black text-[#e6ff00] leading-none mt-0.5">3/3 COST</span>
+      </button>
+      <button id="btnTitleStart" class="h-12 col-span-1 rounded-lg bg-gradient-to-r from-[#ff1493] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
+        <span class="text-xs sm:text-sm font-black leading-tight tracking-tight">⚡ START</span>
+        <span class="text-[8px] text-black/80 font-bold leading-none mt-0.5">1-LOOP</span>
       </button>
       <button id="btnTitleRanking" class="h-12 col-span-1 rounded-lg bg-[#210b3a] hover:bg-[#34115c] active:bg-[#e6ff00] active:text-black text-[#e6ff00] border-2 border-[#e6ff00]/70 transition cursor-pointer select-none flex flex-col items-center justify-center">
-        <span class="text-[11px] font-black leading-tight tracking-tight">🏆 RANKING</span>
-        <span class="text-[8.5px] text-[#e6ff00]/80 leading-none mt-0.5">TOP 5</span>
+        <span class="text-[10.5px] font-black leading-tight tracking-tight">🏆 RANKING</span>
+        <span class="text-[8px] text-[#e6ff00]/80 leading-none mt-0.5">TOP 5</span>
       </button>
     </div>
 
@@ -664,6 +700,14 @@
       <button id="btnBottomMenuClose" class="h-12 w-full rounded-lg bg-gradient-to-r from-[#00f5d4] via-[#ff66b2] to-[#e6ff00] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
         <span class="text-sm font-black leading-tight tracking-wider" data-i18n="controls.close">✕ 閉じる</span>
         <span class="text-[8.5px] text-black/80 font-bold leading-none mt-0.5">CLOSE SETTINGS</span>
+      </button>
+    </div>
+
+    <!-- DECK CONFIRM DECK (SHOWN WHENEVER #deckModal IS OPEN) -->
+    <div id="deckControlsBar" class="hidden w-full mt-1 shrink-0">
+      <button id="btnBottomDeckClose" class="h-12 w-full rounded-lg bg-gradient-to-r from-[#ff66cc] via-[#e6ff00] to-[#00f5d4] text-black font-black active:scale-95 transition cursor-pointer select-none flex flex-col items-center justify-center shadow-lg hover:brightness-110">
+        <span class="text-sm font-black leading-tight tracking-wider" data-i18n="controls.confirmDeck">✓ 編成を確定して閉じる</span>
+        <span class="text-[8.5px] text-black/80 font-bold leading-none mt-0.5">CONFIRM DECK</span>
       </button>
     </div>
 
@@ -765,6 +809,14 @@
           <span id="dtFeverGauge" class="font-black text-[#e6ff00]">0%</span>
         </div>
       </div>
+    </div>
+
+    <!-- CAPTURED RELICS & DECK -->
+    <div id="dtRelicsSection" class="space-y-1.5 bg-[#140730]/90 p-2.5 rounded-lg border border-[#e6ff00]/20">
+      <div class="text-[11px] font-extrabold text-[#e6ff00] flex items-center gap-1 border-b border-[#e6ff00]/20 pb-1">
+        <span data-i18n="sidebar.relicsTitle">🃏 鹵獲レリック＆デッキ</span>
+      </div>
+      <div id="dtRelicsList" class="space-y-1 text-[9.5px] text-gray-300 pt-0.5"></div>
     </div>
 
     <!-- STAGE 1 STORY BRIEF -->

@@ -102,6 +102,7 @@ window.UI = {
   },
 
   isMenuOpen: false,
+  isDeckOpen: false,
   isRankingOpen: false,
   isStage5ClearOpen: false,
 
@@ -116,6 +117,7 @@ window.UI = {
     const titleControls = this.el("titleControlsBar");
     const gameControls = this.el("gameControlsBar");
     const menuControls = this.el("menuControlsBar");
+    const deckControls = this.el("deckControlsBar");
     const rankingControls = this.el("rankingControlsBar");
     const gameOverControls = this.el("gameOverControlsBar");
     const attractControls = this.el("attractControlsBar");
@@ -155,17 +157,19 @@ window.UI = {
     // Bottom Controls Deck Switcher (mutually exclusive 4-col / full-span decks)
     const activeDeck = this.isMenuOpen
       ? "menu"
-      : (this.isRankingOpen
-        ? "ranking"
-        : (isGameOver
-          ? "gameover"
-          : (isAttract
-            ? "attract"
-            : (this.isStage5ClearOpen
-              ? "clearEnding"
-              : (isEnding
-                ? "ending"
-                : (isTitle ? "title" : "game"))))));
+      : (this.isDeckOpen
+        ? "deck"
+        : (this.isRankingOpen
+          ? "ranking"
+          : (isGameOver
+            ? "gameover"
+            : (isAttract
+              ? "attract"
+              : (this.isStage5ClearOpen
+                ? "clearEnding"
+                : (isEnding
+                  ? "ending"
+                  : (isTitle ? "title" : "game")))))));
 
     const toggleBlock = (el, on) => {
       if (!el) return;
@@ -179,6 +183,7 @@ window.UI = {
     };
 
     toggleBlock(menuControls, activeDeck === "menu");
+    toggleBlock(deckControls, activeDeck === "deck");
     toggleBlock(rankingControls, activeDeck === "ranking");
     toggleBlock(gameOverControls, activeDeck === "gameover");
     toggleBlock(attractControls, activeDeck === "attract");
@@ -322,7 +327,7 @@ window.UI = {
       this.setText(hudMisses, `MISS:${state.stageMisses || 0}`);
     }
 
-    // Buff Slots - only rebuild when key string changes
+    // Buff Slots & Live BURST Hand Preview
     const slotsContainer = this.el("buffSlots");
     if (slotsContainer && state.keptBuffs) {
       const lang = (window.I18N && I18N.lang) || "ja";
@@ -347,6 +352,25 @@ window.UI = {
         });
       }
     }
+
+    const btnBurst = this.el("btnBurst");
+    const btnBurstPreview = this.el("btnBurstPreview");
+    if (btnBurst && window.Systems && typeof Systems.evaluateBurstHand === "function") {
+      const evalRes = Systems.evaluateBurstHand(state);
+      if (evalRes.count > 0) {
+        let handTag = "";
+        if (evalRes.handType === "full_drive") handTag = " FULL!";
+        else if (evalRes.handType === "overclock") handTag = " OC!";
+        else if (evalRes.handType === "trinity") handTag = " TRI!";
+        if (btnBurstPreview) this.setText(btnBurstPreview, `×${evalRes.mult.toFixed(1)}${handTag}`);
+        btnBurst.classList.remove("opacity-50");
+      } else {
+        if (btnBurstPreview) this.setText(btnBurstPreview, "---");
+        btnBurst.classList.add("opacity-50");
+      }
+    }
+
+    this.renderOwnedRelics(state);
 
     // Permanent Upgrades List (Rendered dynamically when menu is open)
     if (this.isMenuOpen && state.perm && window.Systems && Systems.PERM_DEFS) {
@@ -414,6 +438,178 @@ window.UI = {
         }
       }
     }
+  },
+
+  renderOwnedRelics(state) {
+    if (!state || !window.Systems || !Systems.RELIC_DEFS) return;
+    const lang = (window.I18N && I18N.lang) || "ja";
+    const relics = state.relics || {};
+    const loadout = typeof Systems.getLoadout === "function" ? Systems.getLoadout() : [];
+    const entries = Object.keys(Systems.RELIC_DEFS)
+      .filter(id => (relics[id] || 0) > 0)
+      .map(id => [id, relics[id]]);
+    const key = `${lang}|` + entries.map(([k, v]) => `${k}:${v}`).join("|") + `|L:${loadout.join(",")}|W:${state._noaBitWarpCharges || 0}`;
+    if (this._lastRelicHudKey === key) return;
+    this._lastRelicHudKey = key;
+
+    const hudBar = this.el("hudRelicBar");
+    if (hudBar) {
+      if (entries.length === 0) {
+        hudBar.classList.add("hidden");
+        hudBar.classList.remove("flex");
+        hudBar.innerHTML = "";
+      } else {
+        hudBar.classList.remove("hidden");
+        hudBar.classList.add("flex");
+        hudBar.innerHTML = entries.map(([id, cnt]) => {
+          const def = Systems.RELIC_DEFS[id];
+          const stackTxt = cnt > 1 ? `×${cnt}` : "";
+          const warpTxt = (id === "noa_bit" && (state._noaBitWarpCharges || 0) > 0) ? "★" : "";
+          return `<span class="px-1.5 py-0.5 rounded bg-[#220a4a] border text-[8px] font-bold whitespace-nowrap shrink-0 leading-none" style="border-color:${def.color}; color:${def.color}" title="${def.desc}">${def.icon} ${def.short}${stackTxt}${warpTxt}</span>`;
+        }).join("");
+      }
+    }
+
+    const dtList = this.el("dtRelicsList");
+    if (dtList) {
+      let html = "";
+      if (loadout.length > 0 && Systems.LOADOUT_DEFS) {
+        const pills = loadout.map(id => {
+          const m = Systems.LOADOUT_DEFS.find(x => x.id === id);
+          return m ? `<span class="px-1 py-0.5 rounded bg-black/50 border border-[#00f5d4]/30 text-[8.5px] text-[#d6c4ff] whitespace-nowrap">${m.icon} ${m.name}</span>` : "";
+        }).join("");
+        html += `<div class="flex flex-wrap gap-1 pb-1 border-b border-white/10">${pills}</div>`;
+      }
+      if (entries.length === 0) {
+        html += `<div class="text-[8.5px] text-gray-400 italic pt-0.5">${t("sidebar.noRelics")}</div>`;
+      } else {
+        html += entries.map(([id, cnt]) => {
+          const def = Systems.RELIC_DEFS[id];
+          const stackTxt = cnt > 1 ? ` ×${cnt}` : "";
+          return `<div class="flex items-start justify-between gap-1 bg-black/35 rounded px-1.5 py-1 border" style="border-color:${def.color}55">
+            <span class="font-bold text-[9px] leading-tight" style="color:${def.color}">${def.icon} ${def.name}${stackTxt}</span>
+          </div>`;
+        }).join("");
+      }
+      dtList.innerHTML = html;
+    }
+  },
+
+  updateTitleDeckBadge() {
+    const badge = document.getElementById("titleDeckCostBadge");
+    if (!badge || !window.Systems || typeof Systems.getLoadoutCost !== "function") return;
+    badge.textContent = `${Systems.getLoadoutCost()}/${Systems.LOADOUT_MAX_COST} COST`;
+  },
+
+  renderDeckModal() {
+    const listEl = document.getElementById("deckModuleList");
+    const costText = document.getElementById("deckCostText");
+    const pipsEl = document.getElementById("deckCostPips");
+    if (!listEl || !window.Systems || !Systems.LOADOUT_DEFS) return;
+
+    const equipped = Systems.getLoadout();
+    const cost = Systems.getLoadoutCost(equipped);
+    const maxCost = Systems.LOADOUT_MAX_COST;
+
+    if (costText) {
+      costText.textContent = `${cost}/${maxCost}`;
+    }
+    if (pipsEl) {
+      let pipsHtml = "";
+      for (let i = 0; i < maxCost; i++) {
+        pipsHtml += i < cost
+          ? `<span class="w-2.5 h-2.5 rounded-sm bg-[#e6ff00] border border-white/70"></span>`
+          : `<span class="w-2.5 h-2.5 rounded-sm bg-black/60 border border-[#00f5d4]/40"></span>`;
+      }
+      pipsEl.innerHTML = pipsHtml;
+    }
+
+    const prevScrollTop = listEl.scrollTop;
+    const activeModId = (typeof document !== "undefined" && document.activeElement && document.activeElement.dataset && document.activeElement.dataset.modId) || null;
+    listEl.innerHTML = "";
+    Systems.LOADOUT_DEFS.forEach(def => {
+      const isEq = equipped.includes(def.id);
+      const cantAfford = !isEq && (cost + def.cost > maxCost);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.modId = def.id;
+      btn.setAttribute("aria-pressed", isEq ? "true" : "false");
+      if (cantAfford) btn.setAttribute("aria-disabled", "true");
+      else btn.removeAttribute("aria-disabled");
+
+      btn.className = "deck-card w-full p-2 rounded-xl bg-[#16063b]/80 hover:bg-[#230b4f] text-left cursor-pointer flex items-center justify-between gap-2";
+
+      const eqBadge = `<span class="px-1.5 py-0.5 rounded bg-[#00f5d4] text-[#09031c] font-black text-[8px] tracking-wider leading-none whitespace-nowrap${isEq ? "" : " invisible"}"${isEq ? "" : ' aria-hidden="true"'}>${t("deck.equipped")}</span>`;
+      const costBadge = `<span class="px-1.5 py-0.5 rounded bg-black/70 border border-[#e6ff00]/60 text-[#e6ff00] font-mono font-black text-[8.5px] leading-none whitespace-nowrap">COST ${def.cost}</span>`;
+
+      btn.innerHTML = `
+        <div class="flex items-start gap-2 min-w-0">
+          <span class="text-base leading-none shrink-0 mt-0.5">${def.icon}</span>
+          <div class="min-w-0">
+            <div class="font-bold text-[10.5px] leading-tight truncate" style="color:${isEq ? def.color : "#ffffff"}">${def.name}</div>
+            <div class="text-[8px] text-[#b59ce6] leading-snug mt-0.5">${def.desc}</div>
+          </div>
+        </div>
+        <div class="flex flex-col items-end justify-center gap-1 shrink-0 min-w-[54px]">
+          ${costBadge}
+          ${eqBadge}
+        </div>
+      `;
+
+      btn.addEventListener("click", () => {
+        const res = Systems.toggleLoadoutModule(def.id);
+        const hintEl = document.getElementById("deckStatusHint");
+        if (!res.ok) {
+          if (window.sfx && window.sfx.flipperClick) window.sfx.flipperClick();
+          if (hintEl) hintEl.textContent = t("deck.overCostHint");
+          return;
+        }
+        if (hintEl) hintEl.textContent = "";
+        if (window.sfx) {
+          if (res.equipped && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+          else if (window.sfx.flipperClick) window.sfx.flipperClick();
+        }
+        if (window.GameEngine && GameEngine.state && GameEngine.state.inTitle) {
+          GameEngine.state = GameEngine.createInitialState();
+        }
+        this.renderDeckModal();
+        this.updateTitleDeckBadge();
+      });
+
+      listEl.appendChild(btn);
+    });
+    listEl.scrollTop = prevScrollTop;
+    if (activeModId && typeof listEl.querySelector === "function") {
+      const nextBtn = listEl.querySelector(`button[data-mod-id="${activeModId}"]`);
+      if (nextBtn && typeof nextBtn.focus === "function") {
+        nextBtn.focus({ preventScroll: true });
+      }
+    }
+  },
+
+  renderRelicDraft(state) {
+    const container = document.getElementById("relicOptions");
+    if (!container || !window.Systems || !Systems.RELIC_DEFS) return;
+    const ids = (state && state._currentRelicDraft) || Systems.rollRelicDraft(state);
+    if (state) state._currentRelicDraft = ids;
+    container.innerHTML = "";
+    ids.forEach((id, idx) => {
+      const def = Systems.RELIC_DEFS[id] || Systems.RELIC_DEFS.radar;
+      const isBossSlot = idx === 0 && def.isBoss;
+      const badgeHtml = isBossSlot
+        ? `<span class="inline-block px-1 py-0.5 rounded bg-[#ff1493] text-white text-[7px] font-black tracking-wide leading-none">${t("clear.bossRelicBadge")}</span>`
+        : `<span class="inline-block px-1 py-0.5 rounded bg-[#00f5d4]/20 text-[#00f5d4] border border-[#00f5d4]/40 text-[7px] font-bold leading-none">${t("clear.commonRelicBadge")}</span>`;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.relic = def.id;
+      btn.className = `relic-btn min-w-0 p-1 rounded bg-[#16063b]/65 hover:bg-[#ff1493]/50 active:scale-95 border border-[#00f5d4]/60 text-left cursor-pointer transition flex flex-col justify-between gap-0.5 ${isBossSlot ? "boss-relic-card" : ""}`;
+      btn.innerHTML = `
+        <div class="flex items-center justify-between gap-0.5">${badgeHtml}</div>
+        <div class="flex items-center gap-0.5 min-w-0 font-bold text-[9px] leading-tight tracking-tight whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" style="color:${def.color}"><span class="shrink-0" aria-hidden="true">${def.icon}</span><span class="min-w-0 truncate">${def.name}</span></div>
+        <div class="text-[7.5px] text-[#d6c4ff] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">${def.desc}</div>
+      `;
+      container.appendChild(btn);
+    });
   },
 
   getPermKey(state) {
@@ -525,10 +721,13 @@ window.UI = {
         if (e.repeat) return;
         e.preventDefault();
         const menuModal = document.getElementById("menuModal");
+        const deckModal = document.getElementById("deckModal");
         const rankingModal = document.getElementById("rankingModal");
         const gameOverModal = document.getElementById("gameOverModal");
         if (window.GameFlow && window.GameFlow.attract && window.GameFlow.attract.active) {
           window.GameFlow.stopAttractDemo();
+        } else if (deckModal && !deckModal.classList.contains("hidden")) {
+          if (typeof UI.closeDeckModal === "function") UI.closeDeckModal(engine.state);
         } else if (menuModal && !menuModal.classList.contains("hidden")) {
           closeMenu();
         } else if (rankingModal && !rankingModal.classList.contains("hidden")) {
@@ -547,6 +746,11 @@ window.UI = {
       }
 
       if (e.repeat) return;
+
+      // Allow native <button> Space / Enter / Tab interactions inside #deckModal
+      if (isShown("deckControlsBar")) {
+        return;
+      }
 
       // Dynamic Z / X / C / V / Space / Enter mapping for non-gameplay bottom decks
       if (isShown("menuControlsBar")) {
@@ -615,7 +819,10 @@ window.UI = {
         if (e.code === "KeyZ") {
           e.preventDefault();
           document.getElementById("btnTitleSettings")?.click();
-        } else if (e.code === "KeyX" || e.code === "KeyC") {
+        } else if (e.code === "KeyX") {
+          e.preventDefault();
+          document.getElementById("btnTitleDeck")?.click();
+        } else if (e.code === "KeyC") {
           e.preventDefault();
           document.getElementById("btnTitleStart")?.click();
         } else if (e.code === "KeyV") {
@@ -903,6 +1110,64 @@ window.UI = {
       });
     }
 
+    // Pre-Sortie Deck Loadout Modal Open & Close
+    const deckModal = document.getElementById("deckModal");
+    UI.openDeckModal = (st = null) => {
+      const state = st || engine.state;
+      if (!deckModal) return;
+      if (window.sfx) window.sfx.flipperClick();
+      if (window.GameFlow && window.GameFlow.stopAttractDemo) {
+        window.GameFlow.stopAttractDemo();
+      }
+      const titleModalEl = document.getElementById("titleModal");
+      if (titleModalEl) titleModalEl.inert = true;
+      const hintEl = document.getElementById("deckStatusHint");
+      if (hintEl) hintEl.textContent = "";
+      UI.isDeckOpen = true;
+      UI.renderDeckModal();
+      UI.updateScreenMode(state);
+      UI.openModal(deckModal);
+      deckModal.focus();
+    };
+
+    UI.closeDeckModal = (st = null) => {
+      const state = st || engine.state;
+      if (!deckModal) return;
+      if (window.sfx) window.sfx.flipperClick();
+      UI.isDeckOpen = false;
+      const titleModalEl = document.getElementById("titleModal");
+      if (titleModalEl) titleModalEl.inert = false;
+      UI.updateScreenMode(state);
+      UI.updateTitleDeckBadge();
+      UI.closeModal(deckModal);
+      document.getElementById("btnTitleDeck")?.focus();
+    };
+
+    const btnTitleDeck = document.getElementById("btnTitleDeck");
+    if (btnTitleDeck) btnTitleDeck.addEventListener("click", () => UI.openDeckModal(engine.state));
+
+    const btnBottomDeckClose = document.getElementById("btnBottomDeckClose");
+    if (btnBottomDeckClose) btnBottomDeckClose.addEventListener("click", () => UI.closeDeckModal(engine.state));
+
+    const btnDeckResetDefault = document.getElementById("btnDeckResetDefault");
+    if (btnDeckResetDefault) {
+      btnDeckResetDefault.addEventListener("click", () => {
+        if (!window.Systems) return;
+        Systems.resetLoadoutDefault();
+        const hintEl = document.getElementById("deckStatusHint");
+        if (hintEl) hintEl.textContent = "";
+        if (window.sfx && window.sfx.capsuleCatch) window.sfx.capsuleCatch();
+        if (engine.state && engine.state.inTitle) {
+          engine.state = engine.createInitialState();
+        }
+        UI.renderDeckModal();
+        UI.updateTitleDeckBadge();
+      });
+    }
+
+    UI.updateTitleDeckBadge();
+    UI.renderDeckModal();
+
     // Stage Selection (Header Button, Menu Modal Stage Cards)
     const loadStageFromUI = (stage) => {
       if (!stage) return;
@@ -992,6 +1257,8 @@ window.UI = {
     if (window.I18N) {
       I18N.onChange(() => {
         updateLanguageUI();
+        this.updateTitleDeckBadge();
+        this.renderDeckModal();
         if (engine && engine.state) {
           this.renderPermUpgrades(engine.state);
           this.updateHUD(engine.state);
@@ -1005,6 +1272,9 @@ window.UI = {
           if (nameEl) nameEl.textContent = idx === 5 ? t("engine.stage5.finalDisplayName") : t(`stage${idx}.bossName`);
           if (quoteEl) quoteEl.innerHTML = t(`stage${idx}.defeatQuote`);
           if (nextBtn && idx === 5) nextBtn.innerHTML = t("clear.toEnding");
+          if (idx !== 5 && engine && engine.state) {
+            this.renderRelicDraft(engine.state);
+          }
         }
         if (window.GameFlow && typeof GameFlow.refreshLanguage === "function") {
           GameFlow.refreshLanguage();
@@ -1172,16 +1442,20 @@ window.UI = {
       });
     }
 
-    document.querySelectorAll(".relic-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+    const relicOptions = document.getElementById("relicOptions");
+    if (relicOptions) {
+      relicOptions.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest(".relic-btn") : null;
+        if (!btn) return;
         this._clearTallyTimers();
         const chosenRelic = btn.dataset.relic || "radar";
-        const title = btn.querySelector(".font-bold") ? btn.querySelector(".font-bold").textContent : t("ui.relicPart");
+        const def = (window.Systems && Systems.RELIC_DEFS && Systems.RELIC_DEFS[chosenRelic]) || null;
+        const title = def ? def.name : t("ui.relicPart");
         this.closeModal(modal);
         this.showCutin(t("ui.relicEquip", { title }), 160);
         engine.advanceToNextStage(chosenRelic);
       });
-    });
+    }
   },
 
   initDebugControls(engine) {
@@ -1405,6 +1679,10 @@ window.UI = {
       if (nextBtn) nextBtn.innerHTML = t("clear.toEnding");
     } else {
       if (relicSection) relicSection.classList.remove("hidden");
+      if (!state._currentRelicDraft && window.Systems && typeof Systems.rollRelicDraft === "function") {
+        state._currentRelicDraft = Systems.rollRelicDraft(state);
+      }
+      this.renderRelicDraft(state);
     }
     this.updateScreenMode(state);
 

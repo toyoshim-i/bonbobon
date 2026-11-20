@@ -99,7 +99,7 @@ window.GameEngine = {
   },
 
   createInitialState() {
-    return {
+    const state = {
       score: 0,
       peakScore: 0,
       stageIndex: 1,
@@ -111,11 +111,28 @@ window.GameEngine = {
       stageMisses: 0,
       stagePlayFrames: 0,
       stageEarnedScore: 0,
-      relics: { radar: 0, spring: 0, drone: 0 },
+      relics: (window.Systems && typeof Systems.createEmptyRelics === "function")
+        ? Systems.createEmptyRelics()
+        : {
+            lilith_gravity: 0, celty_fission: 0, noa_bit: 0, kasumi_chakra: 0,
+            radar: 0, spring: 0, drone: 0, fever_cap: 0, holo_magnet: 0, burst_core: 0
+          },
       selectedRelic: "radar",
       baseMultiplier: 1.0,
       burstMultiplier: 1.0,
       burstTimer: 0,
+      overdriveActive: false,
+      overdriveRank: 0,
+      magnetActive: false,
+      magnetRank: 0,
+      deckLightningBolts: [],
+      _overdriveChainCd: 0,
+      _fissionHitCount: 0,
+      _fissionCd: 0,
+      _noaBitInterceptCd: 0,
+      _noaBitWarpCharges: 0,
+      _noaBitPos: { x: 198, y: 532 },
+      _currentRelicDraft: null,
       fever: {
         gauge: 0,
         active: false,
@@ -138,17 +155,15 @@ window.GameEngine = {
         springVy: 0
       },
 
-      perm: (window.Systems && typeof Systems.getInitialPermState === "function")
-        ? Systems.getInitialPermState()
-        : {
-            centerPost: 0,
-            centerPostHP: 0,
-            kickbackL: 0,
-            kickbackL_charges: 0,
-            kickbackR: 0,
-            kickbackR_charges: 0,
-            wideFlipper: 0
-          },
+      perm: {
+        centerPost: 0,
+        centerPostHP: 0,
+        kickbackL: 0,
+        kickbackL_charges: 0,
+        kickbackR: 0,
+        kickbackR_charges: 0,
+        wideFlipper: 0
+      },
 
       keptBuffs: [
         { id: "mult2x", tier: 1 },
@@ -174,6 +189,10 @@ window.GameEngine = {
 
       clearSequence: this.createDefaultClearSequence()
     };
+    if (window.Systems && typeof Systems.applyLoadoutToState === "function") {
+      Systems.applyLoadoutToState(state);
+    }
+    return state;
   },
 
   loadStage(stage) {
@@ -183,6 +202,12 @@ window.GameEngine = {
 
     this.state.boss = stage.createBossState();
     this.state.phase = 1;
+    this.state.hitStopTimer = 0;
+    if (this.state.fever && this.state.fever.active) {
+      this.state.fever.active = false;
+      this.state.fever.timer = 0;
+      this.state.fever.mult = 1.0;
+    }
     this.state.stagePlayFrames = 0;
     this.state.stageEarnedScore = 0;
     this.state.stageCleared = false;
@@ -194,6 +219,10 @@ window.GameEngine = {
     this.state.hearts = [];
     this.state.shockwaves = [];
     this.state.capsules = [];
+    this.state.deckLightningBolts = [];
+    this.state._currentRelicDraft = null;
+    this.state._noaBitInterceptCd = 0;
+    this.state._noaBitWarpCharges = (this.state.relics && this.state.relics.noa_bit > 0) ? 1 : 0;
     this.state.nudgeOffset = { x: 0, y: 0 };
 
     const meta = this.getStageMeta(stage && stage.id);
@@ -260,13 +289,8 @@ window.GameEngine = {
   },
 
   advanceToNextStage(chosenRelic) {
-    if (chosenRelic && this.state.relics) {
-      this.state.relics[chosenRelic] = (this.state.relics[chosenRelic] || 0) + 1;
-      this.state.selectedRelic = chosenRelic;
-      if (chosenRelic === "radar") {
-        const addMult = (window.ScoreTable && ScoreTable.multiplier.RADAR_ADD_MULT) || 0.5;
-        this.state.baseMultiplier = +((this.state.baseMultiplier || 1.0) + addMult).toFixed(2);
-      }
+    if (chosenRelic && window.Systems && typeof Systems.applyRelicPickup === "function") {
+      Systems.applyRelicPickup(this.state, chosenRelic);
     }
     const nextIdx = (this.state.stageIndex || 1) + 1;
     if (nextIdx > 5) {
@@ -410,13 +434,25 @@ window.GameEngine = {
       }
     }
 
+    if ((state._overdriveChainCd || 0) > 0) state._overdriveChainCd--;
+    if ((state._fissionCd || 0) > 0) state._fissionCd--;
+    if ((state._noaBitInterceptCd || 0) > 0) state._noaBitInterceptCd--;
+    if (state.relics && state.relics.noa_bit > 0) {
+      const bitTick = (state.boss && state.boss.animTick) || 0;
+      if (!state._noaBitPos) state._noaBitPos = { x: 198, y: 532 };
+      state._noaBitPos.x = 198 + Math.sin(bitTick * 0.05) * 62;
+      state._noaBitPos.y = 532 + Math.cos(bitTick * 0.08) * 8;
+    }
+
     // Burst Buff Timer
     if (state.burstTimer > 0) {
       state.burstTimer--;
       if (state.burstTimer <= 0) {
         state.burstMultiplier = 1.0;
         state.magnetActive = false;
+        state.magnetRank = 0;
         state.overdriveActive = false;
+        state.overdriveRank = 0;
         UI.showCutin(t("engine.burstEnd"), 90);
         UI.updateHUD(state);
       }
@@ -425,7 +461,9 @@ window.GameEngine = {
     // Fever Mode Timer
     if (state.fever.active) {
       state.fever.timer--;
-      const feverDur = (window.Systems && Systems.BALANCE.FEVER_DURATION_FRAMES) || (60 * 18);
+      const feverDur = (window.Systems && typeof Systems.getFeverDurationFrames === "function")
+        ? Systems.getFeverDurationFrames(state)
+        : (60 * 18);
       state.fever.gauge = Math.max(0, (state.fever.timer / feverDur) * 100);
       if (state.fever.timer <= 0 || state.balls.length <= 1) {
         Systems.endFeverMode(state);
@@ -448,8 +486,15 @@ window.GameEngine = {
         Physics.stepBallPhysics(state, ball, gravity, SUBSTEPS, s);
 
         if (this.currentStage) {
-          this.currentStage.checkCollisions(ball, state, this, s);
+          this._activeCollisionBall = ball;
+          try {
+            this.currentStage.checkCollisions(ball, state, this, s);
+          } finally {
+            this._activeCollisionBall = null;
+          }
         }
+
+        Physics.enforceOuterBounds(state, ball);
       }
     }
 
@@ -464,13 +509,15 @@ window.GameEngine = {
       if (ball._coreGrace > 0) ball._coreGrace--;
       if (ball._flipHitGrace > 0) ball._flipHitGrace--;
       if (ball._postGrace > 0) ball._postGrace--;
+      if (ball._chakraTimer > 0) ball._chakraTimer--;
+      if (ball._magnetHeld > 0) ball._magnetHeld--;
       if (!ball.inShooterLane) hasActivePlayBall = true;
 
       // Ball Stagnation / Stuck Detection (Universal pinball feature)
       const speed = Math.hypot(ball.vx, ball.vy);
       const isTrappedInWell = (state.boss && state.boss.crotch && state.boss.chestArmorBroken &&
                                Math.hypot(ball.x - state.boss.crotch.x, ball.y - state.boss.crotch.y) < 22);
-      const isStuck = !ball.inShooterLane && !ball._onWireRamp && !ball._inNavelTrap && !ball._fusionStasis && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
+      const isStuck = !ball.inShooterLane && !ball._onWireRamp && !ball._inNavelTrap && !ball._fusionStasis && !ball._seraphStasis && !(ball._magnetHeld > 0) && (speed < 0.75 || isTrappedInWell) && ball.y < this.H - 45;
 
       if (isStuck) {
         ball.stuckTimer = (ball.stuckTimer || 0) + 1;
@@ -514,7 +561,9 @@ window.GameEngine = {
             state.burstTimer = 0;
             state.burstMultiplier = 1.0;
             state.magnetActive = false;
+            state.magnetRank = 0;
             state.overdriveActive = false;
+            state.overdriveRank = 0;
             if (state.fever) {
               state.fever.gauge = Math.floor((state.fever.gauge || 0) * bal.MISS_FEVER_KEEP_RATIO);
             }
@@ -593,15 +642,30 @@ window.GameEngine = {
     }
 
     // Floating Capsules (Plan A)
+    const hasHoloMag = !!(state.relics && state.relics.holo_magnet > 0);
+    const capMult = hasHoloMag ? 1.5 : 1.0;
     for (let ci = state.capsules.length - 1; ci >= 0; ci--) {
       const cap = state.capsules[ci];
       cap.phase += 0.06;
+      if (hasHoloMag && state.balls) {
+        let nearBall = null;
+        let nearDist = 65;
+        for (const ball of state.balls) {
+          if (ball.inShooterLane || ball._onWireRamp) continue;
+          const d = Math.hypot(ball.x - cap.x, ball.y - cap.y);
+          if (d < nearDist) { nearDist = d; nearBall = ball; }
+        }
+        if (nearBall) {
+          cap.x += (nearBall.x - cap.x) * 0.04;
+          cap.baseY += (nearBall.y - cap.y) * 0.04;
+        }
+      }
       cap.y = cap.baseY + Math.sin(cap.phase) * 3.5;
       cap.life--;
 
       let caught = false;
       for (const ball of state.balls) {
-        if (Math.hypot(ball.x - cap.x, ball.y - cap.y) < ball.r + cap.r + 2) {
+        if (Math.hypot(ball.x - cap.x, ball.y - cap.y) < ball.r + cap.r * capMult + 2) {
           caught = true;
           break;
         }
@@ -616,6 +680,15 @@ window.GameEngine = {
     }
 
     Particles.update(state);
+
+    if (state.deckLightningBolts && state.deckLightningBolts.length > 0) {
+      for (let li = state.deckLightningBolts.length - 1; li >= 0; li--) {
+        state.deckLightningBolts[li].life--;
+        if (state.deckLightningBolts[li].life <= 0) {
+          state.deckLightningBolts.splice(li, 1);
+        }
+      }
+    }
   },
 
   renderTable() {
@@ -707,6 +780,69 @@ window.GameEngine = {
 
     // Flippers, Capsules, Plunger & Balls
     if (!isPostWhiteout) {
+      const fxTick = (state.boss && state.boss.animTick) || 0;
+
+      // Lilith Signature Relic: Inverted Gravity Cushion Field
+      if (state.relics && state.relics.lilith_gravity > 0) {
+        ctx.save();
+        const pulse = 0.5 + 0.5 * Math.sin(fxTick * 0.14);
+        ctx.strokeStyle = `rgba(255, 20, 147, ${(0.22 + pulse * 0.18).toFixed(2)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(198, 610, 38 + pulse * 6, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(0, 245, 212, ${(0.18 + pulse * 0.16).toFixed(2)})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(198, 610, 24 + (1 - pulse) * 5, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Noa Signature Relic: Aegis Intercept Escort Bit
+      if (state.relics && state.relics.noa_bit > 0) {
+        const bp = state._noaBitPos || { x: 198, y: 532 };
+        const ready = (state._noaBitInterceptCd || 0) <= 0;
+        const warpReady = (state._noaBitWarpCharges || 0) > 0;
+        ctx.save();
+        ctx.translate(bp.x, bp.y);
+        if (ready) {
+          ctx.strokeStyle = "#00f5d4";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(0, 0, 10 + Math.sin(fxTick * 0.15) * 1.5, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          const frac = 1 - Math.min(1, (state._noaBitInterceptCd || 0) / 480);
+          ctx.strokeStyle = "rgba(0, 245, 212, 0.45)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 9.5, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * frac);
+          ctx.stroke();
+        }
+        ctx.rotate(fxTick * 0.06);
+        ctx.fillStyle = ready ? "#00f5d4" : "#5a6b8c";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(5.5, 0);
+        ctx.lineTo(0, 6);
+        ctx.lineTo(-5.5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        if (warpReady) {
+          ctx.save();
+          ctx.fillStyle = "#e6ff00";
+          ctx.font = "bold 7.5px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("W", bp.x, bp.y - 12);
+          ctx.restore();
+        }
+      }
+
       // Flippers (Main + Stage 5 Phase 3 Mid-Field Wing Paddles)
       const flippers = Physics.getFlippers(state);
       flippers.forEach((f, idx) => {
@@ -716,6 +852,15 @@ window.GameEngine = {
 
         ctx.save();
         ctx.lineCap = "round";
+        if (!f.isSubFlipper && state.magnetActive) {
+          const magAlpha = (0.28 + 0.18 * Math.sin(fxTick * 0.25)).toFixed(2);
+          ctx.strokeStyle = `rgba(0, 245, 212, ${magAlpha})`;
+          ctx.lineWidth = 17;
+          ctx.beginPath();
+          ctx.moveTo(f.px, f.py);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
         if (f.isSubFlipper) {
           // 中段ウイングパドル：ゴールド×シアンの発光エナジーブレード
           ctx.strokeStyle = "rgba(230, 255, 0, 0.35)";
@@ -955,6 +1100,7 @@ window.GameEngine = {
       ctx.restore();
 
       // Balls (ground-level; elevated wire-ramp balls cast a shadow here and render in renderForeground)
+      const bTick = (state.boss && state.boss.animTick) || 0;
       state.balls.forEach(ball => {
         if (ball._onWireRamp) {
           const h = ball._onWireRamp.elev || 1.0;
@@ -967,7 +1113,9 @@ window.GameEngine = {
           return;
         }
         if (ball.trail && ball.trail.length > 1) {
-          ctx.fillStyle = state.fever.active ? "#e6ff00" : "#00f5d4";
+          ctx.fillStyle = ball._isFissionBall
+            ? "#00f5d4"
+            : (state.overdriveActive ? "#e6ff00" : (state.fever.active ? "#e6ff00" : "#00f5d4"));
           for (let i = 0; i < ball.trail.length; i++) {
             const pt = ball.trail[i];
             const alpha = (i / ball.trail.length) * 0.45;
@@ -979,9 +1127,43 @@ window.GameEngine = {
           ctx.globalAlpha = 1.0;
         }
 
+        if ((ball._magnetHeld || 0) > 0) {
+          ctx.save();
+          ctx.strokeStyle = "#00f5d4";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r + 4.2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        if ((ball._chakraTimer || 0) > 0) {
+          ctx.save();
+          ctx.strokeStyle = "#ff66cc";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r + 3.2, (bTick * 0.18), (bTick * 0.18) + Math.PI * 1.4);
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (state.overdriveActive) {
+          ctx.save();
+          ctx.strokeStyle = "#e6ff00";
+          ctx.lineWidth = 1.4;
+          const ang = (bTick * 0.35 + ball.x * 0.1) % (Math.PI * 2);
+          ctx.beginPath();
+          ctx.moveTo(ball.x + Math.cos(ang) * (ball.r + 1), ball.y + Math.sin(ang) * (ball.r + 1));
+          ctx.lineTo(ball.x + Math.cos(ang + 0.5) * (ball.r + 5), ball.y + Math.sin(ang + 0.5) * (ball.r + 5));
+          ctx.moveTo(ball.x - Math.cos(ang) * (ball.r + 1), ball.y - Math.sin(ang) * (ball.r + 1));
+          ctx.lineTo(ball.x - Math.cos(ang + 0.4) * (ball.r + 5), ball.y - Math.sin(ang + 0.4) * (ball.r + 5));
+          ctx.stroke();
+          ctx.restore();
+        }
+
         ctx.save();
-        ctx.fillStyle = state.fever.active ? "#e6ff00" : (state.burstTimer > 0 ? "#ff1493" : "#ffffff");
-        ctx.strokeStyle = "#ff1493";
+        ctx.fillStyle = ball._isFissionBall
+          ? "#00f5d4"
+          : (state.overdriveActive ? "#e6ff00" : (state.fever.active ? "#e6ff00" : (state.burstTimer > 0 ? "#ff1493" : "#ffffff")));
+        ctx.strokeStyle = ball._isFissionBall ? "#e6ff00" : "#ff1493";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -1005,6 +1187,33 @@ window.GameEngine = {
 
     // Particles, Popups, Hearts & Shockwaves
     Particles.render(ctx, state);
+
+    // Deck Chain Lightning / Slash Bolts
+    if (state.deckLightningBolts && state.deckLightningBolts.length > 0) {
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "miter";
+      for (let li = 0; li < state.deckLightningBolts.length; li++) {
+        const bolt = state.deckLightningBolts[li];
+        const pts = bolt.pts;
+        if (!pts || pts.length < 2) continue;
+        ctx.globalAlpha = Math.max(0, Math.min(1, bolt.life / (bolt.maxLife || 14)));
+        ctx.strokeStyle = bolt.color || "#e6ff00";
+        ctx.lineWidth = 4.0;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x, pts[pi].y);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x, pts[pi].y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // Blinding Whiteout Flash
     if (state.clearSequence && state.clearSequence.active && state.clearSequence.whiteoutAlpha > 0) {

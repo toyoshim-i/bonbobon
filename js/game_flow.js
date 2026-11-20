@@ -255,8 +255,10 @@ window.GameFlow = {
       const titleModal = document.getElementById("titleModal");
       const isTitleVisible = titleModal && !titleModal.classList.contains("hidden");
       const menuModal = document.getElementById("menuModal");
+      const deckModal = document.getElementById("deckModal");
       const rankingModal = document.getElementById("rankingModal");
       const isModalOpen = (menuModal && !menuModal.classList.contains("hidden")) ||
+                          (deckModal && !deckModal.classList.contains("hidden")) ||
                           (rankingModal && !rankingModal.classList.contains("hidden"));
 
       if ((isTitleVisible || this.attract.active) && !isModalOpen && (e.code === "Space" || e.code === "Enter")) {
@@ -323,8 +325,10 @@ window.GameFlow = {
     if (!state || !state.inTitle) return;
 
     const menu = document.getElementById("menuModal");
+    const deck = document.getElementById("deckModal");
     const ranking = document.getElementById("rankingModal");
     const isModalOpen = (menu && !menu.classList.contains("hidden")) ||
+                        (deck && !deck.classList.contains("hidden")) ||
                         (ranking && !ranking.classList.contains("hidden"));
 
     if (isModalOpen || this.attract.active) {
@@ -1560,16 +1564,19 @@ window.GameFlow = {
   },
 
   hideAllModals() {
-    ["titleModal", "attractModal", "rankingModal", "menuModal", "gameOverModal", "endingModal", "clearModal"].forEach(id => {
+    ["titleModal", "attractModal", "rankingModal", "menuModal", "deckModal", "gameOverModal", "endingModal", "clearModal"].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.classList.remove("opacity-100", "flex");
         el.classList.add("opacity-0", "hidden");
       }
     });
+    const titleEl = document.getElementById("titleModal");
+    if (titleEl) titleEl.inert = false;
     cancelAnimationFrame(this.ending.rafId);
     if (window.UI) {
       UI.isMenuOpen = false;
+      UI.isDeckOpen = false;
       UI.isRankingOpen = false;
       UI.isStage5ClearOpen = false;
       if (window.GameEngine && GameEngine.state) {

@@ -278,15 +278,27 @@ Object.assign(window.Stage4, {
           continue;
         }
       } else {
+        if (sh.y > 440 && window.Systems && Systems.tryNoaBitIntercept(state, sh.x, sh.y)) {
+          nj.thrownShurikens.splice(i, 1);
+          continue;
+        }
         let clashedBall = false;
+        const clashPad = state.overdriveActive ? 17 : 3;
         for (const ball of state.balls) {
           if (ball.inShooterLane || ball._onWireRamp) continue;
           const d = Math.hypot(ball.x - sh.x, ball.y - sh.y);
-          if (d < ball.r + sh.r + 3) {
+          if (d < ball.r + sh.r + clashPad) {
             clashedBall = true;
             if (window.sfx && window.sfx.metalBumper) window.sfx.metalBumper();
-            Particles.add(state, sh.x, sh.y, "#00f5d4", 12, 4.0);
-            Systems.addScore(state, ScoreTable.stage4.SHURIKEN_CLASH, sh.x, sh.y, "⚔️CLASH!");
+            Particles.add(state, sh.x, sh.y, state.overdriveActive ? "#e6ff00" : "#00f5d4", state.overdriveActive ? 18 : 12, 4.4);
+            if (state.overdriveActive) {
+              Systems.addScore(state, ScoreTable.common.VOLT_SHATTER, sh.x, sh.y, "⚡VOLT SHATTER!", { fromDeckEffect: true });
+              if ((state.overdriveRank || 0) >= 2 && typeof this.applyDeckBonusDamage === "function") {
+                this.applyDeckBonusDamage(state, 1, sh.x, sh.y, "⚡VOLT COUNTER!", "#e6ff00");
+              }
+            } else {
+              Systems.addScore(state, ScoreTable.stage4.SHURIKEN_CLASH, sh.x, sh.y, "⚔️CLASH!");
+            }
             nj.thrownShurikens.splice(i, 1);
             break;
           }
